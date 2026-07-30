@@ -4,9 +4,9 @@ export function App() {
   return (
     <main>
       <p className="eyebrow">FGO Battle Simulator Work</p>
-      <h1>戦闘進行・カード選択基盤</h1>
+      <h1>戦闘進行・カードチェイン基盤</h1>
       <p>
-        戦闘UIの実装前に、15／10／5枚の配布、通常カードと宝具からの3枚選択、実行直前の不発判定と宝具NP消費を検証しています。
+        戦闘UIの実装前に、15／10／5枚の配布、通常カードと宝具からの3枚選択、実行直前判定、各種チェイン・Extra Attack・宝具OCを検証しています。
       </p>
       <dl>
         <div>
