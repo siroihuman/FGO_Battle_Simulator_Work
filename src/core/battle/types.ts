@@ -2,6 +2,11 @@ import type { AppliedEffect } from "../../effects/types";
 
 export type BattleSide = "ally" | "enemy";
 
+export interface BreakGaugeState {
+  /** Base maximum HP of the gauge before temporary max-HP effects. */
+  maxHp: number;
+}
+
 export interface BattleUnitState {
   instanceId: string;
   dataId: string;
@@ -15,6 +20,14 @@ export interface BattleUnitState {
   /** Base instant-death rate (DR) in permille. Missing enemy data uses 0. */
   deathRatePermille: number;
   alive: boolean;
+  /** One-based number of the currently displayed HP gauge. */
+  hpGaugeNumber: number;
+  /** Future gauges in activation order. Current plus future gauges max at 10. */
+  remainingBreakGauges: BreakGaugeState[];
+  /** Intermediate HP 0 waiting for ally-turn-end break settlement. */
+  breakPending: boolean;
+  /** Battle turn in which the most recent gauge was settled. */
+  lastBreakBattleTurn: number | null;
   traits: string[];
   effects: AppliedEffect[];
   skillCooldowns: number[];

@@ -13,6 +13,7 @@ export const MIN_WAVE_COUNT = 1 as const;
 export const MAX_WAVE_COUNT = 3 as const;
 export const MIN_ENEMY_COUNT_PER_WAVE = 1 as const;
 export const MAX_ENEMY_COUNT_TOTAL = 99 as const;
+export const MAX_ENEMY_HP_GAUGES = 10 as const;
 
 export type EnemyFrontlineLimit = 3 | 6;
 export type EnemyReplacementMode = "standard" | "immediate";
@@ -171,6 +172,77 @@ function assertStartingUnit(unit: BattleUnitState, label: string): void {
       `${label} must start alive with positive HP: ${unit.instanceId}`,
     );
   }
+  if (unit.breakPending || unit.lastBreakBattleTurn !== null) {
+    throw new RangeError(
+      `${label} must not start with break progress: ${unit.instanceId}`,
+    );
+  }
+  if (unit.hpGaugeNumber !== 1) {
+    throw new RangeError(
+      `${label} must start on HP gauge 1: ${unit.instanceId}`,
+    );
+  }
+}
+
+function assertBreakState(unit: BattleUnitState, label: string): void {
+  assertSafeInteger(unit.hpGaugeNumber, `${label} hpGaugeNumber`);
+  if (unit.hpGaugeNumber < 1) {
+    throw new RangeError(`${label} hpGaugeNumber must be positive`);
+  }
+  if (
+    unit.hpGaugeNumber + unit.remainingBreakGauges.length
+    > MAX_ENEMY_HP_GAUGES
+  ) {
+    throw new RangeError(
+      `${label} must not exceed ${MAX_ENEMY_HP_GAUGES} total HP gauges`,
+    );
+  }
+  for (const [index, gauge] of unit.remainingBreakGauges.entries()) {
+    assertSafeInteger(gauge.maxHp, `${label} break gauge ${index + 1} maxHp`);
+    if (gauge.maxHp <= 0) {
+      throw new RangeError(
+        `${label} break gauge ${index + 1} maxHp must be positive`,
+      );
+    }
+  }
+  if (unit.side === "ally") {
+    if (
+      unit.hpGaugeNumber !== 1
+      || unit.remainingBreakGauges.length > 0
+      || unit.breakPending
+      || unit.lastBreakBattleTurn !== null
+    ) {
+      throw new RangeError(`${label} allies cannot have break gauges`);
+    }
+    return;
+  }
+  if (
+    unit.breakPending
+    && (
+      !unit.alive
+      || unit.hp !== 0
+      || unit.remainingBreakGauges.length === 0
+    )
+  ) {
+    throw new RangeError(
+      `${label} pending break requires a living enemy at HP 0 with a next gauge`,
+    );
+  }
+  if (unit.lastBreakBattleTurn !== null) {
+    assertSafeInteger(
+      unit.lastBreakBattleTurn,
+      `${label} lastBreakBattleTurn`,
+    );
+    if (unit.lastBreakBattleTurn < 1) {
+      throw new RangeError(
+        `${label} lastBreakBattleTurn must be positive`,
+      );
+    }
+  }
+}
+
+function countPendingBreaks(formation: SideFormation): number {
+  return listedUnits(formation).filter(({ breakPending }) => breakPending).length;
 }
 
 function normalizeContinuation(
@@ -264,6 +336,12 @@ function assertCurrentFormation(
     throw new RangeError(
       `current Wave enemy count must not exceed ${MAX_ENEMY_COUNT_TOTAL}`,
     );
+  }
+  for (const unit of listedUnits(formation.ally)) {
+    assertBreakState(unit, `ally ${unit.instanceId}`);
+  }
+  for (const unit of listedUnits(formation.enemy)) {
+    assertBreakState(unit, `enemy ${unit.instanceId}`);
   }
   assertValidFormation(formation);
 }
@@ -370,11 +448,23 @@ export function setBattleFormation(
       `total remaining enemy count must not exceed ${MAX_ENEMY_COUNT_TOTAL}`,
     );
   }
+  const pendingBreakDelta =
+    countPendingBreaks(formation.enemy)
+    - countPendingBreaks(state.formation.enemy);
+  const pendingBreaks =
+    state.waveContinuation.pendingBreaks + pendingBreakDelta;
+  if (pendingBreaks < 0) {
+    throw new RangeError("pending break count cannot become negative");
+  }
   return {
     ...state,
     formation: {
       ally: copySideFormation(formation.ally),
       enemy: copySideFormation(formation.enemy),
+    },
+    waveContinuation: {
+      ...state.waveContinuation,
+      pendingBreaks,
     },
   };
 }
@@ -384,9 +474,18 @@ export function setWaveContinuation(
   continuation: WaveContinuationState,
 ): BattleState {
   assertBattleOngoing(state);
+  const normalized = normalizeContinuation(continuation);
+  const representedPendingBreaks = countPendingBreaks(
+    state.formation.enemy,
+  );
+  if (normalized.pendingBreaks < representedPendingBreaks) {
+    throw new RangeError(
+      "pendingBreaks cannot be smaller than pending enemy gauges",
+    );
+  }
   return {
     ...state,
-    waveContinuation: normalizeContinuation(continuation),
+    waveContinuation: normalized,
   };
 }
 
