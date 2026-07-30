@@ -15,6 +15,7 @@ export const MIN_ENEMY_COUNT_PER_WAVE = 1 as const;
 export const MAX_ENEMY_COUNT_TOTAL = 99 as const;
 
 export type EnemyFrontlineLimit = 3 | 6;
+export type EnemyReplacementMode = "standard" | "immediate";
 
 /**
  * The action phase is the part of a turn in which that side selects and
@@ -59,11 +60,13 @@ export interface CreateBattleStateInput {
   ally: SideFormation;
   waves: readonly BattleWaveInput[];
   enemyFrontlineLimit: EnemyFrontlineLimit;
+  enemyReplacementMode?: EnemyReplacementMode;
 }
 
 export interface BattleState {
   formation: BattleFormation;
   enemyFrontlineLimit: EnemyFrontlineLimit;
+  enemyReplacementMode: EnemyReplacementMode;
   remainingWaves: BattleWaveState[];
   /** One-based Wave number for UI and logs. */
   waveNumber: number;
@@ -194,6 +197,16 @@ function assertEnemyFrontlineLimit(
   }
 }
 
+function assertEnemyReplacementMode(
+  value: string,
+): asserts value is EnemyReplacementMode {
+  if (value !== "standard" && value !== "immediate") {
+    throw new RangeError(
+      "enemyReplacementMode must be standard or immediate",
+    );
+  }
+}
+
 function normalizeInitialWave(
   wave: BattleWaveInput,
   waveIndex: number,
@@ -259,6 +272,8 @@ export function createBattleState(
   input: CreateBattleStateInput,
 ): BattleState {
   assertEnemyFrontlineLimit(input.enemyFrontlineLimit);
+  const enemyReplacementMode = input.enemyReplacementMode ?? "standard";
+  assertEnemyReplacementMode(enemyReplacementMode);
   if (
     input.waves.length < MIN_WAVE_COUNT
     || input.waves.length > MAX_WAVE_COUNT
@@ -306,6 +321,7 @@ export function createBattleState(
   return {
     formation,
     enemyFrontlineLimit: input.enemyFrontlineLimit,
+    enemyReplacementMode,
     remainingWaves: remainingWaves.map(copyWave),
     waveNumber: 1,
     totalWaves: waves.length,
