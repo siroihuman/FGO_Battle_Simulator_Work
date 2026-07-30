@@ -101,6 +101,14 @@ export interface CommonActionResult {
   absorptionResult?: HpAbsorptionResult;
 }
 
+export interface CommonActionBatchResult {
+  source: BattleUnitState | null;
+  targets: Array<BattleUnitState | null>;
+  counters: EffectRuntimeCounters;
+  results: CommonActionResult[];
+  absorptionResult?: HpAbsorptionResult;
+}
+
 export function executeCommonAction(
   source: BattleUnitState | null,
   target: BattleUnitState | null,
@@ -296,6 +304,99 @@ export function executeCommonActions(
   return {
     source: currentSource,
     target: currentTarget,
+    counters: currentCounters,
+    results,
+  };
+}
+
+/**
+ * Executes one declared action against targets in the supplied order.
+ *
+ * HP absorption is the only grouped action in the initial foundation: every
+ * target is reduced first, then the source receives one recovery based on the
+ * total HP actually removed. Other actions are resolved once per target.
+ */
+export function executeCommonActionForTargets(
+  source: BattleUnitState | null,
+  targets: readonly (BattleUnitState | null)[],
+  action: CommonAction,
+  counters: EffectRuntimeCounters,
+  rng: DeterministicRng,
+): CommonActionBatchResult {
+  if (action.kind === "absorb_hp") {
+    const absorptionResult = resolveHpAbsorption(
+      source,
+      targets,
+      {
+        amountPerTarget: action.amount,
+        canDefeat: action.canDefeat,
+        recoveryRatePermille: action.recoveryRatePermille,
+        ignoreRecoveryModifiers: action.ignoreRecoveryModifiers,
+        ignoreHealingBlock: action.ignoreHealingBlock,
+        intermediateBreak: action.intermediateBreak,
+        ignoreGuts: action.ignoreGuts,
+        percentageGutsRecoveryModifierPermille:
+          action.percentageGutsRecoveryModifierPermille,
+      },
+    );
+    const results = absorptionResult.targetResults.map(
+      (targetResult, index): CommonActionResult => ({
+        action,
+        outcome:
+          !targets[index]
+            ? "no_target"
+            : targetResult.actualReduction > 0 ? "changed" : "unchanged",
+        source: absorptionResult.source,
+        target: absorptionResult.targets[index],
+        counters,
+        hpChange: -targetResult.actualReduction,
+        survivalResult: targetResult.survival,
+        hpReductionResult: targetResult,
+        recoveryResult: absorptionResult.recovery,
+        absorptionResult,
+      }),
+    );
+    return {
+      source: absorptionResult.source,
+      targets: absorptionResult.targets,
+      counters,
+      results,
+      absorptionResult,
+    };
+  }
+
+  let currentSource = source;
+  let currentCounters = counters;
+  const currentTargets = [...targets];
+  const results: CommonActionResult[] = [];
+  currentTargets.forEach((target, index) => {
+    const currentTarget =
+      target?.instanceId === currentSource?.instanceId
+        ? currentSource
+        : target;
+    const result = executeCommonAction(
+      currentSource,
+      currentTarget,
+      action,
+      currentCounters,
+      rng,
+    );
+    currentTargets[index] = result.target;
+    currentSource = result.source ?? currentSource;
+    if (currentSource?.instanceId === result.target?.instanceId) {
+      currentSource = result.target;
+    }
+    currentCounters = result.counters;
+    results.push(result);
+  });
+  const finalTargets = currentTargets.map((target) =>
+    target?.instanceId === currentSource?.instanceId
+      ? currentSource
+      : target,
+  );
+  return {
+    source: currentSource,
+    targets: finalTargets,
     counters: currentCounters,
     results,
   };

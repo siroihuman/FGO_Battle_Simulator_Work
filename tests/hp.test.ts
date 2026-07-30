@@ -397,4 +397,36 @@ describe("HP absorption", () => {
       },
     });
   });
+
+  it("does not consume recovery modifiers when no HP was absorbed", () => {
+    const source = register(
+      unit("ally-a", "ally", { hp: 1_000 }),
+      {
+        stableId: "counted-given-healing",
+        name: "与HP回復量アップ",
+        effectType: COMMON_EFFECT_TYPES.givenHpRecovery,
+        category: "buff",
+        value: 500,
+        remainingUses: 1,
+      },
+      createEffectRuntimeCounters(),
+    ).unit;
+    const result = resolveHpAbsorption(
+      source,
+      [unit("enemy-a", "enemy", { hp: 1 })],
+      { amountPerTarget: 1_000, canDefeat: false },
+    );
+
+    expect(result).toMatchObject({
+      outcome: "unchanged",
+      totalActualReduction: 0,
+      recoveryBaseAmount: 0,
+      source: {
+        hp: 1_000,
+        effects: [{ stableId: "counted-given-healing", remainingUses: 1 }],
+      },
+      targets: [{ hp: 1 }],
+    });
+    expect(result.recovery).toBeUndefined();
+  });
 });
