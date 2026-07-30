@@ -25,19 +25,40 @@ import type {
   EffectRemovalRequest,
 } from "./removal";
 import {
-  resolveLethalHp,
-} from "./survival";
+  resolveHpAbsorption,
+  resolveHpRecovery,
+  resolveHpReduction,
+} from "./hp";
 import type {
-  LethalHpResolution,
-} from "./survival";
+  HpAbsorptionResult,
+  HpRecoveryResult,
+  HpReductionResult,
+} from "./hp";
+import type { LethalHpResolution } from "./survival";
 import type { EffectRuntimeCounters } from "./types";
 
 export type CommonAction =
-  | { kind: "heal_hp"; amount: number }
+  | {
+      kind: "heal_hp";
+      amount: number;
+      ignoreRecoveryModifiers?: boolean;
+      ignoreHealingBlock?: boolean;
+    }
   | {
       kind: "reduce_hp";
       amount: number;
       canDefeat: boolean;
+      intermediateBreak?: boolean;
+      ignoreGuts?: boolean;
+      percentageGutsRecoveryModifierPermille?: number;
+    }
+  | {
+      kind: "absorb_hp";
+      amount: number;
+      canDefeat: boolean;
+      recoveryRatePermille?: number;
+      ignoreRecoveryModifiers?: boolean;
+      ignoreHealingBlock?: boolean;
       intermediateBreak?: boolean;
       ignoreGuts?: boolean;
       percentageGutsRecoveryModifierPermille?: number;
@@ -66,6 +87,7 @@ export type CommonActionOutcome = "changed" | "unchanged" | "no_target";
 export interface CommonActionResult {
   action: CommonAction;
   outcome: CommonActionOutcome;
+  source?: BattleUnitState | null;
   target: BattleUnitState | null;
   counters: EffectRuntimeCounters;
   hpChange?: number;
@@ -74,11 +96,9 @@ export interface CommonActionResult {
   removalAttempts?: EffectRemovalAttempt[];
   survivalResult?: LethalHpResolution;
   instantDeathResult?: InstantDeathResult;
-}
-
-function assertNonNegativeAmount(amount: number, name: string): void {
-  assertSafeInteger(amount, name);
-  if (amount < 0) throw new RangeError(`${name} must not be negative`);
+  recoveryResult?: HpRecoveryResult;
+  hpReductionResult?: HpReductionResult;
+  absorptionResult?: HpAbsorptionResult;
 }
 
 export function executeCommonAction(
@@ -120,59 +140,87 @@ export function executeCommonAction(
           ? "no_target"
           : result.target !== target ? "changed" : "unchanged",
       target: result.target,
+      source:
+        result.source?.instanceId === result.target?.instanceId
+          ? result.target
+          : result.source,
       counters,
       instantDeathResult: result,
       survivalResult: result.survival,
+    };
+  }
+  if (action.kind === "heal_hp") {
+    const result = resolveHpRecovery(
+      source,
+      target,
+      action.amount,
+      action,
+    );
+    return {
+      action,
+      outcome:
+        result.outcome === "no_target"
+          ? "no_target"
+          : result.source !== source || result.target !== target
+            ? "changed"
+            : "unchanged",
+      source: result.source,
+      target: result.target,
+      counters,
+      hpChange: result.actualRecovered,
+      recoveryResult: result,
+    };
+  }
+  if (action.kind === "absorb_hp") {
+    const result = resolveHpAbsorption(
+      source,
+      [target],
+      {
+        amountPerTarget: action.amount,
+        canDefeat: action.canDefeat,
+        recoveryRatePermille: action.recoveryRatePermille,
+        ignoreRecoveryModifiers: action.ignoreRecoveryModifiers,
+        ignoreHealingBlock: action.ignoreHealingBlock,
+        intermediateBreak: action.intermediateBreak,
+        ignoreGuts: action.ignoreGuts,
+        percentageGutsRecoveryModifierPermille:
+          action.percentageGutsRecoveryModifierPermille,
+      },
+    );
+    const targetResult = result.targetResults[0];
+    return {
+      action,
+      outcome:
+        !target
+          ? "no_target"
+          : result.outcome === "absorbed" ? "changed" : "unchanged",
+      source: result.source,
+      target: result.targets[0],
+      counters,
+      hpChange: -(targetResult?.actualReduction ?? 0),
+      survivalResult: targetResult?.survival,
+      hpReductionResult: targetResult,
+      recoveryResult: result.recovery,
+      absorptionResult: result,
     };
   }
   if (!target) {
     return { action, outcome: "no_target", target, counters };
   }
 
-  if (action.kind === "heal_hp") {
-    assertNonNegativeAmount(action.amount, "heal amount");
-    if (!target.alive) {
-      return { action, outcome: "unchanged", target, counters, hpChange: 0 };
-    }
-    const missingHp = Math.max(0, target.maxHp - target.hp);
-    const hp = target.hp + Math.min(action.amount, missingHp);
-    return {
-      action,
-      outcome: hp === target.hp ? "unchanged" : "changed",
-      target: hp === target.hp ? target : { ...target, hp },
-      counters,
-      hpChange: hp - target.hp,
-    };
-  }
-
   if (action.kind === "reduce_hp") {
-    assertNonNegativeAmount(action.amount, "HP reduction amount");
-    if (!target.alive) {
-      return { action, outcome: "unchanged", target, counters, hpChange: 0 };
-    }
-    const minimum = action.canDefeat ? 0 : 1;
-    const reducibleHp = Math.max(0, target.hp - minimum);
-    const hp = target.hp - Math.min(action.amount, reducibleHp);
-    const reducedTarget =
-      hp === target.hp
-        ? target
-        : { ...target, hp, alive: hp > 0 };
-    const survivalResult =
-      action.canDefeat && hp === 0
-        ? resolveLethalHp(reducedTarget, {
-            intermediateBreak: action.intermediateBreak,
-            ignoreGuts: action.ignoreGuts,
-            percentageRecoveryModifierPermille:
-              action.percentageGutsRecoveryModifierPermille,
-          })
-        : undefined;
+    const result = resolveHpReduction(target, action.amount, action);
     return {
       action,
-      outcome: hp === target.hp ? "unchanged" : "changed",
-      target: survivalResult?.unit ?? reducedTarget,
+      outcome:
+        result.outcome === "unchanged" || result.outcome === "no_target"
+          ? "unchanged"
+          : "changed",
+      target: result.target,
       counters,
-      hpChange: hp - target.hp,
-      survivalResult,
+      hpChange: -result.actualReduction,
+      survivalResult: result.survival,
+      hpReductionResult: result,
     };
   }
 
@@ -216,28 +264,39 @@ export function executeCommonActions(
   counters: EffectRuntimeCounters,
   rng: DeterministicRng,
 ): {
+  source: BattleUnitState | null;
   target: BattleUnitState | null;
   counters: EffectRuntimeCounters;
   results: CommonActionResult[];
 } {
   let currentTarget = target;
+  let currentSource = source;
   let currentCounters = counters;
   const results: CommonActionResult[] = [];
   for (const action of actions) {
-    const currentSource =
-      source?.instanceId === currentTarget?.instanceId
+    const actionSource =
+      currentSource?.instanceId === currentTarget?.instanceId
         ? currentTarget
-        : source;
+        : currentSource;
     const result = executeCommonAction(
-      currentSource,
+      actionSource,
       currentTarget,
       action,
       currentCounters,
       rng,
     );
     currentTarget = result.target;
+    currentSource = result.source ?? actionSource;
+    if (currentSource?.instanceId === currentTarget?.instanceId) {
+      currentSource = currentTarget;
+    }
     currentCounters = result.counters;
     results.push(result);
   }
-  return { target: currentTarget, counters: currentCounters, results };
+  return {
+    source: currentSource,
+    target: currentTarget,
+    counters: currentCounters,
+    results,
+  };
 }
