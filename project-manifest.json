@@ -1,0 +1,77 @@
+{
+  "manifestVersion": 1,
+  "project": "FGO_Battle_Simulator_Work",
+  "specVersion": "1.0.0",
+  "dataSchemaVersion": "1.0.0",
+  "status": "foundation",
+  "canonicalDocuments": [
+    "AGENTS.md",
+    "docs/INDEX.md",
+    "docs/PROJECT_RULES.md",
+    "docs/ARCHITECTURE.md",
+    "docs/IMPLEMENTATION_STATUS.md",
+    "docs/DECISION_LOG.md",
+    "docs/specs/BATTLE_SYSTEM.md",
+    "docs/specs/CALCULATIONS_AND_RNG.md",
+    "docs/specs/EFFECTS_AND_TIMING.md",
+    "docs/specs/UI_AND_STORAGE.md",
+    "docs/specs/INITIAL_CONTENT.md"
+  ],
+  "coreRules": {
+    "battleType": "annihilation_only",
+    "specialVictoryConditions": false,
+    "specialDefeatConditions": false,
+    "maxWaves": 3,
+    "allyFrontlineRequired": 3,
+    "allyReserveMax": 3,
+    "duplicateServantsAllowed": true,
+    "enemyTotalMin": 1,
+    "enemyTotalMax": 99,
+    "enemyActiveModes": [
+      3,
+      6
+    ],
+    "enemyReplacementModes": [
+      "standard",
+      "immediate"
+    ],
+    "maxBreakGauges": 10,
+    "starCap": 99,
+    "starCarryBeyondNextCommandPhase": false,
+    "servantSkillLevel": "max",
+    "mysticCodeLevel": "max",
+    "servantNpLevels": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "enemyWithoutNoblePhantasmCharge": 0,
+    "fixedSeedReplayRequired": true
+  },
+  "initialContent": {
+    "servants": [
+      {
+        "name": "光のコヤンスカヤ",
+        "source": "https://w.atwiki.jp/f_go/pages/5141.html"
+      },
+      {
+        "name": "ルシフェラ",
+        "source": "https://w.atwiki.jp/siroi_human/pages/795.html"
+      }
+    ],
+    "mysticCodes": [
+      "アトラス院制服",
+      "ノーマルカルデア制服"
+    ],
+    "optionalCraftEssenceSource": "https://appmedia.jp/fategrandorder/97937"
+  },
+  "referenceSources": [
+    "https://w.atwiki.jp/f_go/pages/304.html",
+    "https://w.atwiki.jp/f_go/pages/2030.html",
+    "https://w.atwiki.jp/f_go/pages/145.html",
+    "https://w.atwiki.jp/f_go/pages/955.html",
+    "https://w.atwiki.jp/f_go/pages/4673.html"
+  ]
+}

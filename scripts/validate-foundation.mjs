@@ -1,0 +1,118 @@
+import { readFile, access } from "node:fs/promises";
+import { constants } from "node:fs";
+import process from "node:process";
+
+const errors = [];
+
+async function exists(path) {
+  try {
+    await access(path, constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readText(path) {
+  try {
+    return await readFile(path, "utf8");
+  } catch (error) {
+    errors.push(`${path} を読み込めません: ${error.message}`);
+    return "";
+  }
+}
+
+function assert(condition, message) {
+  if (!condition) errors.push(message);
+}
+
+const manifestText = await readText("project-manifest.json");
+let manifest;
+
+try {
+  manifest = JSON.parse(manifestText);
+} catch (error) {
+  errors.push(`project-manifest.json が正しいJSONではありません: ${error.message}`);
+}
+
+if (manifest) {
+  assert(/^\d+\.\d+\.\d+$/.test(manifest.specVersion), "specVersion は x.y.z 形式である必要があります");
+  assert(manifest.coreRules.battleType === "annihilation_only", "戦闘形式は全滅戦だけでなければなりません");
+  assert(manifest.coreRules.specialVictoryConditions === false, "特殊勝利条件は無効でなければなりません");
+  assert(manifest.coreRules.specialDefeatConditions === false, "特殊敗北条件は無効でなければなりません");
+  assert(manifest.coreRules.maxWaves === 3, "最大Wave数は3でなければなりません");
+  assert(manifest.coreRules.allyFrontlineRequired === 3, "味方前衛必須数は3でなければなりません");
+  assert(manifest.coreRules.allyReserveMax === 3, "味方控え上限は3でなければなりません");
+  assert(manifest.coreRules.enemyTotalMax === 99, "敵参加上限は99でなければなりません");
+  assert(
+    JSON.stringify(manifest.coreRules.enemyActiveModes) === JSON.stringify([3, 6]),
+    "敵同時出現モードは3体と6体でなければなりません"
+  );
+  assert(manifest.coreRules.maxBreakGauges === 10, "ブレイクゲージ上限は10でなければなりません");
+  assert(manifest.coreRules.starCap === 99, "スター上限は99でなければなりません");
+  assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
+  assert(manifest.coreRules.fixedSeedReplayRequired === true, "固定シード再現は必須です");
+
+  const docs = manifest.canonicalDocuments ?? [];
+  assert(new Set(docs).size === docs.length, "canonicalDocuments に重複があります");
+  for (const path of docs) {
+    if (!(await exists(path))) errors.push(`正本文書がありません: ${path}`);
+  }
+}
+
+const mandatoryFiles = [
+  "README.md",
+  "AGENTS.md",
+  "docs/NEW_CHAT_GUIDE.md",
+  "docs/HANDOFF_TEMPLATE.md",
+  "docs/roles/SYSTEM.md",
+  "docs/roles/SERVANT.md",
+  "docs/roles/CRAFT_ESSENCE.md",
+  "docs/roles/MYSTIC_CODE.md",
+  "docs/roles/ENEMY.md",
+  "docs/templates/SERVANT_ADDITION.md",
+  "docs/templates/CRAFT_ESSENCE_ADDITION.md",
+  "docs/templates/MYSTIC_CODE_ADDITION.md",
+  "docs/templates/ENEMY_ADDITION.md",
+  "docs/templates/BUG_REPORT.md"
+];
+
+for (const path of mandatoryFiles) {
+  if (!(await exists(path))) errors.push(`必須ファイルがありません: ${path}`);
+}
+
+const agents = await readText("AGENTS.md");
+assert(agents.includes("リポジトリを唯一の正本"), "AGENTS.md に正本規則がありません");
+assert(agents.includes("特殊勝利条件・特殊敗北条件を追加する"), "AGENTS.md に特殊勝敗条件の禁止がありません");
+
+for (const path of [
+  "docs/roles/SYSTEM.md",
+  "docs/roles/SERVANT.md",
+  "docs/roles/CRAFT_ESSENCE.md",
+  "docs/roles/MYSTIC_CODE.md",
+  "docs/roles/ENEMY.md"
+]) {
+  const text = await readText(path);
+  assert(text.includes("## 変更可能範囲"), `${path} に変更可能範囲がありません`);
+  assert(text.includes("## 完了条件"), `${path} に完了条件がありません`);
+}
+
+for (const path of [
+  "docs/templates/SERVANT_ADDITION.md",
+  "docs/templates/CRAFT_ESSENCE_ADDITION.md",
+  "docs/templates/MYSTIC_CODE_ADDITION.md",
+  "docs/templates/ENEMY_ADDITION.md"
+]) {
+  const text = await readText(path);
+  assert(text.includes("## 処理分類"), `${path} に処理分類がありません`);
+  assert(text.includes("## 参照資料"), `${path} に参照資料がありません`);
+  assert(text.includes("## 確認項目"), `${path} に確認項目がありません`);
+}
+
+if (errors.length > 0) {
+  console.error("基盤検査に失敗しました。");
+  for (const error of errors) console.error(`- ${error}`);
+  process.exit(1);
+}
+
+console.log(`基盤検査に成功しました。仕様書バージョン: ${manifest.specVersion}`);
