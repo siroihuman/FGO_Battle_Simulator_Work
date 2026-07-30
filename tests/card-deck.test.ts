@@ -124,6 +124,22 @@ describe("command card deck construction", () => {
     expect(one.sourceCards).toHaveLength(5);
   });
 
+  it("allows an empty next deck while ally annihilation awaits turn-end judgment", () => {
+    const state = battle();
+    const rebuilt = rebuildCommandCardDeck(
+      state.commandDeck,
+      {
+        frontline: [null, null, null],
+        reserve: [],
+      },
+      "ally_departure",
+    );
+
+    expect(rebuilt.sourceCards).toEqual([]);
+    expect(rebuilt.remainingCards).toEqual([]);
+    expect(rebuilt.lastRebuildReason).toBe("ally_departure");
+  });
+
   it("rejects an ally without exactly five intrinsic cards", () => {
     expect(() =>
       createBattleState({
