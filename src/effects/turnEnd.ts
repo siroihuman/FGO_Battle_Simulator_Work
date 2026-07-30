@@ -29,6 +29,7 @@ import {
 import type {
   EffectRuntimeCounters,
   RemovedEffect,
+  TriggerActivation,
   TriggerAction,
   TurnEndSettlementKind,
 } from "./types";
@@ -89,6 +90,23 @@ export interface SideTurnEndResult {
   durations: TurnEndDurationResult[];
 }
 
+export interface SideTurnEndSnapshot {
+  side: BattleSide;
+  registrationCutoff: number;
+  candidates: TriggerActivation[];
+  durationOwnerInstanceIds: string[];
+}
+
+export interface ResolveSideTurnEndOptions {
+  snapshot?: SideTurnEndSnapshot;
+  advanceDurations?: boolean;
+}
+
+export interface SideTurnEndDurationResult {
+  formation: BattleFormation;
+  durations: TurnEndDurationResult[];
+}
+
 interface PendingHpSettlement {
   targetInstanceId: string;
   recoveryContributions: TurnEndHpContribution[];
@@ -105,6 +123,53 @@ function latestRegistrationOrder(formation: BattleFormation): number {
     }
   }
   return latest;
+}
+
+export function createSideTurnEndSnapshot(
+  formation: BattleFormation,
+  endingSide: BattleSide,
+): SideTurnEndSnapshot {
+  const owners = orderedLocations(formation, endingSide, false);
+  return {
+    side: endingSide,
+    registrationCutoff: latestRegistrationOrder(formation),
+    candidates: collectTriggerActivations(
+      owners,
+      { timing: "turn_end" },
+    ),
+    durationOwnerInstanceIds: owners.map(({ unit }) => unit.instanceId),
+  };
+}
+
+export function advanceSideTurnEndDurations(
+  formation: BattleFormation,
+  endingSide: BattleSide,
+  snapshot: SideTurnEndSnapshot,
+): SideTurnEndDurationResult {
+  if (snapshot.side !== endingSide) {
+    throw new RangeError("turn-end snapshot side does not match");
+  }
+  let currentFormation = formation;
+  const durations: TurnEndDurationResult[] = [];
+  for (const ownerInstanceId of snapshot.durationOwnerInstanceIds) {
+    const location = findUnitLocation(currentFormation, ownerInstanceId);
+    if (!location || location.side !== endingSide) continue;
+    const duration = advanceOwnerTurnEnd(
+      location.unit,
+      endingSide,
+      false,
+      snapshot.registrationCutoff,
+    );
+    currentFormation = replaceUnit(currentFormation, duration.unit);
+    durations.push({
+      ownerInstanceId,
+      removed: duration.removed,
+    });
+  }
+  return {
+    formation: currentFormation,
+    durations,
+  };
 }
 
 function replaceIfPresent(
@@ -234,19 +299,23 @@ export function resolveSideTurnEnd(
   endingSide: BattleSide,
   counters: EffectRuntimeCounters,
   rng: DeterministicRng,
+  options: ResolveSideTurnEndOptions = {},
 ): SideTurnEndResult {
   let currentFormation = formation;
   let currentCounters = counters;
-  const registrationCutoff = latestRegistrationOrder(formation);
+  const snapshot =
+    options.snapshot
+    ?? createSideTurnEndSnapshot(formation, endingSide);
+  if (snapshot.side !== endingSide) {
+    throw new RangeError("turn-end snapshot side does not match");
+  }
+  const registrationCutoff = snapshot.registrationCutoff;
   if (currentCounters.nextRegistrationOrder <= registrationCutoff) {
     throw new RangeError(
       "effect runtime counters must be ahead of registered effects",
     );
   }
-  const candidates = collectTriggerActivations(
-    orderedLocations(formation, endingSide, false),
-    { timing: "turn_end" },
-  ).filter(
+  const candidates = snapshot.candidates.filter(
     ({ effect }) => effect.registrationOrder <= registrationCutoff,
   );
   const activations: TurnEndActivationResult[] = [];
@@ -422,24 +491,18 @@ export function resolveSideTurnEnd(
     });
   }
 
-  const durations: TurnEndDurationResult[] = [];
-  for (const location of orderedLocations(
-    currentFormation,
-    endingSide,
-    false,
-  )) {
-    const duration = advanceOwnerTurnEnd(
-      location.unit,
-      endingSide,
-      false,
-      registrationCutoff,
-    );
-    currentFormation = replaceUnit(currentFormation, duration.unit);
-    durations.push({
-      ownerInstanceId: location.unit.instanceId,
-      removed: duration.removed,
-    });
-  }
+  const durationResult =
+    options.advanceDurations === false
+      ? {
+          formation: currentFormation,
+          durations: [],
+        }
+      : advanceSideTurnEndDurations(
+          currentFormation,
+          endingSide,
+          snapshot,
+        );
+  currentFormation = durationResult.formation;
 
   return {
     formation: currentFormation,
@@ -447,6 +510,6 @@ export function resolveSideTurnEnd(
     registrationCutoff,
     activations,
     hpSettlements,
-    durations,
+    durations: durationResult.durations,
   };
 }
