@@ -38,6 +38,10 @@ export interface EffectTrigger {
   actions?: readonly TriggerAction[];
 }
 
+export type TurnEndSettlementKind =
+  | "recurring_hp_recovery"
+  | "slip_damage";
+
 /**
  * One trigger action is resolved against all matching targets in formation
  * order before the next action is started.
@@ -45,6 +49,11 @@ export interface EffectTrigger {
 export interface TriggerAction {
   target: TargetSelector;
   action: CommonAction;
+  /**
+   * Standard recurring HP recovery and slip damage are collected per target
+   * and settled together after all eligible turn-end triggers activate.
+   */
+  turnEndSettlement?: TurnEndSettlementKind;
 }
 
 export type EffectFlagValue = boolean | number | string;
