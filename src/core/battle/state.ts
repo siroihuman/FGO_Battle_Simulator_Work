@@ -62,12 +62,15 @@ export interface CreateBattleStateInput {
   waves: readonly BattleWaveInput[];
   enemyFrontlineLimit: EnemyFrontlineLimit;
   enemyReplacementMode?: EnemyReplacementMode;
+  mysticCodeCooldowns?: readonly number[];
 }
 
 export interface BattleState {
   formation: BattleFormation;
   enemyFrontlineLimit: EnemyFrontlineLimit;
   enemyReplacementMode: EnemyReplacementMode;
+  /** Cooldowns of the three selected Mystic Code skills. */
+  mysticCodeCooldowns: number[];
   remainingWaves: BattleWaveState[];
   /** One-based Wave number for UI and logs. */
   waveNumber: number;
@@ -241,6 +244,20 @@ function assertBreakState(unit: BattleUnitState, label: string): void {
   }
 }
 
+function assertSkillCooldowns(
+  unit: BattleUnitState,
+  label: string,
+): void {
+  for (const [index, cooldown] of unit.skillCooldowns.entries()) {
+    assertSafeInteger(cooldown, `${label} skillCooldowns[${index}]`);
+    if (cooldown < 0) {
+      throw new RangeError(
+        `${label} skillCooldowns[${index}] must not be negative`,
+      );
+    }
+  }
+}
+
 function countPendingBreaks(formation: SideFormation): number {
   return listedUnits(formation).filter(({ breakPending }) => breakPending).length;
 }
@@ -277,6 +294,23 @@ function assertEnemyReplacementMode(
       "enemyReplacementMode must be standard or immediate",
     );
   }
+}
+
+function normalizeMysticCodeCooldowns(
+  cooldowns: readonly number[] = [0, 0, 0],
+): number[] {
+  if (cooldowns.length !== 3) {
+    throw new RangeError("mysticCodeCooldowns must contain 3 values");
+  }
+  return cooldowns.map((cooldown, index) => {
+    assertSafeInteger(cooldown, `mysticCodeCooldowns[${index}]`);
+    if (cooldown < 0) {
+      throw new RangeError(
+        `mysticCodeCooldowns[${index}] must not be negative`,
+      );
+    }
+    return cooldown;
+  });
 }
 
 function normalizeInitialWave(
@@ -339,9 +373,11 @@ function assertCurrentFormation(
   }
   for (const unit of listedUnits(formation.ally)) {
     assertBreakState(unit, `ally ${unit.instanceId}`);
+    assertSkillCooldowns(unit, `ally ${unit.instanceId}`);
   }
   for (const unit of listedUnits(formation.enemy)) {
     assertBreakState(unit, `enemy ${unit.instanceId}`);
+    assertSkillCooldowns(unit, `enemy ${unit.instanceId}`);
   }
   assertValidFormation(formation);
 }
@@ -400,6 +436,9 @@ export function createBattleState(
     formation,
     enemyFrontlineLimit: input.enemyFrontlineLimit,
     enemyReplacementMode,
+    mysticCodeCooldowns: normalizeMysticCodeCooldowns(
+      input.mysticCodeCooldowns,
+    ),
     remainingWaves: remainingWaves.map(copyWave),
     waveNumber: 1,
     totalWaves: waves.length,

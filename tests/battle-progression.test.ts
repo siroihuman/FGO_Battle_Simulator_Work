@@ -115,6 +115,7 @@ describe("battle state creation", () => {
       phase: "ally_action",
       outcome: "ongoing",
       enemyReplacementMode: "standard",
+      mysticCodeCooldowns: [0, 0, 0],
       waveContinuation: {
         pendingBreaks: 0,
         pendingRevives: 0,
@@ -135,6 +136,25 @@ describe("battle state creation", () => {
       enemyReplacementMode: "immediate",
     });
     expect(state.enemyReplacementMode).toBe("immediate");
+  });
+
+  it("validates the three Mystic Code cooldown values", () => {
+    expect(() =>
+      createBattleState({
+        ally: allyFormation(),
+        waves: [{ enemy: enemyFormation("wave-1") }],
+        enemyFrontlineLimit: 3,
+        mysticCodeCooldowns: [1, 2],
+      }),
+    ).toThrow(/must contain 3 values/);
+    expect(() =>
+      createBattleState({
+        ally: allyFormation(),
+        waves: [{ enemy: enemyFormation("wave-1") }],
+        enemyFrontlineLimit: 3,
+        mysticCodeCooldowns: [0, -1, 0],
+      }),
+    ).toThrow(/must not be negative/);
   });
 
   it("accepts the six-enemy frontline mode and retains all six slots", () => {

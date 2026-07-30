@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.9.0",
-  "status": "break-pending-foundation",
+  "dataSchemaVersion": "1.10.0",
+  "status": "turn-end-coordinator",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
