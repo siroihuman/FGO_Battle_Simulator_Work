@@ -1,4 +1,6 @@
 import type { BattleSide } from "../core/battle/types";
+import type { CommonAction } from "./actions";
+import type { TargetSelector } from "./targeting";
 
 export type EffectCategory = "buff" | "debuff" | "other";
 export type EffectRemovalPolicy = "removable" | "id_only" | "unremovable";
@@ -33,6 +35,16 @@ export interface EffectTrigger {
   activationRatePermille?: number;
   consumeUseOnActivation?: boolean;
   condition?: TriggerCondition;
+  actions?: readonly TriggerAction[];
+}
+
+/**
+ * One trigger action is resolved against all matching targets in formation
+ * order before the next action is started.
+ */
+export interface TriggerAction {
+  target: TargetSelector;
+  action: CommonAction;
 }
 
 export type EffectFlagValue = boolean | number | string;

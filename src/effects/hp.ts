@@ -403,13 +403,16 @@ export function resolveHpAbsorption(
     [totalActualReduction, recoveryRatePermille],
     1000,
   );
-  const recovery = resolveHpRecovery(
-    currentSource,
-    currentSource,
-    recoveryBaseAmount,
-    options,
-  );
-  currentSource = recovery.target ?? currentSource;
+  const recovery =
+    totalActualReduction === 0
+      ? undefined
+      : resolveHpRecovery(
+          currentSource,
+          currentSource,
+          recoveryBaseAmount,
+          options,
+        );
+  currentSource = recovery?.target ?? currentSource;
   const finalTargets = targetResults.map((result) =>
     result.target?.instanceId === currentSource.instanceId
       ? currentSource
