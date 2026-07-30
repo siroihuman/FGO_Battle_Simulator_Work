@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.11.0",
-  "status": "command-card-deck",
+  "dataSchemaVersion": "1.12.0",
+  "status": "command-card-selection-preflight",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",

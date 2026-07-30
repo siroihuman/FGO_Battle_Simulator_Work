@@ -1,7 +1,15 @@
 import type { AppliedEffect } from "../../effects/types";
+import type { NoblePhantasmLevel } from "../../formulas/np";
 
 export type BattleSide = "ally" | "enemy";
 export type CommandCardType = "buster" | "arts" | "quick";
+
+export interface NoblePhantasmState {
+  stableId: string;
+  name: string;
+  cardType: CommandCardType;
+  level: NoblePhantasmLevel;
+}
 
 export interface BreakGaugeState {
   /** Base maximum HP of the gauge before temporary max-HP effects. */
@@ -31,6 +39,8 @@ export interface BattleUnitState {
   lastBreakBattleTurn: number | null;
   /** Five intrinsic cards for allies; enemies may leave this empty. */
   commandCards: CommandCardType[];
+  /** The upgraded NP used by this battle unit; missing data is represented by null. */
+  noblePhantasm: NoblePhantasmState | null;
   traits: string[];
   effects: AppliedEffect[];
   skillCooldowns: number[];

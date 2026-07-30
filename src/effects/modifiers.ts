@@ -23,6 +23,7 @@ export const COMMON_EFFECT_TYPES = {
   invincibility: "invincibility",
   invincibilityPierce: "invincibility_pierce",
   maxHpChange: "max_hp_change",
+  noblePhantasmSeal: "noble_phantasm_seal",
   receivedBuffSuccess: "received_buff_success",
   receivedHpRecovery: "received_hp_recovery",
   solemnDefense: "solemn_defense",
