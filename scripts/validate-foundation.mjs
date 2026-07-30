@@ -85,6 +85,22 @@ if (manifest) {
     manifest.coreRules.stopCommandSequenceWithoutEnemyTarget === true,
     "敵対象が尽きた後は残りコマンド行動を開始してはいけません"
   );
+  assert(
+    manifest.coreRules.enemyPriorityBeforeNormalPlan === true,
+    "敵優先スキル完了後に通常行動予定を作らなければなりません"
+  );
+  assert(
+    manifest.coreRules.enemyDefaultActionPolicy === "full_np_else_normal_attack",
+    "敵の最小既定行動はフルチャージ宝具、それ以外は通常攻撃でなければなりません"
+  );
+  assert(
+    manifest.coreRules.enemyReplacementInheritsPlannedSlots === false,
+    "途中登場した敵は退場者の予定済み行動枠を引き継いではいけません"
+  );
+  assert(
+    manifest.coreRules.stopEnemySequenceOnAllyAnnihilation === true,
+    "味方全滅後は残り敵行動を開始してはいけません"
+  );
   assert(manifest.coreRules.maxBreakGauges === 10, "ブレイクゲージ上限は10でなければなりません");
   assert(manifest.coreRules.starCap === 99, "スター上限は99でなければなりません");
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
