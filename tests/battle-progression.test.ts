@@ -114,6 +114,7 @@ describe("battle state creation", () => {
       waveTurn: 1,
       phase: "ally_action",
       outcome: "ongoing",
+      enemyReplacementMode: "standard",
       waveContinuation: {
         pendingBreaks: 0,
         pendingRevives: 0,
@@ -124,6 +125,16 @@ describe("battle state creation", () => {
       "wave-1-front",
     );
     expect(state.remainingWaves).toHaveLength(1);
+  });
+
+  it("stores the selected immediate enemy replacement mode", () => {
+    const state = createBattleState({
+      ally: allyFormation(),
+      waves: [{ enemy: enemyFormation("wave-1") }],
+      enemyFrontlineLimit: 3,
+      enemyReplacementMode: "immediate",
+    });
+    expect(state.enemyReplacementMode).toBe("immediate");
   });
 
   it("accepts the six-enemy frontline mode and retains all six slots", () => {
