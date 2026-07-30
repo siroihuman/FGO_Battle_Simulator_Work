@@ -80,6 +80,15 @@ export type EnemyActionSkipReason =
   | "noble_phantasm_not_configured"
   | "noble_phantasm_charge_not_full";
 
+export type EnemyActorExecutionSkipReason = Extract<
+  EnemyActionSkipReason,
+  | "actor_missing"
+  | "actor_not_enemy"
+  | "actor_not_frontline"
+  | "actor_defeated"
+  | "actor_action_disabled"
+>;
+
 interface EnemyActionExecutionBase {
   state: BattleState;
   source: EnemyActionSource;
@@ -277,6 +286,32 @@ function requestedAction(
 }
 
 /**
+ * Checks only whether an enemy actor can begin any action. AI callers use
+ * this before spending randomness to select a concrete normal action.
+ */
+export function enemyActorExecutionSkipReason(
+  state: BattleState,
+  actorInstanceId: string,
+): EnemyActorExecutionSkipReason | null {
+  assertEnemyActionPhase(state);
+  const location = findUnitLocation(
+    state.formation,
+    actorInstanceId,
+  );
+  if (!location) return "actor_missing";
+  if (location.side !== "enemy") return "actor_not_enemy";
+  if (location.area !== "frontline") {
+    return "actor_not_frontline";
+  }
+  if (!location.unit.alive || location.unit.hp <= 0) {
+    return "actor_defeated";
+  }
+  return isActionDisabled(location.unit)
+    ? "actor_action_disabled"
+    : null;
+}
+
+/**
  * Rechecks one AI-requested action immediately before execution.
  *
  * Missing normal attacks, skills, or NPs are ordinary skips. A normal slot is
@@ -315,16 +350,11 @@ export function beginEnemyActionExecution(
   });
 
   if (!location) return skipped("actor_missing");
-  if (location.side !== "enemy") return skipped("actor_not_enemy");
-  if (location.area !== "frontline") {
-    return skipped("actor_not_frontline");
-  }
-  if (!location.unit.alive || location.unit.hp <= 0) {
-    return skipped("actor_defeated");
-  }
-  if (isActionDisabled(location.unit)) {
-    return skipped("actor_action_disabled");
-  }
+  const actorSkipReason = enemyActorExecutionSkipReason(
+    state,
+    actorInstanceId,
+  );
+  if (actorSkipReason) return skipped(actorSkipReason);
 
   const resolved = requestedAction(location.unit, request);
   if (!resolved.action) {
