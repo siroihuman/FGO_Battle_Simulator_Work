@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.10.0",
-  "status": "turn-end-coordinator",
+  "dataSchemaVersion": "1.11.0",
+  "status": "command-card-deck",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",

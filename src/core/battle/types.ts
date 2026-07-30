@@ -1,6 +1,7 @@
 import type { AppliedEffect } from "../../effects/types";
 
 export type BattleSide = "ally" | "enemy";
+export type CommandCardType = "buster" | "arts" | "quick";
 
 export interface BreakGaugeState {
   /** Base maximum HP of the gauge before temporary max-HP effects. */
@@ -28,6 +29,8 @@ export interface BattleUnitState {
   breakPending: boolean;
   /** Battle turn in which the most recent gauge was settled. */
   lastBreakBattleTurn: number | null;
+  /** Five intrinsic cards for allies; enemies may leave this empty. */
+  commandCards: CommandCardType[];
   traits: string[];
   effects: AppliedEffect[];
   skillCooldowns: number[];

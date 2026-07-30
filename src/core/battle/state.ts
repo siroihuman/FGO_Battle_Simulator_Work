@@ -1,4 +1,8 @@
 import { assertSafeInteger } from "../numeric";
+import {
+  createCommandCardDeck,
+  type CommandCardDeckState,
+} from "../cards/deck";
 import { assertValidFormation } from "./formation";
 import type {
   BattleFormation,
@@ -71,6 +75,7 @@ export interface BattleState {
   enemyReplacementMode: EnemyReplacementMode;
   /** Cooldowns of the three selected Mystic Code skills. */
   mysticCodeCooldowns: number[];
+  commandDeck: CommandCardDeckState;
   remainingWaves: BattleWaveState[];
   /** One-based Wave number for UI and logs. */
   waveNumber: number;
@@ -258,6 +263,22 @@ function assertSkillCooldowns(
   }
 }
 
+function assertCommandCards(
+  unit: BattleUnitState,
+  label: string,
+): void {
+  if (unit.commandCards.length !== 5) {
+    throw new RangeError(`${label} must have exactly 5 command cards`);
+  }
+  for (const [index, card] of unit.commandCards.entries()) {
+    if (card !== "buster" && card !== "arts" && card !== "quick") {
+      throw new RangeError(
+        `${label} commandCards[${index}] is invalid`,
+      );
+    }
+  }
+}
+
 function countPendingBreaks(formation: SideFormation): number {
   return listedUnits(formation).filter(({ breakPending }) => breakPending).length;
 }
@@ -374,6 +395,7 @@ function assertCurrentFormation(
   for (const unit of listedUnits(formation.ally)) {
     assertBreakState(unit, `ally ${unit.instanceId}`);
     assertSkillCooldowns(unit, `ally ${unit.instanceId}`);
+    assertCommandCards(unit, `ally ${unit.instanceId}`);
   }
   for (const unit of listedUnits(formation.enemy)) {
     assertBreakState(unit, `enemy ${unit.instanceId}`);
@@ -439,6 +461,7 @@ export function createBattleState(
     mysticCodeCooldowns: normalizeMysticCodeCooldowns(
       input.mysticCodeCooldowns,
     ),
+    commandDeck: createCommandCardDeck(formation.ally),
     remainingWaves: remainingWaves.map(copyWave),
     waveNumber: 1,
     totalWaves: waves.length,

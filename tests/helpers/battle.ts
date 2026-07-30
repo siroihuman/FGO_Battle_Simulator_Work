@@ -25,6 +25,13 @@ export function unit(
     remainingBreakGauges: options.remainingBreakGauges ?? [],
     breakPending: options.breakPending ?? false,
     lastBreakBattleTurn: options.lastBreakBattleTurn ?? null,
+    commandCards: options.commandCards ?? [
+      "buster",
+      "buster",
+      "arts",
+      "arts",
+      "quick",
+    ],
     traits: options.traits ?? [],
     effects: options.effects ?? [],
     skillCooldowns: options.skillCooldowns ?? [0, 0, 0],

@@ -326,6 +326,7 @@ describe("Wave progression", () => {
       },
     };
     state = setBattleFormation(state, formation);
+    const commandDeckBeforeWaveChange = state.commandDeck;
     state = defeatUnit(state, "wave-1-front");
     state = completeAllyTurnEnd(beginAllyTurnEnd(state));
 
@@ -350,6 +351,7 @@ describe("Wave progression", () => {
     expect(state.formation.enemy.frontline[0]?.instanceId).toBe(
       "wave-2-front",
     );
+    expect(state.commandDeck).toBe(commandDeckBeforeWaveChange);
   });
 
   it("can advance after an enemy-turn recurring effect clears the Wave", () => {
