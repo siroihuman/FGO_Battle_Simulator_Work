@@ -48,6 +48,15 @@ if (manifest) {
     JSON.stringify(manifest.coreRules.enemyActiveModes) === JSON.stringify([3, 6]),
     "敵同時出現モードは3体と6体でなければなりません"
   );
+  assert(manifest.coreRules.enemyNormalActionBudget === 3, "敵の通常行動予算は3でなければなりません");
+  assert(
+    JSON.stringify(manifest.coreRules.enemyIndividualMaxActions) === JSON.stringify(["auto", 1, 2, 3]),
+    "敵個別行動上限は自動・1・2・3でなければなりません"
+  );
+  assert(
+    manifest.coreRules.enemyPrioritySkillsConsumeNormalActions === false,
+    "敵優先スキルは通常行動回数を消費してはいけません"
+  );
   assert(manifest.coreRules.maxBreakGauges === 10, "ブレイクゲージ上限は10でなければなりません");
   assert(manifest.coreRules.starCap === 99, "スター上限は99でなければなりません");
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
