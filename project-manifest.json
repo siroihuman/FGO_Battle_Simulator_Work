@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.0.0",
-  "status": "calculation-foundation",
+  "status": "effect-foundation",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
