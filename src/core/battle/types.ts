@@ -7,6 +7,8 @@ export interface BattleUnitState {
   dataId: string;
   name: string;
   side: BattleSide;
+  /** Maximum HP before temporary max-HP states are applied. */
+  baseMaxHp: number;
   maxHp: number;
   hp: number;
   np: number;

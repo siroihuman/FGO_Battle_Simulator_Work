@@ -9,12 +9,14 @@ export function unit(
   side: BattleSide,
   options: Partial<BattleUnitState> = {},
 ): BattleUnitState {
+  const baseMaxHp = options.baseMaxHp ?? options.maxHp ?? 10_000;
   return {
     instanceId,
     dataId: options.dataId ?? instanceId.replace(/\d+$/, ""),
     name: options.name ?? instanceId,
     side,
-    maxHp: options.maxHp ?? 10_000,
+    baseMaxHp,
+    maxHp: options.maxHp ?? baseMaxHp,
     hp: options.hp ?? 10_000,
     np: options.np ?? 0,
     deathRatePermille: options.deathRatePermille ?? 0,

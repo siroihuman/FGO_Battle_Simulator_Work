@@ -1,6 +1,7 @@
 import type { BattleUnitState } from "../core/battle/types";
 import { assertSafeInteger } from "../core/numeric";
 import type { DeterministicRng } from "../core/rng";
+import { reconcileMaxHp } from "./maxHp";
 import {
   COMMON_EFFECT_TYPES,
   classificationsOverlap,
@@ -67,13 +68,11 @@ export function removeEffects(
   const selected = selectCandidates(unit, request);
   const selectedIds = new Set(selected.map(({ instanceId }) => instanceId));
   const reason: EffectRemovalReason = request.force ? "forced" : "dispel";
+  const effects = unit.effects.filter(
+    ({ instanceId }) => !selectedIds.has(instanceId),
+  );
   return {
-    unit: {
-      ...unit,
-      effects: unit.effects.filter(
-        ({ instanceId }) => !selectedIds.has(instanceId),
-      ),
-    },
+    unit: reconcileMaxHp(unit, effects),
     removed: selected.map((effect) => ({ effect, reason })),
   };
 }
@@ -157,13 +156,11 @@ export function attemptRemoveEffects(
       .map(({ effect }) => effect.instanceId),
   );
   const reason: EffectRemovalReason = request.force ? "forced" : "dispel";
+  const effects = unit.effects.filter(
+    ({ instanceId }) => !removedIds.has(instanceId),
+  );
   return {
-    unit: {
-      ...unit,
-      effects: unit.effects.filter(
-        ({ instanceId }) => !removedIds.has(instanceId),
-      ),
-    },
+    unit: reconcileMaxHp(unit, effects),
     removed: attempts
       .filter(({ outcome }) => outcome === "removed")
       .map(({ effect }) => ({ effect, reason })),

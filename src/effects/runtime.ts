@@ -1,5 +1,9 @@
 import type { BattleSide, BattleUnitState } from "../core/battle/types";
 import { assertSafeInteger } from "../core/numeric";
+import {
+  applyMaxHpState,
+  reconcileMaxHp,
+} from "./maxHp";
 import type {
   AppliedEffect,
   EffectRuntimeCounters,
@@ -56,8 +60,12 @@ export function applyEffect(
     registrationOrder: counters.nextRegistrationOrder,
     flags: { ...(template.flags ?? {}) },
   };
+  const unitWithEffect = {
+    ...target,
+    effects: [...target.effects, effect],
+  };
   return {
-    unit: { ...target, effects: [...target.effects, effect] },
+    unit: applyMaxHpState(unitWithEffect, effect),
     effect,
     counters: {
       nextInstanceNumber: counters.nextInstanceNumber + 1,
@@ -110,18 +118,21 @@ export function consumeUnitEffectUse(
     return { unit, consumed: false };
   }
   return {
-    unit: {
-      ...unit,
-      effects: result.effect
-        ? unit.effects.map((candidate) =>
+    unit: result.effect
+      ? {
+          ...unit,
+          effects: unit.effects.map((candidate) =>
             candidate.instanceId === effectInstanceId
               ? result.effect!
-              : candidate
-          )
-        : unit.effects.filter(
+              : candidate,
+          ),
+        }
+      : reconcileMaxHp(
+          unit,
+          unit.effects.filter(
             (candidate) => candidate.instanceId !== effectInstanceId,
           ),
-    },
+        ),
     consumed: true,
     removed: result.removed,
   };
@@ -153,5 +164,5 @@ export function advanceOwnerTurnEnd(
     }
     return [{ ...effect, remainingTurns }];
   });
-  return { unit: { ...unit, effects }, removed };
+  return { unit: reconcileMaxHp(unit, effects), removed };
 }
