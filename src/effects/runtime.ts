@@ -1,4 +1,5 @@
 import type { BattleSide, BattleUnitState } from "../core/battle/types";
+import { assertSafeInteger } from "../core/numeric";
 import type {
   AppliedEffect,
   EffectRuntimeCounters,
@@ -32,6 +33,11 @@ export function applyEffect(
   }
   assertOptionalCount(template.remainingTurns, "remainingTurns");
   assertOptionalCount(template.remainingUses, "remainingUses");
+  assertSafeInteger(template.value ?? 0, "effect value");
+  const classifications = [...new Set(template.classifications ?? [])];
+  if (classifications.some((classification) => classification.length === 0)) {
+    throw new RangeError("effect classifications must not contain empty strings");
+  }
   const effect: AppliedEffect = {
     instanceId: `effect-${counters.nextInstanceNumber}`,
     stableId: template.stableId,
@@ -40,6 +46,7 @@ export function applyEffect(
     category: template.category,
     sourceInstanceId,
     targetInstanceId: target.instanceId,
+    classifications,
     value: template.value ?? 0,
     remainingTurns: template.remainingTurns ?? null,
     remainingUses: template.remainingUses ?? null,

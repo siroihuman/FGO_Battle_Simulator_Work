@@ -6,7 +6,7 @@ export function App() {
       <p className="eyebrow">FGO Battle Simulator Work</p>
       <h1>状態・効果基盤</h1>
       <p>
-        戦闘UIの実装前に、計算の再現性と状態・対象処理を保証する基盤を検証しています。
+        戦闘UIの実装前に、計算の再現性と状態の付与・耐性・無効・解除を保証する基盤を検証しています。
       </p>
       <dl>
         <div>

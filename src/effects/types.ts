@@ -3,6 +3,7 @@ import type { BattleSide } from "../core/battle/types";
 export type EffectCategory = "buff" | "debuff" | "other";
 export type EffectRemovalPolicy = "removable" | "id_only" | "unremovable";
 export type EffectDurationTick = "owner_turn_end" | "manual";
+export type EffectClassification = string;
 
 export type TriggerTiming =
   | "on_apply"
@@ -41,6 +42,7 @@ export interface EffectTemplate {
   name: string;
   effectType: string;
   category: EffectCategory;
+  classifications?: readonly EffectClassification[];
   value?: number;
   remainingTurns?: number | null;
   remainingUses?: number | null;
@@ -65,6 +67,7 @@ export interface AppliedEffect extends Required<
   instanceId: string;
   sourceInstanceId: string | null;
   targetInstanceId: string;
+  classifications: EffectClassification[];
   value: number;
   remainingTurns: number | null;
   remainingUses: number | null;
