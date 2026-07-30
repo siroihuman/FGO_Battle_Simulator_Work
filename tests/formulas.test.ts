@@ -7,8 +7,19 @@ import {
   drawDamageRandom,
 } from "../src/formulas/damageRandom";
 import { distributeDamageAcrossHits } from "../src/formulas/hitDistribution";
-import { addNp, applyOverkillNp, npCap } from "../src/formulas/np";
-import { addStars, resolveStarsForHit } from "../src/formulas/stars";
+import {
+  addNp,
+  applyOverkillNp,
+  calculateAttackNp,
+  calculateReceivedNp,
+  npCap,
+} from "../src/formulas/np";
+import {
+  addStars,
+  calculateStarRate,
+  distributeStarsToCards,
+  resolveStarsForHit,
+} from "../src/formulas/stars";
 
 // Reference values checked 2026-07-30:
 // https://w.atwiki.jp/f_go/pages/304.html
@@ -54,6 +65,47 @@ describe("NP calculation primitives", () => {
     expect(applyOverkillNp(101, true)).toBe(151);
     expect(applyOverkillNp(101, false)).toBe(101);
   });
+
+  it("matches the documented Ereshkigal first-Arts example", () => {
+    expect(
+      calculateAttackNp({
+        baseNpUnits: 54,
+        cardNpValuePermille: 3_000,
+        cardPerformanceModPermille: 110,
+        firstCardBonusPermille: 1_000,
+        targetNpRatePermille: 1_000,
+        overkillOrOvergaugeByHit: [false, false, false, false, false, false],
+      }),
+    ).toEqual({
+      baseUnitsPerHit: 233,
+      normalHits: 6,
+      overkillHits: 0,
+      totalUnits: 1_398,
+    });
+  });
+
+  it("floors after summing normal and 1.5x overkill hits", () => {
+    expect(
+      calculateAttackNp({
+        baseNpUnits: 54,
+        cardNpValuePermille: 3_000,
+        cardPerformanceModPermille: 110,
+        firstCardBonusPermille: 1_000,
+        targetNpRatePermille: 1_000,
+        overkillOrOvergaugeByHit: [false, true, true, true, true, true],
+      }).totalUnits,
+    ).toBe(1_980);
+  });
+
+  it("calculates received NP per hit before the card total", () => {
+    expect(
+      calculateReceivedNp({
+        baseDefenseNpUnits: 300,
+        attackerNpRatePermille: 1_000,
+        overkillByHit: [false, false, false],
+      }).totalUnits,
+    ).toBe(900);
+  });
 });
 
 describe("star calculation primitives", () => {
@@ -70,5 +122,50 @@ describe("star calculation primitives", () => {
 
   it("keeps inventory at the 99-star cap", () => {
     expect(addStars(95, 10)).toBe(99);
+  });
+
+  it("matches the documented Jack first-Quick star-rate example", () => {
+    expect(
+      calculateStarRate({
+        servantStarRatePermille: 255,
+        cardStarValuePermille: 800,
+        cardPerformanceModPermille: 500,
+        firstCardBonusPermille: 200,
+        starGenerationModPermille: 105,
+      }),
+    ).toBe(1_760);
+  });
+
+  it("adds the overkill bonus after the base rate and caps at 300%", () => {
+    expect(
+      calculateStarRate({
+        servantStarRatePermille: 255,
+        cardStarValuePermille: 1_300,
+        cardPerformanceModPermille: 500,
+        firstCardBonusPermille: 200,
+        starGenerationModPermille: 105,
+        criticalBonusPermille: 200,
+        isOverkillOrOvergauge: true,
+      }),
+    ).toBe(3_000);
+  });
+
+  it("distributes at most ten stars to each of five cards", () => {
+    const rng = new BattleRng("star-distribution").stream("stars");
+    const result = distributeStarsToCards(
+      75,
+      [
+        { id: "a", baseWeight: 194 },
+        { id: "b", baseWeight: 194 },
+        { id: "c", baseWeight: 102 },
+        { id: "d", baseWeight: 102 },
+        { id: "e", baseWeight: 10 },
+      ],
+      rng,
+    );
+    expect([...result.randomBonuses].sort((a, b) => b - a)).toEqual([50, 20, 20, 0, 0]);
+    expect(result.starsByCard.every((stars) => stars === 10)).toBe(true);
+    expect(result.distributed).toBe(50);
+    expect(result.unassigned).toBe(25);
   });
 });
