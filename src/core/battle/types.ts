@@ -10,6 +10,8 @@ export interface BattleUnitState {
   maxHp: number;
   hp: number;
   np: number;
+  /** Base instant-death rate (DR) in permille. Missing enemy data uses 0. */
+  deathRatePermille: number;
   alive: boolean;
   traits: string[];
   effects: AppliedEffect[];

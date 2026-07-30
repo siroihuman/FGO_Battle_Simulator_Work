@@ -108,4 +108,8 @@
 - `src/effects/modifiers.ts`は共通の成功率・耐性種別と分類限定照合を管理する。
 - `src/effects/removal.ts`は解除候補の確定、解除成功率、解除耐性を管理する。
 - `src/effects/actions.ts`はHP・NP・状態を変更する宣言的な共通アクションを記述順に実行する。
+- `src/effects/defense.ts`は防御状態の優先順、貫通、攻撃／Hit単位の回数消費とダメージ式へ渡す防御値を管理する。
+- `src/effects/survival.ts`は中間ブレイク、ガッツ、最終死亡、死亡時効果の可否を1か所で確定する。
+- `src/effects/instantDeath.ts`は基礎即死率、成功率・耐性・無効を判定してから共通死亡処理を呼ぶ。
+- 戦闘個体は敵・味方とも`deathRatePermille`を持ち、敵データ未設定時は0とする。
 - 確率0%以下、100%以上、対象不在では乱数を消費しない。

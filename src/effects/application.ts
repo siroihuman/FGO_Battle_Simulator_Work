@@ -8,7 +8,7 @@ import {
 } from "./modifiers";
 import {
   applyEffect,
-  consumeEffectUse,
+  consumeUnitEffectUse,
 } from "./runtime";
 import type {
   AppliedEffect,
@@ -135,21 +135,8 @@ function consumeImmunity(
   unit: BattleUnitState,
   immunity: AppliedEffect,
 ): { unit: BattleUnitState; consumed: boolean } {
-  if (immunity.remainingUses === null) return { unit, consumed: false };
-  const result = consumeEffectUse(immunity);
-  return {
-    unit: {
-      ...unit,
-      effects: result.effect
-        ? unit.effects.map((effect) =>
-            effect.instanceId === immunity.instanceId ? result.effect! : effect
-          )
-        : unit.effects.filter(
-            (effect) => effect.instanceId !== immunity.instanceId,
-          ),
-    },
-    consumed: true,
-  };
+  const result = consumeUnitEffectUse(unit, immunity.instanceId);
+  return { unit: result.unit, consumed: result.consumed };
 }
 
 /**

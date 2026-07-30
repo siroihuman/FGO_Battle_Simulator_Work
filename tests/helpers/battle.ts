@@ -17,6 +17,7 @@ export function unit(
     maxHp: options.maxHp ?? 10_000,
     hp: options.hp ?? 10_000,
     np: options.np ?? 0,
+    deathRatePermille: options.deathRatePermille ?? 0,
     alive: options.alive ?? true,
     traits: options.traits ?? [],
     effects: options.effects ?? [],
