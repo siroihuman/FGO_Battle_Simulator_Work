@@ -101,6 +101,22 @@ if (manifest) {
     manifest.coreRules.stopEnemySequenceOnAllyAnnihilation === true,
     "味方全滅後は残り敵行動を開始してはいけません"
   );
+  assert(
+    manifest.coreRules.damageRandomDrawsPerAllowedTarget === 1,
+    "ダメージを許可された対象ごとのダメージ乱数は1回でなければなりません"
+  );
+  assert(
+    manifest.coreRules.multiTargetHitOrder === "hit_then_frontline",
+    "複数対象攻撃はHit番号、前衛枠順で処理しなければなりません"
+  );
+  assert(
+    manifest.coreRules.sourceAttackStateConsumesPerTarget === false,
+    "攻撃側状態を全体攻撃の対象ごとに消費してはいけません"
+  );
+  assert(
+    manifest.coreRules.protectionAllowsNpAndStarWork === true,
+    "防御によるダメージ無効後もNP・スター処理を継続しなければなりません"
+  );
   assert(manifest.coreRules.maxBreakGauges === 10, "ブレイクゲージ上限は10でなければなりません");
   assert(manifest.coreRules.starCap === 99, "スター上限は99でなければなりません");
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");

@@ -34,8 +34,20 @@ export interface ActivatedProtection {
   consumedUse: boolean;
 }
 
-export interface AttackDefenseResolution {
+export interface AttackDefenseCapabilities {
+  sureHit: boolean;
+  invincibilityPierce: boolean;
+  ignoreDefense: boolean;
+}
+
+export interface AttackSourceDefenseResolution
+  extends AttackDefenseCapabilities {
   source: BattleUnitState | null;
+  consumedSourceEffectInstanceIds: string[];
+}
+
+export interface AttackTargetDefenseResolution
+  extends AttackDefenseCapabilities {
   target: BattleUnitState;
   outcome: AttackDefenseOutcome;
   /** False only when evasion/invincibility/solemn defense nullifies damage. */
@@ -59,8 +71,13 @@ export interface AttackDefenseResolution {
   damageCut: number;
   /** Pass this value to DamageInput.targetFixedDamage. */
   targetFixedDamage: number;
-  consumedSourceEffectInstanceIds: string[];
   consumedTargetEffectInstanceIds: string[];
+}
+
+export interface AttackDefenseResolution
+  extends AttackTargetDefenseResolution {
+  source: BattleUnitState | null;
+  consumedSourceEffectInstanceIds: string[];
 }
 
 const PROTECTION_PRIORITY = [
@@ -230,16 +247,14 @@ function sumValues(effects: readonly AppliedEffect[], name: string): number {
 }
 
 /**
- * Resolves target protection and the target-side damage buckets for one
- * attack/hit phase. Protection priority is solemn defense, invincibility,
- * then evasion. A penetrated count-based protection still consumes one use.
+ * Resolves and consumes source-side penetration states once for an attack or
+ * emitted Hit. Multi-target attacks reuse the returned capabilities for every
+ * target in the same phase.
  */
-export function resolveAttackDefense(
+export function resolveAttackSourceDefense(
   source: BattleUnitState | null,
-  target: BattleUnitState,
   context: AttackDefenseContext,
-  rng: DeterministicRng,
-): AttackDefenseResolution {
+): AttackSourceDefenseResolution {
   const sourceMatches = Object.fromEntries(
     SOURCE_ATTACK_EFFECT_TYPES.map((effectType) => [
       effectType,
@@ -272,6 +287,31 @@ export function resolveAttackDefense(
     );
   }
 
+  return {
+    source: currentSource,
+    sureHit,
+    invincibilityPierce,
+    ignoreDefense,
+    consumedSourceEffectInstanceIds,
+  };
+}
+
+/**
+ * Resolves one target's protection and target-side damage buckets for an
+ * attack/hit phase. Protection priority is solemn defense, invincibility,
+ * then evasion. A penetrated count-based protection still consumes one use.
+ */
+export function resolveAttackTargetDefense(
+  target: BattleUnitState,
+  context: AttackDefenseContext,
+  capabilities: AttackDefenseCapabilities,
+  rng: DeterministicRng,
+): AttackTargetDefenseResolution {
+  const {
+    sureHit,
+    invincibilityPierce,
+    ignoreDefense,
+  } = capabilities;
   let currentTarget = target;
   const consumedTargetEffectInstanceIds: string[] = [];
   let protection: ActivatedProtection | undefined;
@@ -306,7 +346,6 @@ export function resolveAttackDefense(
 
     if (!bypassed) {
       return {
-        source: currentSource,
         target: currentTarget,
         outcome: protectionOutcome(kind),
         damageAllowed: false,
@@ -320,7 +359,6 @@ export function resolveAttackDefense(
         specialDefenseModPermille: 0,
         damageCut: 0,
         targetFixedDamage: 0,
-        consumedSourceEffectInstanceIds,
         consumedTargetEffectInstanceIds,
       };
     }
@@ -366,7 +404,6 @@ export function resolveAttackDefense(
   );
 
   return {
-    source: currentSource,
     target: currentTarget,
     outcome: "damage_allowed",
     damageAllowed: true,
@@ -380,8 +417,33 @@ export function resolveAttackDefense(
     specialDefenseModPermille,
     damageCut,
     targetFixedDamage: -damageCut,
-    consumedSourceEffectInstanceIds,
     consumedTargetEffectInstanceIds,
+  };
+}
+
+/**
+ * Convenience resolver for one source-target pair. Multi-target attack
+ * engines should call the source resolver once, then the target resolver for
+ * each target so source-side count states are not consumed per target.
+ */
+export function resolveAttackDefense(
+  source: BattleUnitState | null,
+  target: BattleUnitState,
+  context: AttackDefenseContext,
+  rng: DeterministicRng,
+): AttackDefenseResolution {
+  const sourceResolution = resolveAttackSourceDefense(source, context);
+  const targetResolution = resolveAttackTargetDefense(
+    target,
+    context,
+    sourceResolution,
+    rng,
+  );
+  return {
+    ...targetResolution,
+    source: sourceResolution.source,
+    consumedSourceEffectInstanceIds:
+      sourceResolution.consumedSourceEffectInstanceIds,
   };
 }
 

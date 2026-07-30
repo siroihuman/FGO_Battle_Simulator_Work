@@ -4,9 +4,9 @@ export function App() {
   return (
     <main>
       <p className="eyebrow">FGO Battle Simulator Work</p>
-      <h1>味方・敵行動列基盤</h1>
+      <h1>攻撃Hit解決基盤</h1>
       <p>
-        戦闘UIの実装前に、味方3枚とExtra Attack、敵の優先スキルと通常3枠の順序実行、各行動後の交代・補充を検証しています。
+        戦闘UIの実装前に、単体・全体攻撃の対象別ダメージ、Hit、防御、ブレイク・ガッツ・死亡、NP・スターを検証しています。
       </p>
       <dl>
         <div>
