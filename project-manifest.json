@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.18.0",
-  "status": "attack-hit-resolution",
+  "dataSchemaVersion": "1.19.0",
+  "status": "battle-attack-star-state",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -60,6 +60,12 @@
     "protectionAllowsNpAndStarWork": true,
     "maxBreakGauges": 10,
     "starCap": 99,
+    "starBuckets": [
+      "command",
+      "next_command"
+    ],
+    "attackGeneratedStarsDestination": "next_command",
+    "quickChainStarsDestination": "next_command",
     "starCarryBeyondNextCommandPhase": false,
     "servantSkillLevel": "max",
     "mysticCodeLevel": "max",
