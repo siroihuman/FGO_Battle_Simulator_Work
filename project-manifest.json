@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.14.0",
-  "status": "enemy-action-planning",
+  "dataSchemaVersion": "1.15.0",
+  "status": "completed-action-boundary",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -43,6 +43,9 @@
       3
     ],
     "enemyPrioritySkillsConsumeNormalActions": false,
+    "completedActionBoundary": true,
+    "enemyRetargetOrder": "rear_then_wrap",
+    "immediateReplacementUnconditionalTargetPriority": false,
     "maxBreakGauges": 10,
     "starCap": 99,
     "starCarryBeyondNextCommandPhase": false,

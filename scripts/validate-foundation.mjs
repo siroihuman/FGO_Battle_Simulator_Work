@@ -57,6 +57,18 @@ if (manifest) {
     manifest.coreRules.enemyPrioritySkillsConsumeNormalActions === false,
     "敵優先スキルは通常行動回数を消費してはいけません"
   );
+  assert(
+    manifest.coreRules.completedActionBoundary === true,
+    "死亡・補充は完了済み行動の境界で処理しなければなりません"
+  );
+  assert(
+    manifest.coreRules.enemyRetargetOrder === "rear_then_wrap",
+    "対象消滅後は後方枠から前方へ回り込まなければなりません"
+  );
+  assert(
+    manifest.coreRules.immediateReplacementUnconditionalTargetPriority === false,
+    "即時補充された敵を無条件に優先してはいけません"
+  );
   assert(manifest.coreRules.maxBreakGauges === 10, "ブレイクゲージ上限は10でなければなりません");
   assert(manifest.coreRules.starCap === 99, "スター上限は99でなければなりません");
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");

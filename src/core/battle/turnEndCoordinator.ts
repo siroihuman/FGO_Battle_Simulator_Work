@@ -1,5 +1,4 @@
 import type { DeterministicRng } from "../rng";
-import { rebuildCommandCardDeck } from "../cards/deck";
 import {
   advanceSideTurnEndDurations,
   createSideTurnEndSnapshot,
@@ -27,6 +26,7 @@ import {
   completeEnemyTurnEnd,
 } from "./progression";
 import {
+  applyAllyDepartureDeckRebuild,
   resolveAllyDefeatReplacement,
   resolveEnemyReplacement,
   type AllyDefeatReplacementResult,
@@ -68,21 +68,6 @@ function applyFormation(
   return formation === state.formation
     ? state
     : setBattleFormation(state, formation);
-}
-
-function applyAllyDepartureDeckRebuild(
-  state: BattleState,
-  replacement: AllyDefeatReplacementResult,
-): BattleState {
-  if (!replacement.cardDeckRebuildRequired) return state;
-  return {
-    ...state,
-    commandDeck: rebuildCommandCardDeck(
-      state.commandDeck,
-      state.formation.ally,
-      "ally_departure",
-    ),
-  };
 }
 
 function assertCoordinatorPhase(

@@ -49,9 +49,9 @@ function cardId(ownerInstanceId: string, cardIndex: number): string {
 
 function buildSourceCards(ally: SideFormation): CommandCard[] {
   const frontline = livingFrontline(ally);
-  if (frontline.length < 1 || frontline.length > 3) {
+  if (frontline.length > 3) {
     throw new RangeError(
-      "command deck requires from 1 to 3 living frontline allies",
+      "command deck supports at most 3 living frontline allies",
     );
   }
   return frontline.flatMap((unit) => {

@@ -2,6 +2,7 @@ import {
   setBattleFormation,
   type BattleState,
 } from "./state";
+import { rebuildCommandCardDeck } from "../cards/deck";
 import type {
   BattleFormation,
   BattleUnitState,
@@ -19,10 +20,28 @@ export interface AllyDefeatReplacementResult {
   state: BattleState;
   events: AllyDefeatReplacementEvent[];
   /**
-   * Ally departure rebuilds the command-card deck. The card subsystem will
-   * consume this signal when it is added.
+   * Ally departure rebuilds the next command-card distribution.
    */
   cardDeckRebuildRequired: boolean;
+}
+
+/**
+ * Rebuilds only the next command-card distribution after an ally departure.
+ * The five cards currently being resolved remain unchanged.
+ */
+export function applyAllyDepartureDeckRebuild(
+  state: BattleState,
+  replacement: AllyDefeatReplacementResult,
+): BattleState {
+  if (!replacement.cardDeckRebuildRequired) return state;
+  return {
+    ...state,
+    commandDeck: rebuildCommandCardDeck(
+      state.commandDeck,
+      state.formation.ally,
+      "ally_departure",
+    ),
+  };
 }
 
 export type EnemyReplacementBoundary =
