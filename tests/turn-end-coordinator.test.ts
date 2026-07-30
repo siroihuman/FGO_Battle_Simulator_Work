@@ -360,6 +360,16 @@ describe("ally turn-end coordinator", () => {
     expect(result.allyReplacement.cardDeckRebuildRequired).toBe(
       true,
     );
+    expect(result.state.commandDeck).toMatchObject({
+      cycle: 2,
+      drawsInCycle: 0,
+      lastRebuildReason: "ally_departure",
+    });
+    expect(new Set(
+      result.state.commandDeck.sourceCards.map(
+        ({ ownerInstanceId }) => ownerInstanceId,
+      ),
+    )).toEqual(new Set(["ally-a", "ally-c", "ally-d"]));
   });
 });
 
