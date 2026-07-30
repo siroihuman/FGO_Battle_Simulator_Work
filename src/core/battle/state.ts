@@ -3,6 +3,7 @@ import {
   createCommandCardDeck,
   type CommandCardDeckState,
 } from "../cards/deck";
+import { npCap } from "../../formulas/np";
 import { assertValidFormation } from "./formation";
 import type {
   BattleFormation,
@@ -279,6 +280,44 @@ function assertCommandCards(
   }
 }
 
+function assertNoblePhantasm(
+  unit: BattleUnitState,
+  label: string,
+): void {
+  assertSafeInteger(unit.np, `${label} NP`);
+  if (unit.np < 0) {
+    throw new RangeError(`${label} NP must not be negative`);
+  }
+  const noblePhantasm = unit.noblePhantasm;
+  if (!noblePhantasm) return;
+  if (!noblePhantasm.stableId || !noblePhantasm.name) {
+    throw new RangeError(
+      `${label} noblePhantasm stableId and name are required`,
+    );
+  }
+  if (
+    noblePhantasm.cardType !== "buster"
+    && noblePhantasm.cardType !== "arts"
+    && noblePhantasm.cardType !== "quick"
+  ) {
+    throw new RangeError(`${label} noblePhantasm cardType is invalid`);
+  }
+  if (
+    noblePhantasm.level !== 1
+    && noblePhantasm.level !== 2
+    && noblePhantasm.level !== 3
+    && noblePhantasm.level !== 4
+    && noblePhantasm.level !== 5
+  ) {
+    throw new RangeError(`${label} noblePhantasm level must be from 1 to 5`);
+  }
+  if (unit.np > npCap(noblePhantasm.level)) {
+    throw new RangeError(
+      `${label} NP exceeds the noblePhantasm level cap`,
+    );
+  }
+}
+
 function countPendingBreaks(formation: SideFormation): number {
   return listedUnits(formation).filter(({ breakPending }) => breakPending).length;
 }
@@ -396,10 +435,12 @@ function assertCurrentFormation(
     assertBreakState(unit, `ally ${unit.instanceId}`);
     assertSkillCooldowns(unit, `ally ${unit.instanceId}`);
     assertCommandCards(unit, `ally ${unit.instanceId}`);
+    assertNoblePhantasm(unit, `ally ${unit.instanceId}`);
   }
   for (const unit of listedUnits(formation.enemy)) {
     assertBreakState(unit, `enemy ${unit.instanceId}`);
     assertSkillCooldowns(unit, `enemy ${unit.instanceId}`);
+    assertNoblePhantasm(unit, `enemy ${unit.instanceId}`);
   }
   assertValidFormation(formation);
 }

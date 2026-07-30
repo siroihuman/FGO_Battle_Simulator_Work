@@ -32,6 +32,7 @@ export function unit(
       "arts",
       "quick",
     ],
+    noblePhantasm: options.noblePhantasm ?? null,
     traits: options.traits ?? [],
     effects: options.effects ?? [],
     skillCooldowns: options.skillCooldowns ?? [0, 0, 0],
