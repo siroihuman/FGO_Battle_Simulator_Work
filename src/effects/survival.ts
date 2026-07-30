@@ -17,7 +17,8 @@ export type LethalHpOutcome =
 export interface LethalHpOptions {
   /**
    * Intermediate break gauges do not activate guts. The break transition is
-   * finalized by the battle turn-end coordinator.
+   * finalized by the battle turn-end coordinator. When omitted, the unit's
+   * remaining break gauges determine this automatically.
    */
   intermediateBreak?: boolean;
   /** Used by instant-death demerits explicitly carrying guts-ignore. */
@@ -116,9 +117,17 @@ export function resolveLethalHp(
     };
   }
 
-  if (options.intermediateBreak) {
+  const intermediateBreak =
+    options.intermediateBreak
+    ?? unit.remainingBreakGauges.length > 0;
+  if (intermediateBreak) {
     return {
-      unit: { ...unit, hp: 0, alive: true },
+      unit: {
+        ...unit,
+        hp: 0,
+        alive: true,
+        breakPending: true,
+      },
       outcome: "break_pending",
       consumedGutsUse: false,
       recoveryHp: 0,
