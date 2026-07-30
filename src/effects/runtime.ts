@@ -84,6 +84,49 @@ export function consumeEffectUse(
   return { effect: { ...effect, remainingUses } };
 }
 
+export interface UnitEffectUseConsumption {
+  unit: BattleUnitState;
+  consumed: boolean;
+  removed?: RemovedEffect;
+}
+
+/**
+ * Consumes a count from a concrete effect instance on a unit.
+ * Unlimited effects are returned unchanged and report consumed=false.
+ */
+export function consumeUnitEffectUse(
+  unit: BattleUnitState,
+  effectInstanceId: string,
+  amount = 1,
+): UnitEffectUseConsumption {
+  const effect = unit.effects.find(
+    (candidate) => candidate.instanceId === effectInstanceId,
+  );
+  if (!effect) {
+    return { unit, consumed: false };
+  }
+  const result = consumeEffectUse(effect, amount);
+  if (effect.remainingUses === null) {
+    return { unit, consumed: false };
+  }
+  return {
+    unit: {
+      ...unit,
+      effects: result.effect
+        ? unit.effects.map((candidate) =>
+            candidate.instanceId === effectInstanceId
+              ? result.effect!
+              : candidate
+          )
+        : unit.effects.filter(
+            (candidate) => candidate.instanceId !== effectInstanceId,
+          ),
+    },
+    consumed: true,
+    removed: result.removed,
+  };
+}
+
 export function advanceOwnerTurnEnd(
   unit: BattleUnitState,
   endingSide: BattleSide,

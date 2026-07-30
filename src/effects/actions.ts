@@ -4,6 +4,13 @@ import type { DeterministicRng } from "../core/rng";
 import { addNp, npCap } from "../formulas/np";
 import type { NoblePhantasmLevel } from "../formulas/np";
 import {
+  resolveInstantDeath,
+} from "./instantDeath";
+import type {
+  InstantDeathOptions,
+  InstantDeathResult,
+} from "./instantDeath";
+import {
   resolveEffectApplication,
 } from "./application";
 import type {
@@ -17,11 +24,28 @@ import type {
   EffectRemovalAttempt,
   EffectRemovalRequest,
 } from "./removal";
+import {
+  resolveLethalHp,
+} from "./survival";
+import type {
+  LethalHpResolution,
+} from "./survival";
 import type { EffectRuntimeCounters } from "./types";
 
 export type CommonAction =
   | { kind: "heal_hp"; amount: number }
-  | { kind: "reduce_hp"; amount: number; canDefeat: boolean }
+  | {
+      kind: "reduce_hp";
+      amount: number;
+      canDefeat: boolean;
+      intermediateBreak?: boolean;
+      ignoreGuts?: boolean;
+      percentageGutsRecoveryModifierPermille?: number;
+    }
+  | {
+      kind: "instant_death";
+      options: InstantDeathOptions;
+    }
   | {
       kind: "change_np";
       amount: number;
@@ -48,6 +72,8 @@ export interface CommonActionResult {
   npChange?: number;
   applicationResults?: EffectApplicationResult[];
   removalAttempts?: EffectRemovalAttempt[];
+  survivalResult?: LethalHpResolution;
+  instantDeathResult?: InstantDeathResult;
 }
 
 function assertNonNegativeAmount(amount: number, name: string): void {
@@ -80,6 +106,25 @@ export function executeCommonAction(
       applicationResults: result.results,
     };
   }
+  if (action.kind === "instant_death") {
+    const result = resolveInstantDeath(
+      source,
+      target,
+      action.options,
+      rng,
+    );
+    return {
+      action,
+      outcome:
+        result.outcome === "no_target"
+          ? "no_target"
+          : result.target !== target ? "changed" : "unchanged",
+      target: result.target,
+      counters,
+      instantDeathResult: result,
+      survivalResult: result.survival,
+    };
+  }
   if (!target) {
     return { action, outcome: "no_target", target, counters };
   }
@@ -108,15 +153,26 @@ export function executeCommonAction(
     const minimum = action.canDefeat ? 0 : 1;
     const reducibleHp = Math.max(0, target.hp - minimum);
     const hp = target.hp - Math.min(action.amount, reducibleHp);
+    const reducedTarget =
+      hp === target.hp
+        ? target
+        : { ...target, hp, alive: hp > 0 };
+    const survivalResult =
+      action.canDefeat && hp === 0
+        ? resolveLethalHp(reducedTarget, {
+            intermediateBreak: action.intermediateBreak,
+            ignoreGuts: action.ignoreGuts,
+            percentageRecoveryModifierPermille:
+              action.percentageGutsRecoveryModifierPermille,
+          })
+        : undefined;
     return {
       action,
       outcome: hp === target.hp ? "unchanged" : "changed",
-      target:
-        hp === target.hp
-          ? target
-          : { ...target, hp, alive: hp > 0 },
+      target: survivalResult?.unit ?? reducedTarget,
       counters,
       hpChange: hp - target.hp,
+      survivalResult,
     };
   }
 
