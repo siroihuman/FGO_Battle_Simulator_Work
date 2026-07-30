@@ -4,9 +4,9 @@ export function App() {
   return (
     <main>
       <p className="eyebrow">FGO Battle Simulator Work</p>
-      <h1>カード・行動境界基盤</h1>
+      <h1>味方カード行動基盤</h1>
       <p>
-        戦闘UIの実装前に、コマンドカードと敵行動に加え、全Hit完了後の自動交代・補充と、対象消滅後の後方枠優先再選択を検証しています。
+        戦闘UIの実装前に、選択した3枚とExtra Attackの順序実行、実行直前判定、全Hit後の交代・補充、対象再選択を検証しています。
       </p>
       <dl>
         <div>

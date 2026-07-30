@@ -69,6 +69,22 @@ if (manifest) {
     manifest.coreRules.immediateReplacementUnconditionalTargetPriority === false,
     "即時補充された敵を無条件に優先してはいけません"
   );
+  assert(
+    manifest.coreRules.allySelectedCommandActionCount === 3,
+    "味方の選択コマンド行動数は3でなければなりません"
+  );
+  assert(
+    manifest.coreRules.extraAttackAfterBraveChain === true,
+    "Braveチェイン後はExtra Attackを予定しなければなりません"
+  );
+  assert(
+    manifest.coreRules.commandExecutionRecheckedPerAction === true,
+    "各コマンド行動は実行直前に再確認しなければなりません"
+  );
+  assert(
+    manifest.coreRules.stopCommandSequenceWithoutEnemyTarget === true,
+    "敵対象が尽きた後は残りコマンド行動を開始してはいけません"
+  );
   assert(manifest.coreRules.maxBreakGauges === 10, "ブレイクゲージ上限は10でなければなりません");
   assert(manifest.coreRules.starCap === 99, "スター上限は99でなければなりません");
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");

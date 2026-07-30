@@ -116,7 +116,7 @@ function isNoblePhantasmSealed(unit: BattleUnitState): boolean {
   );
 }
 
-function ownerRestrictions(
+export function commandCardOwnerRestrictions(
   state: BattleState,
   ownerInstanceId: string,
 ): {
@@ -153,7 +153,10 @@ function noblePhantasmRestrictions(
   unit: BattleUnitState | null;
   restrictions: CommandCardExecutionRestriction[];
 } {
-  const owner = ownerRestrictions(state, card.ownerInstanceId);
+  const owner = commandCardOwnerRestrictions(
+    state,
+    card.ownerInstanceId,
+  );
   const restrictions = [...owner.restrictions];
   if (!owner.unit) {
     return { unit: null, restrictions };
@@ -184,7 +187,7 @@ export function commandCardExecutionRestrictions(
   card: SelectedCommandCard,
 ): CommandCardExecutionRestriction[] {
   if (card.kind === "normal") {
-    return ownerRestrictions(
+    return commandCardOwnerRestrictions(
       state,
       card.ownerInstanceId,
     ).restrictions;
