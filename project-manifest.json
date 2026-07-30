@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.0.0",
-  "status": "effect-foundation",
+  "dataSchemaVersion": "1.1.0",
+  "status": "effect-resolution",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
