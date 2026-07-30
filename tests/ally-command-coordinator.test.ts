@@ -3,6 +3,9 @@ import {
   resolveActionBoundary,
 } from "../src/core/battle/actionBoundary";
 import {
+  resolveBattleAttack,
+} from "../src/core/battle/battleAttack";
+import {
   findUnitLocation,
   replaceUnit,
 } from "../src/core/battle/formation";
@@ -14,6 +17,7 @@ import {
   type EnemyReplacementMode,
 } from "../src/core/battle/state";
 import type { NoblePhantasmState } from "../src/core/battle/types";
+import { BattleRng } from "../src/core/rng";
 import {
   listCommandCardChoices,
   selectCommandCards,
@@ -613,6 +617,123 @@ describe("ally command sequence coordinator", () => {
       { sequence: 3, kind: "selected_card" },
       { sequence: 4, kind: "extra_attack" },
     ]);
+  });
+
+  it("adds a Quick-chain bonus to the next command star bucket once", () => {
+    const ready = withHand(battle(), [
+      ["ally-a", 4],
+      ["ally-b", 4],
+      ["ally-c", 4],
+    ]);
+    const selection = select(ready, [
+      normalCardId(ready, "ally-a", 4),
+      normalCardId(ready, "ally-b", 4),
+      normalCardId(ready, "ally-c", 4),
+    ]);
+    const started = resolveAllyCommandSequence(
+      ready,
+      selection,
+      (input) => ({ state: input.state }),
+    );
+
+    expect(started.accepted).toBe(true);
+    if (!started.accepted) return;
+    expect(started.result.chain.quickChainStars).toBe(20);
+    expect(started.result.quickChainStarAddition).toMatchObject({
+      requested: 20,
+      added: 20,
+      after: 20,
+    });
+    expect(started.result.state.nextCommandStars).toBe(20);
+  });
+
+  it("connects the common attack resolver to each card and its action boundary", () => {
+    let prepared = mixedSelection(battle());
+    for (const target of ["enemy-a", "enemy-b", "enemy-c"]) {
+      prepared = {
+        ...prepared,
+        state: updateUnit(
+          prepared.state,
+          target,
+          (current) => ({
+            ...current,
+            hp: 1,
+            maxHp: 1,
+            baseMaxHp: 1,
+          }),
+        ),
+      };
+    }
+    prepared = {
+      state: prepared.state,
+      selection: select(prepared.state, prepared.selection.cards.map(
+        ({ cardId }) => cardId,
+      )),
+    };
+    const battleRng = new BattleRng("card-attack-integration");
+    const targets: string[] = [];
+    const started = resolveAllyCommandSequence(
+      prepared.state,
+      prepared.selection,
+      (input) => {
+        targets.push(input.target.instanceId);
+        const attack = resolveBattleAttack(input.state, {
+          sourceInstanceId: input.action.ownerInstanceId,
+          targets: [
+            {
+              targetInstanceId: input.target.instanceId,
+              damage: {
+                attack: 10_000,
+                cardDamageValuePermille:
+                  input.action.calculation.cardDamageValuePermille,
+                classAttackCoefficientPermille: 1_000,
+                classAffinityPermille: 1_000,
+                attributeAffinityPermille: 1_000,
+              },
+      stars: {
+        servantStarRatePermille: 700,
+        cardStarValuePermille: 0,
+      },
+            },
+          ],
+          hitWeights: [1],
+          defense: {
+            cardType:
+              input.action.kind === "selected_card"
+                ? input.action.calculation.card.type
+                : "extra",
+            isNoblePhantasm:
+              input.action.kind === "selected_card"
+              && input.action.calculation.card.kind ===
+                "noble_phantasm",
+          },
+          rng: {
+            effects: battleRng.stream("effects"),
+            damage: battleRng.stream("damage"),
+            stars: battleRng.stream("stars"),
+          },
+        });
+        return {
+          state: attack.state,
+          detail: attack.attack.hits[0].damage,
+        };
+      },
+    );
+
+    expect(started.accepted).toBe(true);
+    if (!started.accepted) return;
+    expect(targets).toEqual(["enemy-a", "enemy-b", "enemy-c"]);
+    expect(
+      started.result.actions.every(
+        ({ resolverDetail }) =>
+          typeof resolverDetail === "number"
+          && resolverDetail > 0,
+      ),
+    ).toBe(true);
+    expect(started.result.state.nextCommandStars).toBe(3);
+    expect(
+      started.result.state.formation.enemy.frontline,
+    ).toEqual([null, null, null]);
   });
 
   it("rechecks the Extra Attack owner and fizzles it after self-defeat", () => {

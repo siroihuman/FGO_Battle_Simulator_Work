@@ -3,6 +3,7 @@ import {
   hasLivingUnit,
   isCurrentWaveCleared,
 } from "./state";
+import { activateNextCommandStars } from "./starState";
 
 function assertPhase(
   state: BattleState,
@@ -34,8 +35,10 @@ function startNextWave(state: BattleState): BattleState {
   if (!nextWave) {
     throw new RangeError("cannot advance beyond the final Wave");
   }
+  const withActivatedStars =
+    activateNextCommandStars(state).state;
   return {
-    ...state,
+    ...withActivatedStars,
     formation: {
       ally: {
         frontline: [...state.formation.ally.frontline],
@@ -111,8 +114,10 @@ export function completeEnemyTurnEnd(state: BattleState): BattleState {
   assertPhase(state, "enemy_turn_end");
   const checkpoint = resolveTurnEndCheckpoint(state);
   if (checkpoint) return checkpoint;
+  const withActivatedStars =
+    activateNextCommandStars(state).state;
   return {
-    ...state,
+    ...withActivatedStars,
     battleTurn: state.battleTurn + 1,
     waveTurn: state.waveTurn + 1,
     phase: "ally_action",

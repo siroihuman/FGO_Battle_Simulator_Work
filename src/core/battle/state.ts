@@ -75,6 +75,10 @@ export interface BattleState {
   formation: BattleFormation;
   enemyFrontlineLimit: EnemyFrontlineLimit;
   enemyReplacementMode: EnemyReplacementMode;
+  /** Stars usable by skills and the current ally command phase. */
+  commandStars: number;
+  /** Stars generated for the next ally command phase. */
+  nextCommandStars: number;
   /** Cooldowns of the three selected Mystic Code skills. */
   mysticCodeCooldowns: number[];
   commandDeck: CommandCardDeckState;
@@ -613,6 +617,8 @@ export function createBattleState(
     formation,
     enemyFrontlineLimit: input.enemyFrontlineLimit,
     enemyReplacementMode,
+    commandStars: 0,
+    nextCommandStars: 0,
     mysticCodeCooldowns: normalizeMysticCodeCooldowns(
       input.mysticCodeCooldowns,
     ),

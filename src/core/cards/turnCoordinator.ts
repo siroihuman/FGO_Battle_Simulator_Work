@@ -9,6 +9,10 @@ import {
 import { beginAllyTurnEnd } from "../battle/progression";
 import type { BattleState } from "../battle/state";
 import {
+  addNextCommandStars,
+  type BattleStarAddition,
+} from "../battle/starState";
+import {
   analyzeCommandCardChain,
   type CommandCardCalculationContext,
   type CommandCardChainAnalysis,
@@ -89,6 +93,7 @@ export interface AllyCommandSequenceResult {
   state: BattleState;
   selection: CommandCardSelection;
   chain: CommandCardChainAnalysis;
+  quickChainStarAddition: BattleStarAddition;
   initialTarget: EnemyTargetAnchor;
   actions: AllyCommandActionResolution[];
   plannedActionCount: 3 | 4;
@@ -228,11 +233,15 @@ export function resolveAllyCommandSequence(
   if (!starting.accepted) return starting;
 
   const chain = analyzeCommandCardChain(state, selection);
+  const quickChainStarAddition = addNextCommandStars(
+    state,
+    chain.quickChainStars,
+  );
   const plan = plannedActions(chain);
   const actions: AllyCommandActionResolution[] = [];
   const initialTarget = starting.target;
   let target: EnemyTargetAnchor | null = initialTarget;
-  let currentState = state;
+  let currentState = quickChainStarAddition.state;
 
   for (const action of plan) {
     if (!target) break;
@@ -292,6 +301,7 @@ export function resolveAllyCommandSequence(
       state: beginAllyTurnEnd(currentState),
       selection,
       chain,
+      quickChainStarAddition,
       initialTarget,
       actions,
       plannedActionCount: chain.extraAttack ? 4 : 3,

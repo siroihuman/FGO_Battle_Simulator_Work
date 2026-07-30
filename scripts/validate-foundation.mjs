@@ -119,6 +119,22 @@ if (manifest) {
   );
   assert(manifest.coreRules.maxBreakGauges === 10, "ブレイクゲージ上限は10でなければなりません");
   assert(manifest.coreRules.starCap === 99, "スター上限は99でなければなりません");
+  assert(
+    JSON.stringify(manifest.coreRules.starBuckets) === JSON.stringify(["command", "next_command"]),
+    "スターは現在使用分と次回味方コマンド用の2区分でなければなりません"
+  );
+  assert(
+    manifest.coreRules.attackGeneratedStarsDestination === "next_command",
+    "攻撃で発生したスターは次回味方コマンド用へ加算しなければなりません"
+  );
+  assert(
+    manifest.coreRules.quickChainStarsDestination === "next_command",
+    "Quickチェインのスターは次回味方コマンド用へ加算しなければなりません"
+  );
+  assert(
+    manifest.coreRules.starCarryBeyondNextCommandPhase === false,
+    "未使用スターを次の次の味方コマンドへ持ち越してはいけません"
+  );
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
   assert(manifest.coreRules.fixedSeedReplayRequired === true, "固定シード再現は必須です");
 
