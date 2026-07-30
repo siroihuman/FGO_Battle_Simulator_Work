@@ -13,6 +13,7 @@ import { resolveSideTurnEnd } from "../src/effects/turnEnd";
 import type {
   EffectRuntimeCounters,
   EffectTemplate,
+  TurnEndSettlementKind,
 } from "../src/effects/types";
 import { formation } from "./helpers/battle";
 
@@ -73,6 +74,30 @@ function recurring(
       timing: "turn_end",
       actions: [{ target: self, action }],
       ...options.trigger,
+    },
+  };
+}
+
+function settledRecurring(
+  stableId: string,
+  settlement: TurnEndSettlementKind,
+  action: NonNullable<
+    NonNullable<EffectTemplate["trigger"]>["actions"]
+  >[number]["action"],
+  options: Partial<EffectTemplate> = {},
+): EffectTemplate {
+  return {
+    ...recurring(stableId, action, options),
+    trigger: {
+      timing: "turn_end",
+      ...options.trigger,
+      actions: [
+        {
+          target: self,
+          action,
+          turnEndSettlement: settlement,
+        },
+      ],
     },
   };
 }
@@ -593,6 +618,343 @@ describe("side turn-end integration", () => {
       alive: true,
       effects: [],
     });
+  });
+
+  it("combines standard recurring recovery before consuming modifiers once", () => {
+    let state = withHp(formation(), "ally-a", 2_000);
+    let counters = createEffectRuntimeCounters();
+    let applied = register(
+      state,
+      "enemy-a",
+      {
+        stableId: "counted-given-recovery",
+        name: "与HP回復量アップ",
+        effectType: COMMON_EFFECT_TYPES.givenHpRecovery,
+        category: "buff",
+        value: 500,
+        remainingUses: 1,
+      },
+      counters,
+    );
+    state = applied.formation;
+    counters = applied.counters;
+    applied = register(
+      state,
+      "ally-a",
+      {
+        stableId: "counted-received-recovery",
+        name: "HP回復量アップ",
+        effectType: COMMON_EFFECT_TYPES.receivedHpRecovery,
+        category: "buff",
+        value: 200,
+        remainingUses: 1,
+      },
+      counters,
+    );
+    state = applied.formation;
+    counters = applied.counters;
+    for (const [stableId, amount] of [
+      ["recurring-heal-a", 600],
+      ["recurring-heal-b", 400],
+    ] as const) {
+      applied = register(
+        state,
+        "ally-a",
+        settledRecurring(
+          stableId,
+          "recurring_hp_recovery",
+          { kind: "heal_hp", amount },
+        ),
+        counters,
+        "enemy-a",
+      );
+      state = applied.formation;
+      counters = applied.counters;
+    }
+
+    const result = resolveSideTurnEnd(
+      state,
+      "ally",
+      counters,
+      new BattleRng("grouped-recurring-heal").stream("effects"),
+    );
+    expect(findUnitLocation(result.formation, "ally-a")?.unit).toMatchObject({
+      hp: 3_800,
+      effects: [
+        { stableId: "recurring-heal-a", remainingTurns: 1 },
+        { stableId: "recurring-heal-b", remainingTurns: 1 },
+      ],
+    });
+    expect(findUnitLocation(result.formation, "enemy-a")?.unit.effects).toEqual(
+      [],
+    );
+    expect(result.hpSettlements).toHaveLength(1);
+    expect(result.hpSettlements[0].result).toMatchObject({
+      outcome: "healed",
+      totalBaseRecovery: 1_000,
+      scaledRecovery: 1_800,
+      totalSlipDamage: 0,
+      hpBefore: 2_000,
+      hpAfter: 3_800,
+      receivedModifierPermille: 200,
+      sourceModifiers: [
+        {
+          sourceInstanceId: "enemy-a",
+          givenModifierPermille: 500,
+        },
+      ],
+      consumedSourceEffectInstanceIds: ["effect-1"],
+      consumedTargetEffectInstanceIds: ["effect-2"],
+    });
+    expect(
+      result.activations.map(
+        ({ actions }) => actions[0].deferredSettlement,
+      ),
+    ).toEqual([
+      "recurring_hp_recovery",
+      "recurring_hp_recovery",
+    ]);
+  });
+
+  it("settles recovery and slip damage together regardless of registration order", () => {
+    const run = (slipFirst: boolean) => {
+      let state = withHp(formation(), "ally-a", 500);
+      let counters = createEffectRuntimeCounters();
+      const effects = [
+        settledRecurring(
+          "recurring-heal",
+          "recurring_hp_recovery",
+          { kind: "heal_hp", amount: 1_000 },
+        ),
+        settledRecurring(
+          "poison",
+          "slip_damage",
+          { kind: "reduce_hp", amount: 1_200, canDefeat: false },
+          { category: "debuff" },
+        ),
+      ];
+      if (slipFirst) effects.reverse();
+      for (const effect of effects) {
+        const applied = register(
+          state,
+          "ally-a",
+          effect,
+          counters,
+          effect.category === "debuff" ? "enemy-a" : "ally-a",
+        );
+        state = applied.formation;
+        counters = applied.counters;
+      }
+      return resolveSideTurnEnd(
+        state,
+        "ally",
+        counters,
+        new BattleRng(
+          slipFirst ? "slip-before-heal" : "heal-before-slip",
+        ).stream("effects"),
+      );
+    };
+
+    const healFirst = run(false);
+    const slipFirst = run(true);
+    for (const result of [healFirst, slipFirst]) {
+      expect(findUnitLocation(result.formation, "ally-a")?.unit.hp).toBe(300);
+      expect(result.hpSettlements[0].result).toMatchObject({
+        totalBaseRecovery: 1_000,
+        scaledRecovery: 1_000,
+        totalSlipDamage: 1_200,
+        hpBefore: 500,
+        hpAfter: 300,
+        hpChange: -200,
+      });
+    }
+  });
+
+  it("lets recurring recovery offset slip damage even at maximum HP", () => {
+    let state = formation();
+    let counters = createEffectRuntimeCounters();
+    for (const effect of [
+      settledRecurring(
+        "full-hp-recovery",
+        "recurring_hp_recovery",
+        { kind: "heal_hp", amount: 1_000 },
+      ),
+      settledRecurring(
+        "full-hp-poison",
+        "slip_damage",
+        { kind: "reduce_hp", amount: 500, canDefeat: false },
+        { category: "debuff" },
+      ),
+    ]) {
+      const applied = register(
+        state,
+        "ally-a",
+        effect,
+        counters,
+        effect.category === "debuff" ? "enemy-a" : "ally-a",
+      );
+      state = applied.formation;
+      counters = applied.counters;
+    }
+
+    const result = resolveSideTurnEnd(
+      state,
+      "ally",
+      counters,
+      new BattleRng("full-hp-simultaneous").stream("effects"),
+    );
+    expect(findUnitLocation(result.formation, "ally-a")?.unit.hp).toBe(10_000);
+    expect(result.hpSettlements[0].result).toMatchObject({
+      outcome: "unchanged",
+      scaledRecovery: 1_000,
+      totalSlipDamage: 500,
+      hpBefore: 10_000,
+      hpAfter: 10_000,
+    });
+  });
+
+  it("stops simultaneous slip settlement at HP1 without break or guts", () => {
+    let state = withHp(formation(), "enemy-a", 500);
+    let counters = createEffectRuntimeCounters();
+    for (const effect of [
+      settledRecurring(
+        "small-recovery",
+        "recurring_hp_recovery",
+        { kind: "heal_hp", amount: 100 },
+      ),
+      settledRecurring(
+        "large-curse",
+        "slip_damage",
+        { kind: "reduce_hp", amount: 1_000, canDefeat: false },
+        { category: "debuff" },
+      ),
+    ]) {
+      const applied = register(
+        state,
+        "enemy-a",
+        effect,
+        counters,
+        effect.category === "debuff" ? "ally-a" : "enemy-a",
+      );
+      state = applied.formation;
+      counters = applied.counters;
+    }
+
+    const result = resolveSideTurnEnd(
+      state,
+      "enemy",
+      counters,
+      new BattleRng("nonlethal-settlement").stream("effects"),
+    );
+    expect(findUnitLocation(result.formation, "enemy-a")?.unit).toMatchObject({
+      hp: 1,
+      alive: true,
+    });
+    expect(result.hpSettlements[0].result).toMatchObject({
+      outcome: "damaged",
+      hpAfter: 1,
+      slipPreventedDefeat: true,
+    });
+  });
+
+  it("blocks one grouped recovery and consumes count-based states once", () => {
+    let state = withHp(formation(), "ally-a", 2_000);
+    let counters = createEffectRuntimeCounters();
+    for (const template of [
+      {
+        stableId: "one-recovery-block",
+        name: "HP回復不能",
+        effectType: COMMON_EFFECT_TYPES.hpRecoveryBlocked,
+        category: "debuff" as const,
+        remainingUses: 1,
+      },
+      {
+        stableId: "one-received-modifier",
+        name: "HP回復量アップ",
+        effectType: COMMON_EFFECT_TYPES.receivedHpRecovery,
+        category: "buff" as const,
+        value: 500,
+        remainingUses: 1,
+      },
+    ]) {
+      const applied = register(
+        state,
+        "ally-a",
+        template,
+        counters,
+        "enemy-a",
+      );
+      state = applied.formation;
+      counters = applied.counters;
+    }
+    for (const [stableId, amount, settlement] of [
+      ["blocked-heal-a", 500, "recurring_hp_recovery"],
+      ["blocked-heal-b", 500, "recurring_hp_recovery"],
+      ["settled-poison", 500, "slip_damage"],
+    ] as const) {
+      const applied = register(
+        state,
+        "ally-a",
+        settledRecurring(
+          stableId,
+          settlement,
+          settlement === "recurring_hp_recovery"
+            ? { kind: "heal_hp", amount }
+            : { kind: "reduce_hp", amount, canDefeat: false },
+          settlement === "slip_damage"
+            ? { category: "debuff" }
+            : {},
+        ),
+        counters,
+        settlement === "slip_damage" ? "enemy-a" : "ally-a",
+      );
+      state = applied.formation;
+      counters = applied.counters;
+    }
+
+    const result = resolveSideTurnEnd(
+      state,
+      "ally",
+      counters,
+      new BattleRng("grouped-healing-block").stream("effects"),
+    );
+    expect(findUnitLocation(result.formation, "ally-a")?.unit).toMatchObject({
+      hp: 1_500,
+      effects: [
+        { stableId: "blocked-heal-a" },
+        { stableId: "blocked-heal-b" },
+        { stableId: "settled-poison" },
+      ],
+    });
+    expect(result.hpSettlements[0].result).toMatchObject({
+      scaledRecovery: 0,
+      totalSlipDamage: 500,
+      blockedByEffectInstanceId: "effect-1",
+      consumedTargetEffectInstanceIds: ["effect-2", "effect-1"],
+    });
+  });
+
+  it("rejects a lethal action marked as standard slip damage", () => {
+    const applied = register(
+      formation(),
+      "ally-a",
+      settledRecurring(
+        "invalid-slip",
+        "slip_damage",
+        { kind: "reduce_hp", amount: 500, canDefeat: true },
+      ),
+      createEffectRuntimeCounters(),
+      "enemy-a",
+    );
+
+    expect(() =>
+      resolveSideTurnEnd(
+        applied.formation,
+        "ally",
+        applied.counters,
+        new BattleRng("invalid-slip").stream("effects"),
+      ),
+    ).toThrow(/nonlethal reduce_hp/);
   });
 
   it("groups multi-target absorption into one source recovery", () => {

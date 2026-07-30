@@ -84,6 +84,43 @@ export interface HpAbsorptionResult {
   recovery?: HpRecoveryResult;
 }
 
+export interface RecurringHpRecoveryContribution {
+  source: BattleUnitState | null;
+  baseAmount: number;
+  ignoreRecoveryModifiers?: boolean;
+  ignoreHealingBlock?: boolean;
+}
+
+export type TurnEndHpSettlementOutcome =
+  | "no_target"
+  | "dead"
+  | "unchanged"
+  | "healed"
+  | "damaged";
+
+export interface TurnEndHpSourceModifier {
+  sourceInstanceId: string | null;
+  givenModifierPermille: number;
+}
+
+export interface TurnEndHpSettlementResult {
+  target: BattleUnitState | null;
+  sourceUnits: BattleUnitState[];
+  outcome: TurnEndHpSettlementOutcome;
+  totalBaseRecovery: number;
+  scaledRecovery: number;
+  totalSlipDamage: number;
+  hpBefore: number | null;
+  hpAfter: number | null;
+  hpChange: number;
+  receivedModifierPermille: number;
+  sourceModifiers: TurnEndHpSourceModifier[];
+  blockedByEffectInstanceId?: string;
+  consumedSourceEffectInstanceIds: string[];
+  consumedTargetEffectInstanceIds: string[];
+  slipPreventedDefeat: boolean;
+}
+
 function assertNonNegativeAmount(value: number, name: string): void {
   assertSafeInteger(value, name);
   if (value < 0) throw new RangeError(`${name} must not be negative`);
@@ -426,5 +463,248 @@ export function resolveHpAbsorption(
     totalActualReduction,
     recoveryBaseAmount,
     recovery,
+  };
+}
+
+function uniqueUnits(
+  units: readonly (BattleUnitState | null)[],
+): BattleUnitState[] {
+  return units.filter(
+    (unit, index): unit is BattleUnitState =>
+      unit !== null
+      && units.findIndex(
+        (candidate) => candidate?.instanceId === unit.instanceId,
+      ) === index,
+  );
+}
+
+/**
+ * Settles standard recurring HP recovery and slip damage for one target.
+ *
+ * All recovery contributions share one received-recovery modifier use and one
+ * healing-block use. Given-recovery modifiers are applied once per distinct
+ * original source. Recovery and slip damage are then combined before the
+ * target's HP is clamped between 1 and maximum HP.
+ */
+export function resolveTurnEndHpSettlement(
+  target: BattleUnitState | null,
+  recoveries: readonly RecurringHpRecoveryContribution[],
+  slipDamageAmounts: readonly number[],
+): TurnEndHpSettlementResult {
+  recoveries.forEach(({ baseAmount }, index) => {
+    assertNonNegativeAmount(
+      baseAmount,
+      `turn-end recovery contribution[${index}]`,
+    );
+  });
+  slipDamageAmounts.forEach((amount, index) => {
+    assertNonNegativeAmount(amount, `turn-end slip damage[${index}]`);
+  });
+
+  const originalSourceUnits = uniqueUnits(
+    recoveries.map(({ source }) => source),
+  );
+  const totalBaseRecovery = toSafeNumber(
+    recoveries.reduce(
+      (sum, { baseAmount }) => sum + BigInt(baseAmount),
+      0n,
+    ),
+    "total turn-end base recovery",
+  );
+  const totalSlipDamage = toSafeNumber(
+    slipDamageAmounts.reduce(
+      (sum, amount) => sum + BigInt(amount),
+      0n,
+    ),
+    "total turn-end slip damage",
+  );
+  const emptyResult = (
+    outcome: "no_target" | "dead",
+  ): TurnEndHpSettlementResult => ({
+    target,
+    sourceUnits: originalSourceUnits,
+    outcome,
+    totalBaseRecovery,
+    scaledRecovery: 0,
+    totalSlipDamage,
+    hpBefore: target?.hp ?? null,
+    hpAfter: target?.hp ?? null,
+    hpChange: 0,
+    receivedModifierPermille: 0,
+    sourceModifiers: [],
+    consumedSourceEffectInstanceIds: [],
+    consumedTargetEffectInstanceIds: [],
+    slipPreventedDefeat: false,
+  });
+  if (!target) return emptyResult("no_target");
+  if (!target.alive) return emptyResult("dead");
+
+  const positiveRecoveries = recoveries.filter(
+    ({ baseAmount }) => baseAmount > 0,
+  );
+  const blockEffect = positiveRecoveries.some(
+    ({ ignoreHealingBlock }) => !ignoreHealingBlock,
+  )
+    ? effectsOfType(target, COMMON_EFFECT_TYPES.hpRecoveryBlocked)[0]
+    : undefined;
+  const receivedEffects = positiveRecoveries.some(
+    ({ ignoreRecoveryModifiers }) => !ignoreRecoveryModifiers,
+  )
+    ? effectsOfType(target, COMMON_EFFECT_TYPES.receivedHpRecovery)
+    : [];
+  const receivedModifierPermille = sumEffectValues(
+    receivedEffects,
+    "received HP recovery modifier",
+  );
+  const receivedFactor = Math.max(0, 1000 + receivedModifierPermille);
+
+  const sourceRecords = new Map<string, {
+    source: BattleUnitState;
+    effects: AppliedEffect[];
+    modifierPermille: number;
+  }>();
+  for (const { source, baseAmount, ignoreRecoveryModifiers } of recoveries) {
+    if (!source || baseAmount === 0 || ignoreRecoveryModifiers) continue;
+    if (sourceRecords.has(source.instanceId)) continue;
+    const effects = effectsOfType(
+      source,
+      COMMON_EFFECT_TYPES.givenHpRecovery,
+    );
+    sourceRecords.set(source.instanceId, {
+      source,
+      effects,
+      modifierPermille: sumEffectValues(
+        effects,
+        "given HP recovery modifier",
+      ),
+    });
+  }
+  const sourceModifiers: TurnEndHpSourceModifier[] = [
+    ...sourceRecords.values(),
+  ].map(({ source, modifierPermille }) => ({
+    sourceInstanceId: source.instanceId,
+    givenModifierPermille: modifierPermille,
+  }));
+  if (recoveries.some(({ source }) => source === null)) {
+    sourceModifiers.push({
+      sourceInstanceId: null,
+      givenModifierPermille: 0,
+    });
+  }
+
+  const recoveryNumerator = recoveries.reduce(
+    (
+      sum,
+      {
+        source,
+        baseAmount,
+        ignoreRecoveryModifiers,
+        ignoreHealingBlock,
+      },
+    ) => {
+      if (
+        baseAmount === 0
+        || (blockEffect && !ignoreHealingBlock)
+      ) {
+        return sum;
+      }
+      const givenFactor = ignoreRecoveryModifiers
+        ? 1000
+        : Math.max(
+            0,
+            1000
+              + (source
+                ? sourceRecords.get(source.instanceId)?.modifierPermille ?? 0
+                : 0),
+          );
+      const targetFactor = ignoreRecoveryModifiers
+        ? 1000
+        : receivedFactor;
+      return sum
+        + BigInt(baseAmount) * BigInt(givenFactor) * BigInt(targetFactor);
+    },
+    0n,
+  );
+  const scaledRecovery = toSafeNumber(
+    recoveryNumerator / 1_000_000n,
+    "scaled turn-end recovery",
+  );
+
+  let currentTarget = target;
+  const currentSources = new Map(
+    originalSourceUnits.map((source) => [source.instanceId, source]),
+  );
+  const consumedSourceEffectInstanceIds: string[] = [];
+  for (const {
+    source,
+    effects,
+  } of sourceRecords.values()) {
+    const currentSource =
+      source.instanceId === currentTarget.instanceId
+        ? currentTarget
+        : currentSources.get(source.instanceId) ?? source;
+    const consumed = consumeEffects(currentSource, effects);
+    consumedSourceEffectInstanceIds.push(
+      ...consumed.consumedEffectInstanceIds,
+    );
+    currentSources.set(source.instanceId, consumed.unit);
+    if (source.instanceId === currentTarget.instanceId) {
+      currentTarget = consumed.unit;
+    }
+  }
+
+  const consumedTarget = consumeEffects(
+    currentTarget,
+    [
+      ...receivedEffects,
+      ...(blockEffect ? [blockEffect] : []),
+    ],
+  );
+  currentTarget = consumedTarget.unit;
+  const consumedTargetEffectInstanceIds =
+    consumedTarget.consumedEffectInstanceIds;
+
+  const hpBefore = currentTarget.hp;
+  const rawHp =
+    BigInt(hpBefore)
+    + BigInt(scaledRecovery)
+    - BigInt(totalSlipDamage);
+  const minimumHp = 1n;
+  const maximumHp = BigInt(currentTarget.maxHp);
+  const hpAfter = toSafeNumber(
+    rawHp < minimumHp
+      ? minimumHp
+      : rawHp > maximumHp ? maximumHp : rawHp,
+    "HP after turn-end settlement",
+  );
+  const hpChange = hpAfter - hpBefore;
+  const finalTarget =
+    hpAfter === hpBefore
+      ? currentTarget
+      : { ...currentTarget, hp: hpAfter, alive: true };
+  if (currentSources.has(finalTarget.instanceId)) {
+    currentSources.set(finalTarget.instanceId, finalTarget);
+  }
+
+  return {
+    target: finalTarget,
+    sourceUnits: [...currentSources.values()],
+    outcome:
+      hpChange > 0
+        ? "healed"
+        : hpChange < 0 ? "damaged" : "unchanged",
+    totalBaseRecovery,
+    scaledRecovery,
+    totalSlipDamage,
+    hpBefore,
+    hpAfter,
+    hpChange,
+    receivedModifierPermille,
+    sourceModifiers,
+    blockedByEffectInstanceId: blockEffect?.instanceId,
+    consumedSourceEffectInstanceIds,
+    consumedTargetEffectInstanceIds,
+    slipPreventedDefeat:
+      totalSlipDamage > 0 && rawHp < minimumHp,
   };
 }

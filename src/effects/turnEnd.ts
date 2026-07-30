@@ -14,6 +14,10 @@ import {
   type CommonActionBatchResult,
 } from "./actions";
 import {
+  resolveTurnEndHpSettlement,
+  type TurnEndHpSettlementResult,
+} from "./hp";
+import {
   advanceOwnerTurnEnd,
   consumeUnitEffectUse,
 } from "./runtime";
@@ -26,6 +30,7 @@ import type {
   EffectRuntimeCounters,
   RemovedEffect,
   TriggerAction,
+  TurnEndSettlementKind,
 } from "./types";
 
 export type TurnEndActivationOutcome =
@@ -39,6 +44,7 @@ export interface TurnEndActionResult {
   action: TriggerAction;
   targetInstanceIds: string[];
   batch: CommonActionBatchResult;
+  deferredSettlement?: TurnEndSettlementKind;
 }
 
 export interface TurnEndActivationResult {
@@ -56,12 +62,37 @@ export interface TurnEndDurationResult {
   removed: RemovedEffect[];
 }
 
+export interface TurnEndHpContribution {
+  ownerInstanceId: string;
+  effectInstanceId: string;
+  effectStableId: string;
+  actionIndex: number;
+  sourceInstanceId: string | null;
+  amount: number;
+  ignoreRecoveryModifiers?: boolean;
+  ignoreHealingBlock?: boolean;
+}
+
+export interface TurnEndHpSettlementLog {
+  targetInstanceId: string;
+  recoveryContributions: TurnEndHpContribution[];
+  slipDamageContributions: TurnEndHpContribution[];
+  result: TurnEndHpSettlementResult;
+}
+
 export interface SideTurnEndResult {
   formation: BattleFormation;
   counters: EffectRuntimeCounters;
   registrationCutoff: number;
   activations: TurnEndActivationResult[];
+  hpSettlements: TurnEndHpSettlementLog[];
   durations: TurnEndDurationResult[];
+}
+
+interface PendingHpSettlement {
+  targetInstanceId: string;
+  recoveryContributions: TurnEndHpContribution[];
+  slipDamageContributions: TurnEndHpContribution[];
 }
 
 function latestRegistrationOrder(formation: BattleFormation): number {
@@ -95,6 +126,101 @@ function applyBatch(
   return replaceIfPresent(current, batch.source);
 }
 
+function applyHpSettlement(
+  formation: BattleFormation,
+  result: TurnEndHpSettlementResult,
+): BattleFormation {
+  let current = formation;
+  for (const source of result.sourceUnits) {
+    current = replaceIfPresent(current, source);
+  }
+  return replaceIfPresent(current, result.target);
+}
+
+function assertSettlementAction(action: TriggerAction): void {
+  if (
+    action.turnEndSettlement !== "recurring_hp_recovery"
+    && action.turnEndSettlement !== "slip_damage"
+  ) {
+    throw new RangeError("unknown turn-end settlement kind");
+  }
+  if (
+    action.turnEndSettlement === "recurring_hp_recovery"
+    && action.action.kind !== "heal_hp"
+  ) {
+    throw new RangeError(
+      "recurring_hp_recovery settlement requires a heal_hp action",
+    );
+  }
+  if (
+    action.turnEndSettlement === "slip_damage"
+    && (
+      action.action.kind !== "reduce_hp"
+      || action.action.canDefeat
+    )
+  ) {
+    throw new RangeError(
+      "slip_damage settlement requires a nonlethal reduce_hp action",
+    );
+  }
+}
+
+function queueHpSettlement(
+  pendingSettlements: Map<string, PendingHpSettlement>,
+  candidate: {
+    ownerInstanceId: string;
+    effect: {
+      instanceId: string;
+      stableId: string;
+    };
+  },
+  actionIndex: number,
+  action: TriggerAction,
+  sourceInstanceId: string | null,
+  targetInstanceIds: readonly string[],
+): void {
+  assertSettlementAction(action);
+  if (
+    action.action.kind !== "heal_hp"
+    && action.action.kind !== "reduce_hp"
+  ) {
+    throw new RangeError(
+      "turn-end HP settlement requires an HP action",
+    );
+  }
+  for (const targetInstanceId of targetInstanceIds) {
+    let pending = pendingSettlements.get(targetInstanceId);
+    if (!pending) {
+      pending = {
+        targetInstanceId,
+        recoveryContributions: [],
+        slipDamageContributions: [],
+      };
+      pendingSettlements.set(targetInstanceId, pending);
+    }
+    const contribution: TurnEndHpContribution = {
+      ownerInstanceId: candidate.ownerInstanceId,
+      effectInstanceId: candidate.effect.instanceId,
+      effectStableId: candidate.effect.stableId,
+      actionIndex,
+      sourceInstanceId,
+      amount: action.action.amount,
+      ...(action.action.kind === "heal_hp"
+        ? {
+            ignoreRecoveryModifiers:
+              action.action.ignoreRecoveryModifiers,
+            ignoreHealingBlock: action.action.ignoreHealingBlock,
+          }
+        : {}),
+    };
+    if (action.turnEndSettlement === "recurring_hp_recovery") {
+      pending.recoveryContributions.push(contribution);
+    } else {
+      pending.slipDamageContributions.push(contribution);
+    }
+  }
+}
+
 /**
  * Resolves the recurring effects owned by one side, then decreases durations
  * for that side's frontline. Reserve units neither activate nor tick.
@@ -124,6 +250,7 @@ export function resolveSideTurnEnd(
     ({ effect }) => effect.registrationOrder <= registrationCutoff,
   );
   const activations: TurnEndActivationResult[] = [];
+  const pendingHpSettlements = new Map<string, PendingHpSettlement>();
 
   for (const candidate of candidates) {
     const ownerLocation = findUnitLocation(
@@ -205,6 +332,31 @@ export function resolveSideTurnEnd(
         currentEffect.sourceInstanceId ?? candidate.ownerInstanceId;
       const actionSource =
         findUnitLocation(currentFormation, sourceInstanceId)?.unit ?? null;
+      if (action.turnEndSettlement) {
+        queueHpSettlement(
+          pendingHpSettlements,
+          candidate,
+          actionIndex,
+          action,
+          actionSource?.instanceId ?? null,
+          targetLocations.map(({ unit }) => unit.instanceId),
+        );
+        actionResults.push({
+          actionIndex,
+          action,
+          targetInstanceIds: targetLocations.map(
+            ({ unit }) => unit.instanceId,
+          ),
+          batch: {
+            source: actionSource,
+            targets: actionTargets,
+            counters: currentCounters,
+            results: [],
+          },
+          deferredSettlement: action.turnEndSettlement,
+        });
+        continue;
+      }
       const batch = executeCommonActionForTargets(
         actionSource,
         actionTargets,
@@ -235,6 +387,41 @@ export function resolveSideTurnEnd(
     });
   }
 
+  const hpSettlements: TurnEndHpSettlementLog[] = [];
+  for (const pending of pendingHpSettlements.values()) {
+    const target =
+      findUnitLocation(
+        currentFormation,
+        pending.targetInstanceId,
+      )?.unit ?? null;
+    const recoveryContributions =
+      pending.recoveryContributions.map((contribution) => ({
+        source: contribution.sourceInstanceId
+          ? findUnitLocation(
+              currentFormation,
+              contribution.sourceInstanceId,
+            )?.unit ?? null
+          : null,
+        baseAmount: contribution.amount,
+        ignoreRecoveryModifiers:
+          contribution.ignoreRecoveryModifiers,
+        ignoreHealingBlock: contribution.ignoreHealingBlock,
+      }));
+    const result = resolveTurnEndHpSettlement(
+      target,
+      recoveryContributions,
+      pending.slipDamageContributions.map(({ amount }) => amount),
+    );
+    currentFormation = applyHpSettlement(currentFormation, result);
+    hpSettlements.push({
+      targetInstanceId: pending.targetInstanceId,
+      recoveryContributions: pending.recoveryContributions,
+      slipDamageContributions:
+        pending.slipDamageContributions,
+      result,
+    });
+  }
+
   const durations: TurnEndDurationResult[] = [];
   for (const location of orderedLocations(
     currentFormation,
@@ -259,6 +446,7 @@ export function resolveSideTurnEnd(
     counters: currentCounters,
     registrationCutoff,
     activations,
+    hpSettlements,
     durations,
   };
 }
