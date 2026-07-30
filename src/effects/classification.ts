@@ -1,6 +1,17 @@
+import type { BattleUnitState } from "../core/battle/types";
 import type { EffectCategory, EffectTemplate } from "./types";
 
 export const ROMA_TRAIT_ID = "roma";
+export const ACTION_DISABLED_CLASSIFICATION = "immobilize";
+
+export function isActionDisabled(unit: BattleUnitState): boolean {
+  return unit.effects.some(
+    (effect) =>
+      effect.classifications.includes(ACTION_DISABLED_CLASSIFICATION)
+      || effect.flags.preventsAction === true
+      || effect.flags.preventsCommandCardAction === true,
+  );
+}
 
 export function categoryForGrantedTrait(traitId: string): EffectCategory {
   return traitId === ROMA_TRAIT_ID ? "debuff" : "other";

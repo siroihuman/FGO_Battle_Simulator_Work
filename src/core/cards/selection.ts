@@ -12,11 +12,14 @@ import type {
   NoblePhantasmState,
 } from "../battle/types";
 import { NP_FULL_GAUGE } from "../../formulas/np";
+import { isActionDisabled } from "../../effects/classification";
 import { COMMON_EFFECT_TYPES } from "../../effects/modifiers";
 import type { CommandCard } from "./deck";
 
 export const COMMAND_CARD_SELECTION_SIZE = 3 as const;
-export const ACTION_DISABLED_CLASSIFICATION = "immobilize" as const;
+export {
+  ACTION_DISABLED_CLASSIFICATION,
+} from "../../effects/classification";
 
 export type CommandCardExecutionRestriction =
   | "owner_missing"
@@ -103,14 +106,6 @@ export type CommandCardExecutionResult =
 
 function noblePhantasmCardId(ownerInstanceId: string): string {
   return `${ownerInstanceId}:noble-phantasm`;
-}
-
-function isActionDisabled(unit: BattleUnitState): boolean {
-  return unit.effects.some(
-    (effect) =>
-      effect.classifications.includes(ACTION_DISABLED_CLASSIFICATION)
-      || effect.flags.preventsCommandCardAction === true,
-  );
 }
 
 function isNoblePhantasmSealed(unit: BattleUnitState): boolean {

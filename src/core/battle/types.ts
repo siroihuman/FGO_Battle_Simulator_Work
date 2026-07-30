@@ -11,6 +11,26 @@ export interface NoblePhantasmState {
   level: NoblePhantasmLevel;
 }
 
+export type EnemyMaxActions = "auto" | 1 | 2 | 3;
+
+export interface EnemyActionDefinition {
+  stableId: string;
+  name: string;
+}
+
+/**
+ * Optional enemy behavior data. A null value is the valid minimal enemy:
+ * every requested action skips and its effective charge is always zero.
+ */
+export interface EnemyActionState {
+  maxActions: EnemyMaxActions;
+  normalAttack: EnemyActionDefinition | null;
+  skills: EnemyActionDefinition[];
+  noblePhantasm: EnemyActionDefinition | null;
+  charge: number;
+  chargeMax: number;
+}
+
 export interface BreakGaugeState {
   /** Base maximum HP of the gauge before temporary max-HP effects. */
   maxHp: number;
@@ -41,6 +61,8 @@ export interface BattleUnitState {
   commandCards: CommandCardType[];
   /** The upgraded NP used by this battle unit; missing data is represented by null. */
   noblePhantasm: NoblePhantasmState | null;
+  /** Enemy-only optional action and charge data. Allies always use null. */
+  enemyAction: EnemyActionState | null;
   traits: string[];
   effects: AppliedEffect[];
   skillCooldowns: number[];

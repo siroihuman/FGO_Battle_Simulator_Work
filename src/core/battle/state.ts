@@ -9,6 +9,7 @@ import type {
   BattleFormation,
   BattleSide,
   BattleUnitState,
+  EnemyActionDefinition,
   SideFormation,
 } from "./types";
 
@@ -109,9 +110,42 @@ function copySideFormation(formation: SideFormation): SideFormation {
   };
 }
 
+function normalizeEnemyUnitAction(
+  unit: BattleUnitState,
+): BattleUnitState {
+  const action = unit.enemyAction;
+  if (
+    unit.side !== "enemy"
+    || !action
+    || action.noblePhantasm !== null
+    || (action.charge === 0 && action.chargeMax === 0)
+  ) {
+    return unit;
+  }
+  return {
+    ...unit,
+    enemyAction: {
+      ...action,
+      charge: 0,
+      chargeMax: 0,
+    },
+  };
+}
+
+function normalizeEnemyFormation(
+  formation: SideFormation,
+): SideFormation {
+  return {
+    frontline: formation.frontline.map((unit) =>
+      unit ? normalizeEnemyUnitAction(unit) : null,
+    ),
+    reserve: formation.reserve.map(normalizeEnemyUnitAction),
+  };
+}
+
 function copyWave(wave: BattleWaveState): BattleWaveState {
   return {
-    enemy: copySideFormation(wave.enemy),
+    enemy: normalizeEnemyFormation(copySideFormation(wave.enemy)),
     continuation: { ...wave.continuation },
   };
 }
@@ -318,6 +352,82 @@ function assertNoblePhantasm(
   }
 }
 
+function assertEnemyActionDefinition(
+  action: EnemyActionDefinition,
+  label: string,
+): void {
+  if (!action.stableId || !action.name) {
+    throw new RangeError(`${label} stableId and name are required`);
+  }
+}
+
+function assertEnemyActionState(
+  unit: BattleUnitState,
+  label: string,
+): void {
+  const action = unit.enemyAction;
+  if (unit.side === "ally") {
+    if (action !== null) {
+      throw new RangeError(`${label} ally cannot have enemyAction data`);
+    }
+    return;
+  }
+  if (!action) return;
+  if (
+    action.maxActions !== "auto"
+    && action.maxActions !== 1
+    && action.maxActions !== 2
+    && action.maxActions !== 3
+  ) {
+    throw new RangeError(
+      `${label} enemyAction maxActions must be auto or 1 to 3`,
+    );
+  }
+  if (action.normalAttack) {
+    assertEnemyActionDefinition(
+      action.normalAttack,
+      `${label} normalAttack`,
+    );
+  }
+  action.skills.forEach((skill, index) =>
+    assertEnemyActionDefinition(
+      skill,
+      `${label} skills[${index}]`,
+    ),
+  );
+  if (action.noblePhantasm) {
+    assertEnemyActionDefinition(
+      action.noblePhantasm,
+      `${label} enemy noblePhantasm`,
+    );
+  }
+  assertSafeInteger(action.charge, `${label} charge`);
+  assertSafeInteger(action.chargeMax, `${label} chargeMax`);
+  if (action.charge < 0 || action.chargeMax < 0) {
+    throw new RangeError(
+      `${label} enemy charge values must not be negative`,
+    );
+  }
+  if (!action.noblePhantasm) {
+    if (action.charge !== 0 || action.chargeMax !== 0) {
+      throw new RangeError(
+        `${label} enemy without noblePhantasm must have zero charge`,
+      );
+    }
+    return;
+  }
+  if (action.chargeMax < 1) {
+    throw new RangeError(
+      `${label} enemy with noblePhantasm requires positive chargeMax`,
+    );
+  }
+  if (action.charge > action.chargeMax) {
+    throw new RangeError(
+      `${label} enemy charge must not exceed chargeMax`,
+    );
+  }
+}
+
 function countPendingBreaks(formation: SideFormation): number {
   return listedUnits(formation).filter(({ breakPending }) => breakPending).length;
 }
@@ -378,7 +488,9 @@ function normalizeInitialWave(
   waveIndex: number,
   enemyFrontlineLimit: EnemyFrontlineLimit,
 ): BattleWaveState {
-  const enemy = copySideFormation(wave.enemy);
+  const enemy = normalizeEnemyFormation(
+    copySideFormation(wave.enemy),
+  );
   if (enemy.frontline.length !== enemyFrontlineLimit) {
     throw new RangeError(
       `wave ${waveIndex + 1} enemy frontline must have ${enemyFrontlineLimit} slots`,
@@ -436,11 +548,13 @@ function assertCurrentFormation(
     assertSkillCooldowns(unit, `ally ${unit.instanceId}`);
     assertCommandCards(unit, `ally ${unit.instanceId}`);
     assertNoblePhantasm(unit, `ally ${unit.instanceId}`);
+    assertEnemyActionState(unit, `ally ${unit.instanceId}`);
   }
   for (const unit of listedUnits(formation.enemy)) {
     assertBreakState(unit, `enemy ${unit.instanceId}`);
     assertSkillCooldowns(unit, `enemy ${unit.instanceId}`);
     assertNoblePhantasm(unit, `enemy ${unit.instanceId}`);
+    assertEnemyActionState(unit, `enemy ${unit.instanceId}`);
   }
   assertValidFormation(formation);
 }
@@ -530,17 +644,27 @@ export function setBattleFormation(
   formation: BattleFormation,
 ): BattleState {
   assertBattleOngoing(state);
-  assertCurrentFormation(formation, state.enemyFrontlineLimit);
-  assertSameAllyRoster(state.formation.ally, formation.ally);
-  assertUniqueInstanceIds(formation.ally, [
+  const normalizedFormation: BattleFormation = {
+    ally: formation.ally,
+    enemy: normalizeEnemyFormation(formation.enemy),
+  };
+  assertCurrentFormation(
+    normalizedFormation,
+    state.enemyFrontlineLimit,
+  );
+  assertSameAllyRoster(
+    state.formation.ally,
+    normalizedFormation.ally,
+  );
+  assertUniqueInstanceIds(normalizedFormation.ally, [
     {
-      enemy: formation.enemy,
+      enemy: normalizedFormation.enemy,
       continuation: state.waveContinuation,
     },
     ...state.remainingWaves,
   ]);
   const totalRemainingEnemyCount = [
-    formation.enemy,
+    normalizedFormation.enemy,
     ...state.remainingWaves.map(({ enemy }) => enemy),
   ].reduce(
     (total, enemy) => total + listedUnits(enemy).length,
@@ -552,7 +676,7 @@ export function setBattleFormation(
     );
   }
   const pendingBreakDelta =
-    countPendingBreaks(formation.enemy)
+    countPendingBreaks(normalizedFormation.enemy)
     - countPendingBreaks(state.formation.enemy);
   const pendingBreaks =
     state.waveContinuation.pendingBreaks + pendingBreakDelta;
@@ -562,8 +686,8 @@ export function setBattleFormation(
   return {
     ...state,
     formation: {
-      ally: copySideFormation(formation.ally),
-      enemy: copySideFormation(formation.enemy),
+      ally: copySideFormation(normalizedFormation.ally),
+      enemy: copySideFormation(normalizedFormation.enemy),
     },
     waveContinuation: {
       ...state.waveContinuation,
