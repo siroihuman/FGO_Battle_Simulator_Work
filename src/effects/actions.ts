@@ -70,7 +70,8 @@ export type CommonAction =
   | {
       kind: "change_np";
       amount: number;
-      npLevel: NoblePhantasmLevel;
+      /** Defaults to the target's selected NP level, or 1 without an NP. */
+      npLevel?: NoblePhantasmLevel;
     }
   | {
       kind: "apply_effects";
@@ -234,13 +235,16 @@ export function executeCommonAction(
 
   if (action.kind === "change_np") {
     assertSafeInteger(action.amount, "NP change amount");
-    const cap = npCap(action.npLevel);
+    const npLevel = action.npLevel
+      ?? target.noblePhantasm?.level
+      ?? 1;
+    const cap = npCap(npLevel);
     const cappedCurrent = clampInteger(target.np, 0, cap);
     const safeAmount =
       action.amount >= 0
         ? Math.min(action.amount, cap - cappedCurrent)
         : Math.max(action.amount, -cappedCurrent);
-    const np = addNp(cappedCurrent, safeAmount, action.npLevel);
+    const np = addNp(cappedCurrent, safeAmount, npLevel);
     return {
       action,
       outcome: np === target.np ? "unchanged" : "changed",

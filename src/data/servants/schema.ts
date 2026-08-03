@@ -6,9 +6,9 @@ import type {
   CommandCardType,
 } from "../../core/battle/types";
 import type {
-  TargetRelation,
-  TargetSelection,
-} from "../../effects/targeting";
+  DeclaredActionEffect,
+  DeclaredActionTarget,
+} from "../../effects/declarations";
 import type {
   NoblePhantasmLevel,
 } from "../../formulas/np";
@@ -58,36 +58,14 @@ export interface ServantSourceReference {
   note?: string;
 }
 
-export type ServantEffectParameter =
-  | string
-  | number
-  | boolean
-  | null
-  | readonly ServantEffectParameter[]
-  | { readonly [key: string]: ServantEffectParameter };
-
 /**
  * A target policy stored in content data. A `single` target is selected by the
  * player or AI at execution time; therefore no battle instance ID is stored in
  * reusable servant data.
  */
-export interface ServantEffectTarget {
-  relation: TargetRelation;
-  selection: TargetSelection;
-  includeReserve?: boolean;
-  excludeSource?: boolean;
-  requiredTraits?: readonly string[];
-}
+export type ServantEffectTarget = DeclaredActionTarget;
 
-export interface ServantEffectDefinition {
-  kind: "effect";
-  stableId: string;
-  order: number;
-  mechanicId: string;
-  description: string;
-  target: ServantEffectTarget;
-  parameters?: Readonly<Record<string, ServantEffectParameter>>;
-}
+export type ServantEffectDefinition = DeclaredActionEffect;
 
 export interface ServantNoblePhantasmSpecialAttack {
   stableId: string;

@@ -1,5 +1,11 @@
 import type { CombatantAttackData } from "../../core/battle/actionData";
 import type { BattleUnitState } from "../../core/battle/types";
+import type {
+  CombatantActionEffectData,
+} from "../../effects/actionData";
+import {
+  unresolvedActionEffectStableIds,
+} from "../../effects/actionData";
 import { npCap } from "../../formulas/np";
 import {
   SERVANT_DATA_SCHEMA_VERSION,
@@ -20,6 +26,7 @@ export interface ServantDataRegistry {
 export interface ServantBattleInstance {
   unit: BattleUnitState;
   attackData: CombatantAttackData;
+  actionEffectData: CombatantActionEffectData;
   /**
    * Effects retained in source order but not yet converted to runtime effects.
    * Consumers must not present the instance as fully implemented while this is
@@ -95,23 +102,40 @@ function noblePhantasmAttack(
   return attack;
 }
 
-function unresolvedEffects(
+function actionEffectData(
   definition: ServantDefinition,
+  instanceId: string,
   attack: ServantNoblePhantasmAttackEffect,
-): string[] {
-  const effects: ServantEffectDefinition[] = [
-    ...definition.activeSkills.flatMap((skill) => skill.effects),
-    ...definition.classSkills.flatMap((skill) => skill.effects),
-    ...definition.noblePhantasm.effects.filter(
-      (effect): effect is ServantEffectDefinition => effect.kind === "effect",
-    ),
-  ];
-  return [
-    ...effects.map(({ stableId }) => stableId),
-    ...(attack.specialAttack?.requiredTargetTraits?.length
-      ? [attack.specialAttack.stableId]
-      : []),
-  ];
+): CombatantActionEffectData {
+  return {
+    instanceId,
+    dataId: definition.dataId,
+    passives: definition.classSkills.map((skill) => ({
+      stableId: skill.stableId,
+      name: skill.name,
+      effects: skill.effects,
+    })),
+    actions: [
+      ...definition.activeSkills.map((skill) => ({
+        stableId: skill.stableId,
+        name: skill.name,
+        kind: "skill" as const,
+        skillSlot: skill.slot,
+        cooldownAtMax: skill.cooldownAtMax,
+        attackOrder: null,
+        effects: skill.effects,
+      })),
+      {
+        stableId: definition.noblePhantasm.stableId,
+        name: definition.noblePhantasm.name,
+        kind: "noble_phantasm" as const,
+        attackOrder: attack.order,
+        effects: definition.noblePhantasm.effects.filter(
+          (effect): effect is ServantEffectDefinition => effect.kind === "effect",
+        ),
+      },
+    ],
+  };
 }
 
 /**
@@ -156,6 +180,11 @@ export function createServantBattleInstance(
   const specialAttack = npAttack.specialAttack;
   const conditionalSpecialAttack =
     (specialAttack?.requiredTargetTraits?.length ?? 0) > 0;
+  const combatantEffects = actionEffectData(
+    definition,
+    input.instanceId,
+    npAttack,
+  );
 
   return {
     unit: {
@@ -222,6 +251,12 @@ export function createServantBattleInstance(
       ],
       enemyAttacks: [],
     },
-    unresolvedEffectStableIds: unresolvedEffects(definition, npAttack),
+    actionEffectData: combatantEffects,
+    unresolvedEffectStableIds: [
+      ...unresolvedActionEffectStableIds(combatantEffects),
+      ...(conditionalSpecialAttack && specialAttack
+        ? [specialAttack.stableId]
+        : []),
+    ],
   };
 }
