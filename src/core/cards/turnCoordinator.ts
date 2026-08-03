@@ -13,6 +13,12 @@ import {
   type BattleStarAddition,
 } from "../battle/starState";
 import {
+  findUnitLocation,
+  replaceUnit,
+} from "../battle/formation";
+import { setBattleFormation } from "../battle/state";
+import { addNp } from "../../formulas/np";
+import {
   analyzeCommandCardChain,
   type CommandCardCalculationContext,
   type CommandCardChainAnalysis,
@@ -102,11 +108,27 @@ export interface AllyCommandSequenceResult {
   state: BattleState;
   selection: CommandCardSelection;
   chain: CommandCardChainAnalysis;
+  artsChainNpAddition: ArtsChainNpAddition;
   quickChainStarAddition: BattleStarAddition;
   initialTarget: EnemyTargetAnchor;
   actions: AllyCommandActionResolution[];
   plannedActionCount: 3 | 4;
   stopReason: AllyCommandSequenceStopReason;
+}
+
+export interface ArtsChainNpChange {
+  instanceId: string;
+  before: number;
+  requested: number;
+  added: number;
+  after: number;
+}
+
+export interface ArtsChainNpAddition {
+  state: BattleState;
+  requestedPerParticipant: number;
+  participantInstanceIds: string[];
+  changes: ArtsChainNpChange[];
 }
 
 export type AllyCommandSequenceRejectionReason =
@@ -165,6 +187,55 @@ function plannedActions(
         },
       ]
     : selected;
+}
+
+/**
+ * Applies the fixed Arts-chain NP bonus before the first selected command is
+ * started. Each battle instance receives the bonus at most once, even when
+ * it owns multiple selected Arts cards.
+ */
+export function applyArtsChainNp(
+  state: BattleState,
+  chain: CommandCardChainAnalysis,
+): ArtsChainNpAddition {
+  let formation = state.formation;
+  const changes: ArtsChainNpChange[] = [];
+  for (const instanceId of chain.artsChainParticipantInstanceIds) {
+    const location = findUnitLocation(formation, instanceId);
+    if (!location || location.side !== "ally") {
+      throw new RangeError(
+        `Arts-chain participant is missing: ${instanceId}`,
+      );
+    }
+    const unit = location.unit;
+    const after = addNp(
+      unit.np,
+      chain.artsChainNpUnits,
+      unit.noblePhantasm?.level ?? 1,
+    );
+    formation = replaceUnit(formation, {
+      ...unit,
+      np: after,
+    });
+    changes.push({
+      instanceId,
+      before: unit.np,
+      requested: chain.artsChainNpUnits,
+      added: after - unit.np,
+      after,
+    });
+  }
+  return {
+    state:
+      changes.some(({ added }) => added !== 0)
+        ? setBattleFormation(state, formation)
+        : state,
+    requestedPerParticipant: chain.artsChainNpUnits,
+    participantInstanceIds: [
+      ...chain.artsChainParticipantInstanceIds,
+    ],
+    changes,
+  };
 }
 
 /**
@@ -242,8 +313,9 @@ export function resolveAllyCommandSequence(
   if (!starting.accepted) return starting;
 
   const chain = analyzeCommandCardChain(state, selection);
+  const artsChainNpAddition = applyArtsChainNp(state, chain);
   const quickChainStarAddition = addNextCommandStars(
-    state,
+    artsChainNpAddition.state,
     chain.quickChainStars,
   );
   const plan = plannedActions(chain);
@@ -311,6 +383,7 @@ export function resolveAllyCommandSequence(
       state: beginAllyTurnEnd(currentState),
       selection,
       chain,
+      artsChainNpAddition,
       quickChainStarAddition,
       initialTarget,
       actions,

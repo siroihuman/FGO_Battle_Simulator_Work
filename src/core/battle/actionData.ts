@@ -66,6 +66,8 @@ export interface CombatantAttackData {
   targetNpRatePermille: number;
   /** Source SR used for command-star generation. */
   starRatePermille: number;
+  /** Base command-card star concentration (SW/CriticalWeight). */
+  starWeight: number;
   /** Target DSR added to command-star generation. */
   targetStarRatePermille: number;
   /** Five card-specific Hit distributions, or null for a non-servant. */
@@ -161,6 +163,7 @@ function validateCombatant(data: CombatantAttackData): void {
     ["attackNpRatePermille", data.attackNpRatePermille],
     ["targetNpRatePermille", data.targetNpRatePermille],
     ["starRatePermille", data.starRatePermille],
+    ["starWeight", data.starWeight],
   ] as const) {
     assertNonNegativeInteger(value, `${data.instanceId}.${name}`);
   }

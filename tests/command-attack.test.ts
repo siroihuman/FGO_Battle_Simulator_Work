@@ -181,6 +181,7 @@ function registry() {
     combatantData("ally-b", "same-servant", {
       attack: 20_000,
     }),
+    combatantData("ally-c", "ally-c"),
   ]);
 }
 
@@ -190,6 +191,7 @@ function streams(seed: string) {
     rng,
     streams: {
       effects: rng.stream("effects"),
+      critical: rng.stream("critical"),
       damage: rng.stream("damage"),
       stars: rng.stream("stars"),
     },
@@ -198,24 +200,25 @@ function streams(seed: string) {
 
 describe("ally command data-to-attack integration", () => {
   it("uses card-specific Hits, critical input, and Extra data through one full Brave chain", () => {
-    const state = withHand(battle(), [
-      ["ally-a", 0],
-      ["ally-a", 1],
-      ["ally-a", 2],
-    ]);
+    const state = {
+      ...withHand(battle(), [
+        ["ally-a", 0],
+        ["ally-a", 1],
+        ["ally-a", 2],
+      ]),
+      commandStars: 50,
+    };
     const selected = selection(state, [
       cardId(state, "ally-a", 0),
       cardId(state, "ally-a", 1),
       cardId(state, "ally-a", 2),
     ]);
-    const firstCardId = selected.cards[0].cardId;
     const random = streams("command-attack-brave");
     const resolved = resolveAllyCommandAttacks({
       state,
       selection: selected,
       registry: registry(),
       rng: random.streams,
-      criticalCardIds: [firstCardId],
     });
 
     expect(resolved.sequence.accepted).toBe(true);
@@ -228,6 +231,19 @@ describe("ally command data-to-attack integration", () => {
     );
     expect(details.every(({ outcome }) => outcome === "resolved"))
       .toBe(true);
+    expect(resolved.starDistribution).toMatchObject({
+      outcome: "resolved",
+      commandStars: 50,
+      distributed: 50,
+      unassigned: 0,
+    });
+    if (resolved.starDistribution.outcome === "resolved") {
+      expect(
+        resolved.starDistribution.cards.every(
+          ({ stars }) => stars === 10,
+        ),
+      ).toBe(true);
+    }
     expect(
       details.map((detail) =>
         detail.outcome === "resolved"
@@ -237,9 +253,14 @@ describe("ally command data-to-attack integration", () => {
     ).toEqual([1, 2, 3, 4]);
     expect(
       details[0]?.outcome === "resolved"
-        ? details[0].calculation.isCritical
+        ? details[0].critical
         : null,
-    ).toBe(true);
+    ).toMatchObject({
+      assignedStars: 10,
+      ratePermille: 1_000,
+      rolled: false,
+      isCritical: true,
+    });
     expect(
       details[3]?.outcome === "resolved"
         ? details[3].calculation.extraCardModifierPermille
@@ -340,5 +361,9 @@ describe("ally command data-to-attack integration", () => {
         ({ drawCount }) => drawCount === 0,
       ),
     ).toBe(true);
+    expect(resolved.starDistribution).toMatchObject({
+      outcome: "skipped",
+      reason: "owner_attack_data_missing",
+    });
   });
 });

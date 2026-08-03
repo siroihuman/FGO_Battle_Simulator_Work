@@ -27,6 +27,7 @@ export function combatantData(
     attackNpRatePermille: 1_000,
     targetNpRatePermille: 1_000,
     starRatePermille: 100,
+    starWeight: 100,
     targetStarRatePermille: 0,
     commandCardHitWeights: DEFAULT_COMMAND_HITS,
     extraAttackHitWeights: [1],
