@@ -3,14 +3,12 @@ import {
   SERVANT_LEVELS_BY_RARITY,
   type ServantDefinition,
   type ServantEffectDefinition,
-  type ServantEffectParameter,
-  type ServantEffectTarget,
   type ServantNoblePhantasmAttackEffect,
   type ServantNoblePhantasmEffect,
 } from "./schema";
+import { assertValidDeclaredActionEffect } from "../../effects/declarations";
 
 const STABLE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const MECHANIC_ID = /^[a-z][a-z0-9_]*$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function assertNonEmpty(value: string, name: string): void {
@@ -77,58 +75,6 @@ function assertFiveMultipliers(
   );
 }
 
-function assertParameter(
-  value: ServantEffectParameter,
-  name: string,
-): void {
-  if (value === null || typeof value === "string" || typeof value === "boolean") {
-    return;
-  }
-  if (typeof value === "number") {
-    if (!Number.isSafeInteger(value)) {
-      throw new RangeError(`${name} number must be a safe integer`);
-    }
-    return;
-  }
-  if (Array.isArray(value)) {
-    value.forEach((entry, index) =>
-      assertParameter(entry, `${name}[${index}]`)
-    );
-    return;
-  }
-  if (typeof value === "object") {
-    for (const [key, entry] of Object.entries(value)) {
-      assertNonEmpty(key, `${name} key`);
-      assertParameter(entry, `${name}.${key}`);
-    }
-    return;
-  }
-  throw new RangeError(`${name} must be JSON-compatible`);
-}
-
-function assertTarget(target: ServantEffectTarget, name: string): void {
-  if (!(["self", "allies", "enemies"] as const).includes(target.relation)) {
-    throw new RangeError(`${name}.relation is invalid`);
-  }
-  if (!(["single", "all", "frontmost", "rearmost"] as const).includes(target.selection)) {
-    throw new RangeError(`${name}.selection is invalid`);
-  }
-  if (target.relation === "self") {
-    if (target.selection !== "single") {
-      throw new RangeError(`${name} self target must use single selection`);
-    }
-    if (target.excludeSource) {
-      throw new RangeError(`${name} self target cannot exclude its source`);
-    }
-    if (target.includeReserve) {
-      throw new RangeError(`${name} self target does not use includeReserve`);
-    }
-  }
-  if (target.requiredTraits) {
-    assertUniqueStrings(target.requiredTraits, `${name}.requiredTraits`);
-  }
-}
-
 function assertEffect(
   effect: ServantEffectDefinition,
   name: string,
@@ -138,18 +84,7 @@ function assertEffect(
     throw new RangeError(`${name}.kind must be effect`);
   }
   registerStableId(effect.stableId, `${name}.stableId`, stableIds);
-  assertPositiveInteger(effect.order, `${name}.order`);
-  if (!MECHANIC_ID.test(effect.mechanicId)) {
-    throw new RangeError(`${name}.mechanicId must be lower_snake_case`);
-  }
-  assertNonEmpty(effect.description, `${name}.description`);
-  assertTarget(effect.target, `${name}.target`);
-  if (effect.parameters) {
-    for (const [key, value] of Object.entries(effect.parameters)) {
-      assertNonEmpty(key, `${name}.parameters key`);
-      assertParameter(value, `${name}.parameters.${key}`);
-    }
-  }
+  assertValidDeclaredActionEffect(effect, name);
 }
 
 function registerStableId(

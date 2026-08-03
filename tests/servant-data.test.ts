@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createBattleAttackDataRegistry } from "../src/core/battle/actionData";
 import { createBattleState } from "../src/core/battle/state";
+import { createBattleActionEffectDataRegistry } from "../src/effects/actionData";
 import {
   SERVANT_DATA_SCHEMA_VERSION,
   SERVANT_LEVELS_BY_RARITY,
@@ -59,10 +60,9 @@ const TEST_SERVANT = {
           kind: "effect",
           stableId: "test-skill-one-np",
           order: 1,
-          mechanicId: "add_np",
           description: "味方単体のNPを増やす",
           target: { relation: "allies", selection: "single" },
-          parameters: { amountUnits: 5_000 },
+          action: { kind: "change_np", amount: 5_000 },
         },
       ],
     },
@@ -77,17 +77,26 @@ const TEST_SERVANT = {
           kind: "effect",
           stableId: "test-skill-two-buff",
           order: 1,
-          mechanicId: "apply_effect",
           description: "控えを含む味方全体に状態を付与する",
           target: {
             relation: "allies",
             selection: "all",
             includeReserve: true,
           },
-          parameters: {
-            effectType: "attack_up",
-            valuePermille: 200,
-            turns: 3,
+          action: {
+            kind: "apply_effects",
+            effects: [
+              {
+                template: {
+                  stableId: "test-skill-two-attack-up",
+                  name: "攻撃力アップ",
+                  effectType: "attack",
+                  category: "buff",
+                  value: 200,
+                  remainingTurns: 3,
+                },
+              },
+            ],
           },
         },
       ],
@@ -103,14 +112,28 @@ const TEST_SERVANT = {
           kind: "effect",
           stableId: "test-skill-three-frontmost",
           order: 1,
-          mechanicId: "apply_effect",
           description: "自身を除く先頭の味方に状態を付与する",
           target: {
             relation: "allies",
             selection: "frontmost",
             excludeSource: true,
           },
-          parameters: { effectType: "card_up", cardType: "buster" },
+          action: {
+            kind: "apply_effects",
+            effects: [
+              {
+                template: {
+                  stableId: "test-skill-three-buster-up",
+                  name: "Buster性能アップ",
+                  effectType: "card_performance",
+                  category: "buff",
+                  value: 300,
+                  remainingTurns: 3,
+                  flags: { cardType: "buster" },
+                },
+              },
+            ],
+          },
         },
       ],
     },
@@ -125,10 +148,24 @@ const TEST_SERVANT = {
           kind: "effect",
           stableId: "test-class-skill-one-effect",
           order: 1,
-          mechanicId: "apply_effect",
           description: "自身の性能を上げる",
           target: { relation: "self", selection: "single" },
-          parameters: { effectType: "card_up", valuePermille: 100 },
+          action: {
+            kind: "apply_effects",
+            effects: [
+              {
+                template: {
+                  stableId: "test-passive-card-up",
+                  name: "カード性能アップ",
+                  effectType: "card_performance",
+                  category: "buff",
+                  value: 100,
+                  removalPolicy: "unremovable",
+                  durationTick: "manual",
+                },
+              },
+            ],
+          },
         },
       ],
     },
@@ -144,10 +181,23 @@ const TEST_SERVANT = {
         kind: "effect",
         stableId: "test-np-pre-buff",
         order: 1,
-        mechanicId: "apply_effect",
         description: "攻撃前に自身へ状態を付与する",
         target: { relation: "self", selection: "single" },
-        parameters: { effectType: "attack_up", valuePermille: 200, turns: 1 },
+        action: {
+          kind: "apply_effects",
+          effects: [
+            {
+              template: {
+                stableId: "test-np-attack-up",
+                name: "攻撃力アップ",
+                effectType: "attack",
+                category: "buff",
+                value: 200,
+                remainingTurns: 1,
+              },
+            },
+          ],
+        },
       },
       {
         kind: "attack",
@@ -178,10 +228,15 @@ const TEST_SERVANT = {
         kind: "effect",
         stableId: "test-np-party-np",
         order: 3,
-        mechanicId: "add_np",
         description: "攻撃後に味方全体のNPを増やす",
         target: { relation: "allies", selection: "all" },
-        parameters: { amountUnitsByOvercharge: [1_000, 1_500, 2_000, 2_500, 3_000] },
+        action: {
+          kind: "change_np",
+          amount: {
+            scaling: "overcharge",
+            values: [1_000, 1_500, 2_000, 2_500, 3_000],
+          },
+        },
       },
     ],
   },
@@ -280,9 +335,12 @@ describe("declarative servant data", () => {
     );
 
     const fractional = copyDefinition();
-    fractional.activeSkills[0].effects[0].parameters = { amountUnits: 12.5 };
+    fractional.activeSkills[0].effects[0].action = {
+      kind: "change_np",
+      amount: 12.5,
+    };
     expect(() => assertValidServantDefinition(fractional)).toThrow(
-      /number must be a safe integer/,
+      /must be a safe integer/,
     );
   });
 
@@ -312,7 +370,7 @@ describe("declarative servant data", () => {
     expect(high.unit.noblePhantasm?.level).toBe(5);
   });
 
-  it("adapts base NP attack data but marks conditional and non-attack effects unresolved", () => {
+  it("separates numeric NP attack data from declared effects and marks conditional special attack unresolved", () => {
     const instance = createServantBattleInstance(TEST_SERVANT, {
       instanceId: "test-a",
       level: 90,
@@ -333,10 +391,16 @@ describe("declarative servant data", () => {
       },
     ]);
     expect(instance.unresolvedEffectStableIds).toContain("test-np-special");
-    expect(instance.unresolvedEffectStableIds).toContain("test-np-pre-buff");
-    expect(instance.unresolvedEffectStableIds).toContain(
-      "test-class-skill-one-effect",
-    );
+    expect(instance.unresolvedEffectStableIds).toEqual(["test-np-special"]);
+    expect(instance.actionEffectData.actions.map(({ stableId }) => stableId))
+      .toEqual([
+        "test-skill-one",
+        "test-skill-two",
+        "test-skill-three",
+        "test-noble-phantasm",
+      ]);
+    expect(instance.actionEffectData.passives.map(({ stableId }) => stableId))
+      .toEqual(["test-class-skill-one"]);
   });
 
   it("produces state and numeric records accepted by battle registries", () => {
@@ -365,10 +429,18 @@ describe("declarative servant data", () => {
     const attacks = createBattleAttackDataRegistry(
       instances.map(({ attackData }) => attackData),
     );
+    const effects = createBattleActionEffectDataRegistry(
+      instances.map(({ actionEffectData }) => actionEffectData),
+    );
 
     expect(state.formation.ally.frontline.map((servant) => servant?.dataId))
       .toEqual(["test-servant", "test-servant", "test-servant"]);
     expect(Object.keys(attacks.byInstanceId)).toEqual([
+      "test-a",
+      "test-b",
+      "test-c",
+    ]);
+    expect(Object.keys(effects.byInstanceId)).toEqual([
       "test-a",
       "test-b",
       "test-c",

@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.26.0",
-  "status": "declarative-servant-data",
+  "dataSchemaVersion": "1.27.0",
+  "status": "declared-action-effect-data",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -159,6 +159,18 @@
     "servantEffectOrder": "source_order_contiguous_from_1",
     "servantDuplicateInstanceSelectionsIndependent": true,
     "servantUnresolvedEffectsExplicit": true,
+    "declaredActionValueScaling": [
+      "fixed",
+      "noble_phantasm_level",
+      "overcharge"
+    ],
+    "declaredActionSingleTargetResolvedAtExecution": true,
+    "declaredActionUnsupportedPolicy": "reject_before_state_or_rng_change",
+    "servantPassiveInitializationOrder": "formation_order_including_reserve",
+    "allySkillCooldownTiming": "before_skill_effects",
+    "allySkillConsumesCommandAction": false,
+    "allySkillCompletedActionBoundary": true,
+    "directNpChangeUsesTargetNpLevel": true,
     "servantSkillLevel": "max",
     "mysticCodeLevel": "max",
     "servantNpLevels": [

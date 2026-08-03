@@ -347,6 +347,42 @@ if (manifest) {
     manifest.coreRules.servantUnresolvedEffectsExplicit === true,
     "未接続のサーヴァント効果を明示しなければなりません"
   );
+  assert(
+    JSON.stringify(manifest.coreRules.declaredActionValueScaling) === JSON.stringify([
+      "fixed",
+      "noble_phantasm_level",
+      "overcharge"
+    ]),
+    "宣言効果の数値は固定・宝具Lv別・OC別でなければなりません"
+  );
+  assert(
+    manifest.coreRules.declaredActionSingleTargetResolvedAtExecution === true,
+    "宣言効果の単体対象は実行時に解決しなければなりません"
+  );
+  assert(
+    manifest.coreRules.declaredActionUnsupportedPolicy === "reject_before_state_or_rng_change",
+    "未対応の宣言効果は状態・乱数変更前に拒否しなければなりません"
+  );
+  assert(
+    manifest.coreRules.servantPassiveInitializationOrder === "formation_order_including_reserve",
+    "クラススキルは控えを含む編成順で初期化しなければなりません"
+  );
+  assert(
+    manifest.coreRules.allySkillCooldownTiming === "before_skill_effects",
+    "味方スキルCTは効果より前に設定しなければなりません"
+  );
+  assert(
+    manifest.coreRules.allySkillConsumesCommandAction === false,
+    "味方スキルはコマンドカード行動を消費してはいけません"
+  );
+  assert(
+    manifest.coreRules.allySkillCompletedActionBoundary === true,
+    "味方スキルは完了済み行動境界を通らなければなりません"
+  );
+  assert(
+    manifest.coreRules.directNpChangeUsesTargetNpLevel === true,
+    "直接NP増減は対象自身の宝具Lv上限を使わなければなりません"
+  );
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
   assert(manifest.coreRules.fixedSeedReplayRequired === true, "固定シード再現は必須です");
 
