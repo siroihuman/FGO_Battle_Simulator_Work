@@ -307,6 +307,46 @@ if (manifest) {
     manifest.coreRules.battleTurnLogJsonSerializable === true,
     "1戦闘ターンログはJSONへ保存可能でなければなりません"
   );
+  assert(
+    manifest.coreRules.servantDataSchemaVersion === 1,
+    "サーヴァントデータ形式バージョンは1でなければなりません"
+  );
+  assert(
+    manifest.coreRules.servantDataIdentity === "stable_project_id",
+    "サーヴァントデータは安定したプロジェクトIDを使わなければなりません"
+  );
+  assert(
+    manifest.coreRules.servantSourcePageNumberMayBeDataId === false,
+    "参照ページ番号をサーヴァント内部IDにしてはいけません"
+  );
+  assert(
+    manifest.coreRules.servantContentRevision === "current_upgraded_only",
+    "サーヴァントは強化後の現行データだけでなければなりません"
+  );
+  assert(
+    manifest.coreRules.servantActiveSkillCount === 3,
+    "サーヴァントの保有スキルは上位3つでなければなりません"
+  );
+  assert(
+    manifest.coreRules.servantNoblePhantasmCount === 1,
+    "サーヴァントの宝具は上位1つでなければなりません"
+  );
+  assert(
+    manifest.coreRules.servantClassSkillCoverage === "all",
+    "サーヴァントのクラススキルはすべて登録しなければなりません"
+  );
+  assert(
+    manifest.coreRules.servantEffectOrder === "source_order_contiguous_from_1",
+    "サーヴァント効果は資料順に1から連続登録しなければなりません"
+  );
+  assert(
+    manifest.coreRules.servantDuplicateInstanceSelectionsIndependent === true,
+    "重複サーヴァントは個体別にLvと宝具Lvを選べなければなりません"
+  );
+  assert(
+    manifest.coreRules.servantUnresolvedEffectsExplicit === true,
+    "未接続のサーヴァント効果を明示しなければなりません"
+  );
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
   assert(manifest.coreRules.fixedSeedReplayRequired === true, "固定シード再現は必須です");
 

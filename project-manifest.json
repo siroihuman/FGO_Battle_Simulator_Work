@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.25.0",
-  "status": "battle-turn-timeline-log",
+  "dataSchemaVersion": "1.26.0",
+  "status": "declarative-servant-data",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -149,6 +149,16 @@
       "battle_outcome"
     ],
     "battleTurnLogJsonSerializable": true,
+    "servantDataSchemaVersion": 1,
+    "servantDataIdentity": "stable_project_id",
+    "servantSourcePageNumberMayBeDataId": false,
+    "servantContentRevision": "current_upgraded_only",
+    "servantActiveSkillCount": 3,
+    "servantNoblePhantasmCount": 1,
+    "servantClassSkillCoverage": "all",
+    "servantEffectOrder": "source_order_contiguous_from_1",
+    "servantDuplicateInstanceSelectionsIndependent": true,
+    "servantUnresolvedEffectsExplicit": true,
     "servantSkillLevel": "max",
     "mysticCodeLevel": "max",
     "servantNpLevels": [
