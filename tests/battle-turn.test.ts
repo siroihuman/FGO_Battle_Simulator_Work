@@ -21,6 +21,9 @@ import {
   selectCommandCards,
   type CommandCardSelection,
 } from "../src/core/cards/selection";
+import {
+  createBattleActionEffectDataRegistry,
+} from "../src/effects/actionData";
 import { combatantData } from "./helpers/attackData";
 import { unit } from "./helpers/battle";
 
@@ -35,7 +38,10 @@ function enemyAction(): EnemyActionState {
       stableId: "enemy-normal",
       name: "Enemy Normal",
     },
-    skills: [],
+    skills: [{
+      stableId: "enemy-skill",
+      name: "Enemy Skill",
+    }],
     noblePhantasm: null,
     charge: 0,
     chargeMax: 0,
@@ -212,6 +218,80 @@ describe("complete battle-turn coordinator", () => {
     expect(
       result.actionLogBatches.map(({ kind }) => kind),
     ).toEqual(["ally_command", "enemy_turn"]);
+  });
+
+  it("passes declared enemy skills through the complete-turn path and its ordered log", () => {
+    const state = battle();
+    const actionEffectRegistry = createBattleActionEffectDataRegistry([{
+      instanceId: "enemy-a",
+      dataId: "enemy-a",
+      passives: [],
+      actions: [{
+        stableId: "enemy-skill",
+        name: "Enemy Skill",
+        kind: "skill",
+        skillSlot: 1,
+        cooldownAtMax: 0,
+        attackOrder: null,
+        effects: [{
+          kind: "effect",
+          stableId: "enemy-skill-hp-reduction",
+          order: 1,
+          description: "選択した味方のHPを減らす",
+          target: { relation: "enemies", selection: "single" },
+          action: {
+            kind: "reduce_hp",
+            amount: 1_000,
+            canDefeat: false,
+          },
+        }],
+      }],
+    }]);
+    const result = resolveBattleTurn({
+      state,
+      selection: selection(state),
+      registry: standardRegistry(),
+      actionEffectRegistry,
+      rng: new BattleRng("complete-turn-enemy-skill"),
+      enemy: {
+        priorityRequests: [{
+          actorInstanceId: "enemy-a",
+          skillStableId: "enemy-skill",
+          selectedTargetInstanceId: "ally-b",
+        }],
+      },
+    });
+
+    expect(result.stopReason).toBe("turn_complete");
+    expect(findUnitLocation(
+      result.state.formation,
+      "ally-b",
+    )?.unit.hp).toBe(99_000);
+    expect(result.enemyAttacks?.battleLog.entries[0]).toMatchObject({
+      action: { kind: "enemy_skill", stage: "priority" },
+      outcome: { status: "resolved" },
+      declaredEffects: [{
+        phase: "non_damaging",
+        effects: [{
+          effectStableId: "enemy-skill-hp-reduction",
+          targetInstanceIds: ["ally-b"],
+        }],
+      }],
+    });
+    expect(
+      result.battleLog.records[2],
+    ).toMatchObject({
+      recordType: "action_batch",
+      batch: {
+        kind: "enemy_turn",
+        entries: expect.arrayContaining([expect.objectContaining({
+          action: expect.objectContaining({ kind: "enemy_skill" }),
+          declaredEffects: expect.arrayContaining([
+            expect.objectContaining({ phase: "non_damaging" }),
+          ]),
+        })]),
+      },
+    });
   });
 
   it("reproduces the complete turn and every named RNG position from one fixed seed", () => {

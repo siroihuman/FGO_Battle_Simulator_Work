@@ -29,7 +29,10 @@ export type CommandCardExecutionRestriction =
   | "noble_phantasm_not_configured"
   | "noble_phantasm_changed"
   | "noble_phantasm_sealed"
-  | "insufficient_np";
+  | "insufficient_np"
+  | "action_effects_unresolved"
+  | "action_effect_target_required"
+  | "action_effect_target_invalid";
 
 export interface SelectedNormalCommandCard extends CommandCard {
   kind: "normal";
@@ -336,9 +339,13 @@ function assertAllyActionPhase(state: BattleState): void {
 export function beginCommandCardExecution(
   state: BattleState,
   card: SelectedCommandCard,
+  additionalRestrictions: readonly CommandCardExecutionRestriction[] = [],
 ): CommandCardExecutionResult {
   assertAllyActionPhase(state);
-  const restrictions = commandCardExecutionRestrictions(state, card);
+  const restrictions = [
+    ...commandCardExecutionRestrictions(state, card),
+    ...additionalRestrictions,
+  ];
   const owner = findUnitLocation(
     state.formation,
     card.ownerInstanceId,

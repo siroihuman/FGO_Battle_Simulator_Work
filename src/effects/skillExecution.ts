@@ -18,10 +18,10 @@ import {
   type BattleActionEffectSequence,
 } from "./actionData";
 import {
+  declaredActionTargetSelectionIssue,
   executeDeclaredActionEffects,
   type DeclaredActionEffectsResult,
 } from "./actionExecution";
-import { resolveTargetLocations } from "./targeting";
 import type { EffectRuntimeCounters } from "./types";
 
 export type AllySkillUseRejectionReason =
@@ -79,26 +79,12 @@ function selectedTargetReason(
   input: ResolveAllySkillUseInput,
   skill: BattleActionEffectSequence,
 ): AllySkillUseRejectionReason | null {
-  const selectedEffects = skill.effects.filter(
-    ({ target }) =>
-      target.relation !== "self"
-      && target.selection === "single",
+  return declaredActionTargetSelectionIssue(
+    input.state,
+    input.sourceInstanceId,
+    skill.effects,
+    input.selectedTargetInstanceId,
   );
-  if (selectedEffects.length === 0) return null;
-  if (!input.selectedTargetInstanceId) {
-    return "selected_target_required";
-  }
-  const everyTargetIsValid = selectedEffects.every((effect) =>
-    resolveTargetLocations(
-      input.state.formation,
-      input.sourceInstanceId,
-      {
-        ...effect.target,
-        selectedInstanceId: input.selectedTargetInstanceId,
-      },
-    ).length === 1
-  );
-  return everyTargetIsValid ? null : "selected_target_invalid";
 }
 
 /**

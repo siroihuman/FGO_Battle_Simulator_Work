@@ -37,6 +37,20 @@ import type { DeterministicRng } from "../core/rng";
 import {
   createEffectRuntimeCounters,
 } from "../effects/runtime";
+import {
+  battleActionEffectSequence,
+  combatantActionEffectData,
+  hasUnsupportedDeclaredEffects,
+  noblePhantasmEffectPhases,
+  type BattleActionEffectDataRegistry,
+  type BattleActionEffectSequence,
+} from "../effects/actionData";
+import {
+  declaredActionEffectsStopAttackHits,
+  declaredActionTargetSelectionIssue,
+  executeDeclaredActionEffects,
+  type DeclaredActionEffectGroupResult,
+} from "../effects/actionExecution";
 import type {
   EffectRuntimeCounters,
 } from "../effects/types";
@@ -46,6 +60,7 @@ import type {
 } from "./enemyTurn";
 import {
   resolveEnemyTurnSequence,
+  type EnemyActionGuardInput,
   type EnemyTurnActionResolution,
   type EnemyActionResolverInput,
   type EnemyNormalActionSelector,
@@ -68,7 +83,13 @@ export type EnemyAttackDetail =
       targetScope: AttackTargetScope;
       targetInstanceIds: string[];
       calculation: AttackCalculationData;
+      declaredEffects: DeclaredActionEffectGroupResult[];
       resolution: BattleAttackSequenceResolution;
+    }
+  | {
+      outcome: "resolved_effects";
+      targetInstanceIds: string[];
+      declaredEffects: DeclaredActionEffectGroupResult[];
     };
 
 export interface EnemySingleTargetSelectorInput {
@@ -89,6 +110,8 @@ export interface ResolveEnemyAttacksInput {
   state: BattleState;
   priorityRequests: readonly EnemyPrioritySkillRequest[];
   registry: BattleAttackDataRegistry;
+  /** Optional typed enemy skill and NP effects. */
+  actionEffectRegistry?: BattleActionEffectDataRegistry;
   rng: AttackRngStreams;
   counters?: EffectRuntimeCounters;
   normalSelector?: EnemyNormalActionSelector;
@@ -101,6 +124,92 @@ export interface EnemyAttacksResult {
   sequence: EnemyTurnSequenceResult;
   counters: EffectRuntimeCounters;
   battleLog: BattleLogBatch;
+}
+
+function actionEffectSequence(
+  state: BattleState,
+  registry: BattleActionEffectDataRegistry | undefined,
+  actorInstanceId: string,
+  stableId: string,
+): BattleActionEffectSequence | null {
+  if (!registry) return null;
+  const actor = findUnitLocation(
+    state.formation,
+    actorInstanceId,
+  )?.unit;
+  if (!actor) return null;
+  const combatant = combatantActionEffectData(registry, actor);
+  return combatant
+    ? battleActionEffectSequence(combatant, stableId)
+    : null;
+}
+
+function requestedEffectSequence(
+  input: EnemyActionGuardInput,
+  registry: BattleActionEffectDataRegistry | undefined,
+): BattleActionEffectSequence | null {
+  if (input.request.kind === "normal_attack") return null;
+  const stableId = input.request.kind === "skill"
+    ? input.request.skillStableId
+    : findUnitLocation(
+        input.state.formation,
+        input.actorInstanceId,
+      )?.unit.enemyAction?.noblePhantasm?.stableId;
+  return stableId
+    ? actionEffectSequence(
+        input.state,
+        registry,
+        input.actorInstanceId,
+        stableId,
+      )
+    : null;
+}
+
+function enemyActionEffectGuard(
+  input: EnemyActionGuardInput,
+  registry: BattleActionEffectDataRegistry | undefined,
+) {
+  const sequence = requestedEffectSequence(input, registry);
+  if (!sequence) return null;
+  const expectedKind = input.request.kind === "skill"
+    ? "skill"
+    : "noble_phantasm";
+  if (
+    sequence.kind !== expectedKind
+    || hasUnsupportedDeclaredEffects(sequence)
+    || (
+      input.request.kind === "noble_phantasm"
+      && sequence.effects.some(({ action }) =>
+        action.kind === "change_np"
+        && typeof action.amount !== "number"
+      )
+    )
+  ) {
+    return "action_effects_unresolved" as const;
+  }
+  if (input.request.kind !== "skill") return null;
+  const targetIssue = declaredActionTargetSelectionIssue(
+    input.state,
+    input.actorInstanceId,
+    sequence.effects,
+    input.request.selectedTargetInstanceId,
+  );
+  if (targetIssue === "selected_target_required") {
+    return "action_effect_target_required" as const;
+  }
+  return targetIssue === "selected_target_invalid"
+    ? "action_effect_target_invalid" as const
+    : null;
+}
+
+function declaredEffectTargetInstanceIds(
+  groups: readonly DeclaredActionEffectGroupResult[],
+): string[] {
+  return [...new Set(groups.flatMap(({ result }) =>
+    result.effects.flatMap(({ targetInstanceIds }) =>
+      targetInstanceIds
+    )
+  ))];
 }
 
 function firstLivingAlly(state: BattleState): string | null {
@@ -162,6 +271,7 @@ function enemyActionDetail(
     || !("outcome" in detail)
     || (
       detail.outcome !== "resolved"
+      && detail.outcome !== "resolved_effects"
       && detail.outcome !== "skipped"
     )
   ) {
@@ -221,7 +331,10 @@ function enemyActionOutcome(
       resolverCalled: true,
     };
   }
-  if (detail?.outcome === "resolved") {
+  if (
+    detail?.outcome === "resolved"
+    || detail?.outcome === "resolved_effects"
+  ) {
     return {
       status: "resolved",
       reasons: [],
@@ -265,6 +378,7 @@ function createEnemyAttackBattleLog(
       outcome: enemyActionOutcome(action, detail),
       targetInstanceIds:
         detail?.outcome === "resolved"
+          || detail?.outcome === "resolved_effects"
           ? detail.targetInstanceIds
           : [],
       calculation:
@@ -273,6 +387,11 @@ function createEnemyAttackBattleLog(
           : null,
       overchargeStage: null,
       critical: null,
+      declaredEffectGroups:
+        detail?.outcome === "resolved"
+          || detail?.outcome === "resolved_effects"
+          ? detail.declaredEffects
+          : [],
       attackSequence:
         detail?.outcome === "resolved"
           ? detail.resolution
@@ -297,9 +416,8 @@ function createEnemyAttackBattleLog(
 }
 
 /**
- * Runs the enemy coordinator with concrete normal-attack and NP data. Skills
- * remain valid no-ops until their separate effect-data layer is supplied, and
- * missing enemy attack data consumes no attack RNG.
+ * Runs the enemy coordinator with concrete attacks plus optional declared
+ * skill/NP effects. Missing action data remains a deterministic no-op.
  */
 export function resolveEnemyAttacks(
   input: ResolveEnemyAttacksInput,
@@ -345,11 +463,44 @@ export function resolveEnemyAttacks(
         () => {
           const request = resolverInput.request;
           if (request.kind === "skill") {
+            const effectSequence = actionEffectSequence(
+              resolverInput.state,
+              input.actionEffectRegistry,
+              resolverInput.actorInstanceId,
+              resolverInput.preflight.action.stableId,
+            );
+            if (!effectSequence || effectSequence.kind !== "skill") {
+              return {
+                state: resolverInput.state,
+                detail: {
+                  outcome: "skipped",
+                  reason: "non_damaging_action",
+                } satisfies EnemyAttackDetail,
+              };
+            }
+            const effectResult = executeDeclaredActionEffects(
+              resolverInput.state,
+              resolverInput.actorInstanceId,
+              effectSequence.effects,
+              {
+                selectedTargetInstanceId:
+                  request.selectedTargetInstanceId,
+              },
+              counters,
+              input.rng.effects,
+            );
+            counters = effectResult.counters;
+            const declaredEffects: DeclaredActionEffectGroupResult[] = [{
+              phase: "non_damaging",
+              result: effectResult,
+            }];
             return {
-              state: resolverInput.state,
+              state: effectResult.state,
               detail: {
-                outcome: "skipped",
-                reason: "non_damaging_action",
+                outcome: "resolved_effects",
+                targetInstanceIds:
+                  declaredEffectTargetInstanceIds(declaredEffects),
+                declaredEffects,
               } satisfies EnemyAttackDetail,
             };
           }
@@ -417,6 +568,22 @@ export function resolveEnemyAttacks(
             npSpecialAttackPermille:
               action.npSpecialAttackPermille,
           };
+          const effectSequence =
+            request.kind === "noble_phantasm"
+              ? actionEffectSequence(
+                  resolverInput.state,
+                  input.actionEffectRegistry,
+                  resolverInput.actorInstanceId,
+                  resolverInput.preflight.action.stableId,
+                )
+              : null;
+          const effectPhases = effectSequence
+            ? noblePhantasmEffectPhases(effectSequence)
+            : null;
+          const effectContext = {
+            selectedTargetInstanceId: targets[0],
+          };
+          const declaredEffects: DeclaredActionEffectGroupResult[] = [];
           const resolution = resolveBattleAttackSequence(
             resolverInput.state,
             {
@@ -424,6 +591,60 @@ export function resolveEnemyAttacks(
                 resolverInput.actorInstanceId,
               targetInstanceIds: targets,
               rng: input.rng,
+              ...(effectPhases
+                  && effectPhases.beforeAttack.length > 0
+                ? {
+                    beforeDamage: ({
+                      state,
+                      counters: phaseCounters,
+                    }) => {
+                      const result = executeDeclaredActionEffects(
+                        state,
+                        resolverInput.actorInstanceId,
+                        effectPhases.beforeAttack,
+                        effectContext,
+                        phaseCounters,
+                        input.rng.effects,
+                      );
+                      declaredEffects.push({
+                        phase: "before_attack",
+                        result,
+                      });
+                      return {
+                        state: result.state,
+                        counters: result.counters,
+                        stopAttackHits:
+                          declaredActionEffectsStopAttackHits(result),
+                      };
+                    },
+                  }
+                : {}),
+              ...(effectPhases
+                  && effectPhases.afterAttack.length > 0
+                ? {
+                    afterAttackEffects: ({
+                      state,
+                      counters: phaseCounters,
+                    }) => {
+                      const result = executeDeclaredActionEffects(
+                        state,
+                        resolverInput.actorInstanceId,
+                        effectPhases.afterAttack,
+                        effectContext,
+                        phaseCounters,
+                        input.rng.effects,
+                      );
+                      declaredEffects.push({
+                        phase: "after_attack",
+                        result,
+                      });
+                      return {
+                        state: result.state,
+                        counters: result.counters,
+                      };
+                    },
+                  }
+                : {}),
               prepareAttack: (
                 state,
                 activeTargetInstanceIds,
@@ -445,6 +666,7 @@ export function resolveEnemyAttacks(
               targetScope: action.targetScope,
               targetInstanceIds: targets,
               calculation,
+              declaredEffects,
               resolution,
             } satisfies EnemyAttackDetail,
           };
@@ -457,6 +679,10 @@ export function resolveEnemyAttacks(
       return captured.result;
     },
     auditedNormalSelector,
+    (guardInput) => enemyActionEffectGuard(
+      guardInput,
+      input.actionEffectRegistry,
+    ),
   );
   const battleLog = createEnemyAttackBattleLog(
     input.state,

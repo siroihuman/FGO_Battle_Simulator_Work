@@ -21,6 +21,9 @@ import {
   resolveEnemyAttacks,
   type EnemyAttackDetail,
 } from "../src/ai/enemyAttack";
+import {
+  createBattleActionEffectDataRegistry,
+} from "../src/effects/actionData";
 import { combatantData } from "./helpers/attackData";
 import { unit } from "./helpers/battle";
 
@@ -42,7 +45,10 @@ function enemyActions(
       stableId: "enemy-normal",
       name: "Enemy Normal",
     },
-    skills: [],
+    skills: [{
+      stableId: "enemy-skill",
+      name: "Enemy Skill",
+    }],
     noblePhantasm: {
       stableId: "enemy-np",
       name: "Enemy NP",
@@ -143,6 +149,60 @@ function registry() {
   ]);
 }
 
+function actionEffectRegistry() {
+  return createBattleActionEffectDataRegistry([{
+    instanceId: "enemy-a",
+    dataId: "enemy",
+    passives: [],
+    actions: [
+      {
+        stableId: "enemy-skill",
+        name: "Enemy Skill",
+        kind: "skill",
+        skillSlot: 1,
+        cooldownAtMax: 0,
+        attackOrder: null,
+        effects: [{
+          kind: "effect",
+          stableId: "enemy-skill-hp-reduction",
+          order: 1,
+          description: "選択した味方のHPを減らす",
+          target: { relation: "enemies", selection: "single" },
+          action: {
+            kind: "reduce_hp",
+            amount: 1_000,
+            canDefeat: false,
+          },
+        }],
+      },
+      {
+        stableId: "enemy-np",
+        name: "Enemy NP",
+        kind: "noble_phantasm",
+        attackOrder: 2,
+        effects: [
+          {
+            kind: "effect",
+            stableId: "enemy-np-before",
+            order: 1,
+            description: "攻撃前に味方全体のNPを増やす",
+            target: { relation: "enemies", selection: "all" },
+            action: { kind: "change_np", amount: 1_000 },
+          },
+          {
+            kind: "effect",
+            stableId: "enemy-np-after",
+            order: 3,
+            description: "攻撃後に自身を回復する",
+            target: { relation: "self", selection: "single" },
+            action: { kind: "heal_hp", amount: 500 },
+          },
+        ],
+      },
+    ],
+  }]);
+}
+
 function streams(seed: string) {
   const rng = new BattleRng(seed);
   return {
@@ -203,6 +263,7 @@ describe("enemy data-to-attack integration", () => {
       state: enemyTurn(true),
       priorityRequests: [],
       registry: registry(),
+      actionEffectRegistry: actionEffectRegistry(),
       rng: random.streams,
     });
     const detail = resolved.sequence.actions[0]
@@ -218,6 +279,10 @@ describe("enemy data-to-attack integration", () => {
       },
     });
     if (detail.outcome !== "resolved") return;
+    expect(detail.declaredEffects.map(({ phase }) => phase)).toEqual([
+      "before_attack",
+      "after_attack",
+    ]);
     expect(detail.resolution.attack?.attack.hits).toHaveLength(3);
     for (const instanceId of ["ally-a", "ally-b", "ally-c"]) {
       expect(
@@ -233,6 +298,144 @@ describe("enemy data-to-attack integration", () => {
         "enemy-a",
       )?.unit.enemyAction?.charge,
     ).toBe(0);
+    expect(resolved.battleLog.entries[0]?.declaredEffects).toMatchObject([
+      {
+        phase: "before_attack",
+        effects: [{
+          effectStableId: "enemy-np-before",
+          targetInstanceIds: ["ally-a", "ally-b", "ally-c"],
+        }],
+      },
+      {
+        phase: "after_attack",
+        effects: [{ effectStableId: "enemy-np-after" }],
+      },
+    ]);
+  });
+
+  it("resolves a configured enemy skill against its AI-selected target and logs the effect", () => {
+    const random = streams("enemy-declared-skill");
+    const resolved = resolveEnemyAttacks({
+      state: enemyTurn(),
+      priorityRequests: [{
+        actorInstanceId: "enemy-a",
+        skillStableId: "enemy-skill",
+        selectedTargetInstanceId: "ally-b",
+      }],
+      registry: registry(),
+      actionEffectRegistry: actionEffectRegistry(),
+      rng: random.streams,
+    });
+    const first = resolved.sequence.actions[0];
+    expect(first?.preflight.outcome).toBe("ready");
+    expect(first?.resolverDetail).toMatchObject({
+      outcome: "resolved_effects",
+      targetInstanceIds: ["ally-b"],
+    });
+    expect(findUnitLocation(
+      resolved.sequence.state.formation,
+      "ally-b",
+    )?.unit.hp).toBe(99_000);
+    expect(resolved.battleLog.entries[0]).toMatchObject({
+      action: { kind: "enemy_skill", stage: "priority" },
+      outcome: { status: "resolved", reasons: [] },
+      calculation: null,
+      attack: null,
+      declaredEffects: [{
+        phase: "non_damaging",
+        effects: [{
+          effectStableId: "enemy-skill-hp-reduction",
+          targetInstanceIds: ["ally-b"],
+          results: [{ hpChange: -1_000 }],
+        }],
+      }],
+    });
+  });
+
+  it("skips a selected-target enemy skill before effects when AI omits the target", () => {
+    const random = streams("enemy-skill-target-missing");
+    const resolved = resolveEnemyAttacks({
+      state: enemyTurn(),
+      priorityRequests: [{
+        actorInstanceId: "enemy-a",
+        skillStableId: "enemy-skill",
+      }],
+      registry: registry(),
+      actionEffectRegistry: actionEffectRegistry(),
+      rng: random.streams,
+    });
+    expect(resolved.sequence.actions[0]).toMatchObject({
+      preflight: {
+        outcome: "skipped",
+        reason: "action_effect_target_required",
+      },
+      resolverCalled: false,
+    });
+    expect(findUnitLocation(
+      resolved.sequence.state.formation,
+      "ally-b",
+    )?.unit.hp).toBe(100_000);
+    expect(resolved.battleLog.entries[0]).toMatchObject({
+      outcome: {
+        status: "skipped",
+        reasons: ["action_effect_target_required"],
+      },
+      declaredEffects: [],
+      attack: null,
+      rngEvents: [],
+    });
+    expect(random.rng.stream("effects").snapshot().drawCount).toBe(0);
+  });
+
+  it("skips an unresolved enemy NP before charge and action RNG are consumed", () => {
+    const unresolved = createBattleActionEffectDataRegistry([{
+      instanceId: "enemy-a",
+      dataId: "enemy",
+      passives: [],
+      actions: [{
+        stableId: "enemy-np",
+        name: "Enemy NP",
+        kind: "noble_phantasm",
+        attackOrder: 2,
+        effects: [{
+          kind: "effect",
+          stableId: "enemy-np-future-effect",
+          order: 1,
+          description: "未対応効果",
+          target: { relation: "self", selection: "single" },
+          action: {
+            kind: "unsupported",
+            mechanicId: "future_enemy_np_effect",
+          },
+        }],
+      }],
+    }]);
+    const random = streams("enemy-unresolved-np");
+    const resolved = resolveEnemyAttacks({
+      state: enemyTurn(true),
+      priorityRequests: [],
+      registry: registry(),
+      actionEffectRegistry: unresolved,
+      rng: random.streams,
+    });
+    expect(resolved.sequence.actions[0]).toMatchObject({
+      preflight: {
+        outcome: "skipped",
+        reason: "action_effects_unresolved",
+        chargeBefore: 3,
+        chargeConsumed: 0,
+      },
+      resolverCalled: false,
+    });
+    expect(findUnitLocation(
+      resolved.sequence.state.formation,
+      "enemy-a",
+    )?.unit.enemyAction?.charge).toBe(3);
+    expect(
+      Object.values(random.rng.snapshot().streams).every(
+        ({ drawCount }) => drawCount === 0,
+      ),
+    ).toBe(true);
   });
 
   it("treats missing numeric action data as a safe no-op", () => {

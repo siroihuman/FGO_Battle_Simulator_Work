@@ -15,6 +15,9 @@ import {
 import type {
   EffectRuntimeCounters,
 } from "../../effects/types";
+import type {
+  BattleActionEffectDataRegistry,
+} from "../../effects/actionData";
 import type { BattleRng } from "../rng";
 import {
   resolveAllyCommandAttacks,
@@ -66,6 +69,8 @@ export interface ResolveBattleTurnInput {
   state: BattleState;
   selection: CommandCardSelection;
   registry: BattleAttackDataRegistry;
+  /** Optional declared passive/skill/NP effect data for battle instances. */
+  actionEffectRegistry?: BattleActionEffectDataRegistry;
   /** Owns all named streams so one fixed seed covers the complete turn. */
   rng: BattleRng;
   counters?: EffectRuntimeCounters;
@@ -146,6 +151,7 @@ export function resolveBattleTurn(
     state: input.state,
     selection: input.selection,
     registry: input.registry,
+    actionEffectRegistry: input.actionEffectRegistry,
     rng: {
       effects,
       critical: input.rng.stream("critical"),
@@ -231,6 +237,7 @@ export function resolveBattleTurn(
     priorityRequests:
       input.enemy?.priorityRequests ?? [],
     registry: input.registry,
+    actionEffectRegistry: input.actionEffectRegistry,
     rng: { effects, damage, stars },
     counters: allyTurnEnd.counters,
     normalSelector: input.enemy?.normalSelector,

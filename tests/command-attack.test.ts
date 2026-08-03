@@ -18,6 +18,10 @@ import {
   type AllyCommandAttackDetail,
 } from "../src/core/cards/commandAttack";
 import {
+  createBattleActionEffectDataRegistry,
+  type CombatantActionEffectData,
+} from "../src/effects/actionData";
+import {
   listCommandCardChoices,
   selectCommandCards,
   type CommandCardSelection,
@@ -185,6 +189,60 @@ function registry() {
   ]);
 }
 
+function npEffectData(
+  effects: CombatantActionEffectData["actions"][number]["effects"] = [
+    {
+      kind: "effect",
+      stableId: "np-a-attack-up",
+      order: 1,
+      description: "攻撃前に自身の攻撃力を上げる",
+      target: { relation: "self", selection: "single" },
+      action: {
+        kind: "apply_effects",
+        effects: [{
+          template: {
+            stableId: "np-a-attack-up-state",
+            name: "攻撃力アップ",
+            effectType: "attack",
+            category: "buff",
+            value: 1_000,
+            removalPolicy: "removable",
+            durationTick: "owner_turn_end",
+            remainingTurns: 1,
+          },
+        }],
+      },
+    },
+    {
+      kind: "effect",
+      stableId: "np-a-refund",
+      order: 3,
+      description: "攻撃後にOCでNPを増やす",
+      target: { relation: "self", selection: "single" },
+      action: {
+        kind: "change_np",
+        amount: {
+          scaling: "overcharge",
+          values: [1_000, 1_500, 2_000, 2_500, 3_000],
+        },
+      },
+    },
+  ],
+) {
+  return createBattleActionEffectDataRegistry([{
+    instanceId: "ally-a",
+    dataId: "same-servant",
+    passives: [],
+    actions: [{
+      stableId: "np-a",
+      name: "NP A",
+      kind: "noble_phantasm",
+      attackOrder: 2,
+      effects,
+    }],
+  }]);
+}
+
 function streams(seed: string) {
   const rng = new BattleRng(seed);
   return {
@@ -315,6 +373,216 @@ describe("ally command data-to-attack integration", () => {
         "ally-a",
       )?.unit.np,
     ).toBeGreaterThan(0);
+  });
+
+  it("runs declared NP effects around damage and writes their resolved results to the action log", () => {
+    const state = withHand(battle(), [
+      ["ally-b", 0],
+      ["ally-c", 0],
+    ]);
+    const npCardId = cardId(state, "ally-a");
+    const selected = selection(state, [
+      npCardId,
+      cardId(state, "ally-b", 0),
+      cardId(state, "ally-c", 0),
+    ]);
+    const baselineRandom = streams("declared-np-order");
+    const baseline = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      rng: baselineRandom.streams,
+      additionalOverchargeStagesByCardId: { [npCardId]: 1 },
+    });
+    const effectRandom = streams("declared-np-order");
+    const resolved = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      actionEffectRegistry: npEffectData(),
+      rng: effectRandom.streams,
+      additionalOverchargeStagesByCardId: { [npCardId]: 1 },
+    });
+    const replayRandom = streams("declared-np-order");
+    const replay = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      actionEffectRegistry: npEffectData(),
+      rng: replayRandom.streams,
+      additionalOverchargeStagesByCardId: { [npCardId]: 1 },
+    });
+    expect(resolved.sequence.accepted).toBe(true);
+    expect(baseline.sequence.accepted).toBe(true);
+    if (!resolved.sequence.accepted || !baseline.sequence.accepted) return;
+    const detail = resolved.sequence.result.actions[0]
+      ?.resolverDetail as AllyCommandAttackDetail;
+    const baselineDetail = baseline.sequence.result.actions[0]
+      ?.resolverDetail as AllyCommandAttackDetail;
+    expect(detail.outcome).toBe("resolved");
+    expect(baselineDetail.outcome).toBe("resolved");
+    if (detail.outcome !== "resolved" || baselineDetail.outcome !== "resolved") {
+      return;
+    }
+    expect(detail.declaredEffects.map(({ phase }) => phase)).toEqual([
+      "before_attack",
+      "after_attack",
+    ]);
+    expect(detail.declaredEffects[1]?.result.effects[0]).toMatchObject({
+      effectStableId: "np-a-refund",
+      resolvedAmount: 2_000,
+      targetInstanceIds: ["ally-a"],
+    });
+    expect(
+      detail.resolution.attack?.attack.targets.reduce(
+        (total, target) => total + target.totalDamage,
+        0,
+      ),
+    ).toBeGreaterThan(
+      baselineDetail.resolution.attack?.attack.targets.reduce(
+        (total, target) => total + target.totalDamage,
+        0,
+      ) ?? 0,
+    );
+    expect(resolved.battleLog.entries[0]?.declaredEffects).toMatchObject([
+      {
+        phase: "before_attack",
+        effects: [{ effectStableId: "np-a-attack-up" }],
+      },
+      {
+        phase: "after_attack",
+        effects: [{
+          effectStableId: "np-a-refund",
+          resolvedAmount: 2_000,
+          results: [{ npChange: 2_000 }],
+        }],
+      },
+    ]);
+    expect(replay.battleLog).toEqual(resolved.battleLog);
+    expect(replay.sequence).toEqual(resolved.sequence);
+  });
+
+  it("fizzles an NP with unresolved declared effects before NP or action RNG is consumed", () => {
+    const state = withHand(battle(), [
+      ["ally-b", 0],
+      ["ally-c", 0],
+    ]);
+    const selected = selection(state, [
+      cardId(state, "ally-a"),
+      cardId(state, "ally-b", 0),
+      cardId(state, "ally-c", 0),
+    ]);
+    const unsupported = npEffectData([{
+      kind: "effect",
+      stableId: "np-a-future-effect",
+      order: 1,
+      description: "未対応効果",
+      target: { relation: "self", selection: "single" },
+      action: {
+        kind: "unsupported",
+        mechanicId: "future_np_effect",
+      },
+    }]);
+    const random = streams("unresolved-np");
+    const resolved = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      actionEffectRegistry: unsupported,
+      rng: random.streams,
+    });
+    expect(resolved.sequence.accepted).toBe(true);
+    if (!resolved.sequence.accepted) return;
+    expect(resolved.sequence.result.actions[0]?.preflight).toMatchObject({
+      outcome: "fizzled",
+      restrictions: ["action_effects_unresolved"],
+      npConsumed: 0,
+    });
+    expect(resolved.sequence.result.actions[0]?.resolverCalled).toBe(false);
+    expect(findUnitLocation(
+      resolved.sequence.result.state.formation,
+      "ally-a",
+    )?.unit.np).toBe(20_000);
+    expect(resolved.battleLog.entries[0]).toMatchObject({
+      outcome: {
+        status: "fizzled",
+        reasons: ["action_effects_unresolved"],
+      },
+      declaredEffects: [],
+      attack: null,
+      rngEvents: [],
+    });
+  });
+
+  it("rebuilds active all-target attack inputs after a lethal pre-attack NP effect", () => {
+    const state = withHand(battle(), [
+      ["ally-b", 0],
+      ["ally-c", 0],
+    ]);
+    const selected = selection(state, [
+      cardId(state, "ally-a"),
+      cardId(state, "ally-b", 0),
+      cardId(state, "ally-c", 0),
+    ]);
+    const actionEffects = npEffectData([
+      {
+        kind: "effect",
+        stableId: "np-a-pre-defeat",
+        order: 1,
+        description: "攻撃前に選択対象のHPを0にする",
+        target: { relation: "enemies", selection: "single" },
+        action: {
+          kind: "reduce_hp",
+          amount: 1_000_000,
+          canDefeat: true,
+        },
+      },
+      {
+        kind: "effect",
+        stableId: "np-a-post-refund",
+        order: 3,
+        description: "攻撃後にNPを増やす",
+        target: { relation: "self", selection: "single" },
+        action: { kind: "change_np", amount: 500 },
+      },
+    ]);
+    const random = streams("np-pre-effect-defeat");
+    const resolved = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      actionEffectRegistry: actionEffects,
+      rng: random.streams,
+      requestedTargetInstanceId: "enemy-a",
+    });
+    expect(resolved.sequence.accepted).toBe(true);
+    if (!resolved.sequence.accepted) return;
+    const first = resolved.sequence.result.actions[0];
+    const detail = first?.resolverDetail as AllyCommandAttackDetail;
+    expect(detail.outcome).toBe("resolved");
+    if (detail.outcome !== "resolved") return;
+    expect(detail.targetInstanceIds).toEqual(["enemy-a", "enemy-b"]);
+    expect(
+      detail.resolution.attack?.attack.targets.map(
+        ({ targetInstanceId }) => targetInstanceId,
+      ),
+    ).toEqual(["enemy-b"]);
+    expect(
+      detail.resolution.attack?.attack.hits.every(
+        ({ targetInstanceId }) => targetInstanceId === "enemy-b",
+      ),
+    ).toBe(true);
+    expect(detail.resolution.deaths).toHaveLength(1);
+    expect(first?.boundary.enemyReplacement.departures).toMatchObject([
+      { instanceId: "enemy-a", area: "frontline", index: 0 },
+    ]);
+    expect(first?.boundary.nextEnemyTarget?.instanceId).toBe("enemy-b");
+    expect(
+      resolved.battleLog.entries[0]?.rngEvents.filter(
+        ({ stream, operation }) =>
+          stream === "damage" && operation === "integer",
+      ),
+    ).toHaveLength(1);
   });
 
   it("logs missing command data as safe no-ops without attack RNG", () => {

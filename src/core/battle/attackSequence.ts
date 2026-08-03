@@ -37,6 +37,10 @@ export interface ResolveBattleAttackSequenceInput {
   sourceInstanceId: string | null;
   targetInstanceIds: readonly string[];
   rng: AttackRngStreams;
+  /** Runs after the common before_attack trigger and before Hit calculation. */
+  beforeDamage?: BattleAttackSequenceLifecycleHook;
+  /** Runs after the common after_attack trigger and before on_death triggers. */
+  afterAttackEffects?: BattleAttackSequenceLifecycleHook;
   /**
    * Runs after before-attack effects. This lets the data-input layer rebuild
    * numeric modifiers from the updated source and targets without consuming
@@ -47,6 +51,24 @@ export interface ResolveBattleAttackSequenceInput {
     activeTargetInstanceIds: readonly string[],
   ) => PreparedBattleAttackInput;
 }
+
+export interface BattleAttackSequenceLifecycleHookInput {
+  state: BattleState;
+  counters: EffectRuntimeCounters;
+  sourceInstanceId: string | null;
+  targetInstanceIds: readonly string[];
+}
+
+export interface BattleAttackSequenceLifecycleHookResult {
+  state: BattleState;
+  counters: EffectRuntimeCounters;
+  /** Used by a successful before-damage instant death, even when Guts revives. */
+  stopAttackHits?: boolean;
+}
+
+export type BattleAttackSequenceLifecycleHook = (
+  input: BattleAttackSequenceLifecycleHookInput,
+) => BattleAttackSequenceLifecycleHookResult;
 
 export interface BattleAttackSequenceResolution {
   state: BattleState;
@@ -399,6 +421,20 @@ export function resolveBattleAttackSequence(
     beforeAttack = before.trigger;
   }
 
+  let lifecycleStoppedHits = false;
+  if (input.beforeDamage) {
+    const resolved = input.beforeDamage({
+      state: currentState,
+      counters: currentCounters,
+      sourceInstanceId: input.sourceInstanceId,
+      targetInstanceIds,
+    });
+    assertAttackPhase(resolved.state);
+    currentState = resolved.state;
+    currentCounters = resolved.counters;
+    lifecycleStoppedHits = resolved.stopAttackHits === true;
+  }
+
   const activeTargetInstanceIds = activeTargets(
     currentState,
     targetInstanceIds,
@@ -411,6 +447,7 @@ export function resolveBattleAttackSequence(
     )?.unit.alive === true;
   const stoppedBeforeHits =
     triggerStopsAttackHits(beforeAttack)
+    || lifecycleStoppedHits
     || !sourceCanContinue
     || activeTargetInstanceIds.length === 0;
   const hitTriggers: TriggerEventResolutionResult[] = [];
@@ -562,6 +599,18 @@ export function resolveBattleAttackSequence(
     currentState = resolved.state;
     currentCounters = resolved.counters;
     afterAttack = resolved.trigger;
+  }
+
+  if (input.afterAttackEffects) {
+    const resolved = input.afterAttackEffects({
+      state: currentState,
+      counters: currentCounters,
+      sourceInstanceId: input.sourceInstanceId,
+      targetInstanceIds,
+    });
+    assertAttackPhase(resolved.state);
+    currentState = resolved.state;
+    currentCounters = resolved.counters;
   }
 
   const deathResolution = resolveNewDeaths(
