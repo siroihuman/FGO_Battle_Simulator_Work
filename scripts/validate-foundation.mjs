@@ -186,6 +186,38 @@ if (manifest) {
     manifest.coreRules.starCarryBeyondNextCommandPhase === false,
     "未使用スターを次の次の味方コマンドへ持ち越してはいけません"
   );
+  assert(
+    manifest.coreRules.artsChainNpTiming === "before_first_command",
+    "ArtsチェインNPは最初のコマンド開始前に加算しなければなりません"
+  );
+  assert(
+    manifest.coreRules.artsChainUniqueByInstanceId === true,
+    "ArtsチェインNPは戦闘個体ごとに1回だけ加算しなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.commandStarRandomBonuses) === JSON.stringify([50, 20, 20, 0, 0]),
+    "手札5枚のスター集中度ランダム補正は50・20・20・0・0でなければなりません"
+  );
+  assert(
+    manifest.coreRules.commandStarDistributionCap === 50,
+    "カードへ配分するスターは最大50個でなければなりません"
+  );
+  assert(
+    manifest.coreRules.commandStarPerCardCap === 10,
+    "カード1枚へ配分するスターは最大10個でなければなりません"
+  );
+  assert(
+    manifest.coreRules.criticalRatePermillePerStar === 100,
+    "スター1個はクリティカル率10%でなければなりません"
+  );
+  assert(
+    manifest.coreRules.commandStarDistributionRng === "critical",
+    "スター配分はクリティカル用乱数列を使わなければなりません"
+  );
+  assert(
+    manifest.coreRules.fixedCriticalRatesConsumeRng === false,
+    "クリティカル率0%・100%は乱数を消費してはいけません"
+  );
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
   assert(manifest.coreRules.fixedSeedReplayRequired === true, "固定シード再現は必須です");
 

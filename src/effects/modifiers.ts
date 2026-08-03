@@ -33,6 +33,7 @@ export const COMMON_EFFECT_TYPES = {
   power: "power",
   receivedNpGain: "received_np_gain",
   starGeneration: "star_generation",
+  starFocus: "star_focus",
   targetDamage: "target_damage",
   targetFixedDamage: "target_fixed_damage",
   targetStarGeneration: "target_star_generation",

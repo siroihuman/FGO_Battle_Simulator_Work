@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.21.0",
-  "status": "action-data-input",
+  "dataSchemaVersion": "1.22.0",
+  "status": "command-critical-distribution",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -88,6 +88,20 @@
     "attackGeneratedStarsDestination": "next_command",
     "quickChainStarsDestination": "next_command",
     "starCarryBeyondNextCommandPhase": false,
+    "artsChainNpTiming": "before_first_command",
+    "artsChainUniqueByInstanceId": true,
+    "commandStarRandomBonuses": [
+      50,
+      20,
+      20,
+      0,
+      0
+    ],
+    "commandStarDistributionCap": 50,
+    "commandStarPerCardCap": 10,
+    "criticalRatePermillePerStar": 100,
+    "commandStarDistributionRng": "critical",
+    "fixedCriticalRatesConsumeRng": false,
     "servantSkillLevel": "max",
     "mysticCodeLevel": "max",
     "servantNpLevels": [

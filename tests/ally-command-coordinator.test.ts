@@ -647,6 +647,89 @@ describe("ally command sequence coordinator", () => {
     expect(started.result.state.nextCommandStars).toBe(20);
   });
 
+  it("adds Arts-chain NP once per unique battle instance before commands", () => {
+    const ready = withHand(battle(), [
+      ["ally-a", 2],
+      ["ally-a", 3],
+      ["ally-b", 2],
+    ]);
+    const selection = select(ready, [
+      normalCardId(ready, "ally-a", 2),
+      normalCardId(ready, "ally-a", 3),
+      normalCardId(ready, "ally-b", 2),
+    ]);
+    const seenBeforeFirstAction: Array<[number, number]> = [];
+    const started = resolveAllyCommandSequence(
+      ready,
+      selection,
+      (input) => {
+        if (input.action.sequence === 1) {
+          seenBeforeFirstAction.push([
+            findUnitLocation(input.state.formation, "ally-a")?.unit.np
+              ?? -1,
+            findUnitLocation(input.state.formation, "ally-b")?.unit.np
+              ?? -1,
+          ]);
+        }
+        return { state: input.state };
+      },
+    );
+
+    expect(started.accepted).toBe(true);
+    if (!started.accepted) return;
+    expect(started.result.artsChainNpAddition).toMatchObject({
+      requestedPerParticipant: 2_000,
+      participantInstanceIds: ["ally-a", "ally-b"],
+      changes: [
+        {
+          instanceId: "ally-a",
+          before: 15_000,
+          added: 2_000,
+          after: 17_000,
+        },
+        {
+          instanceId: "ally-b",
+          before: 12_000,
+          added: 2_000,
+          after: 14_000,
+        },
+      ],
+    });
+    expect(seenBeforeFirstAction).toEqual([[17_000, 14_000]]);
+  });
+
+  it("applies Arts-chain NP before a selected NP is consumed", () => {
+    let state = updateUnit(battle(), "ally-b", (current) => ({
+      ...current,
+      np: 18_000,
+    }));
+    state = withHand(state, [
+      ["ally-a", 2],
+      ["ally-c", 2],
+    ]);
+    const selection = select(state, [
+      normalCardId(state, "ally-a", 2),
+      npCardId(state, "ally-b"),
+      normalCardId(state, "ally-c", 2),
+    ]);
+    const started = resolveAllyCommandSequence(
+      state,
+      selection,
+      (input) => ({ state: input.state }),
+    );
+
+    expect(started.accepted).toBe(true);
+    if (!started.accepted) return;
+    expect(started.result.actions[1]?.preflight).toMatchObject({
+      outcome: "ready",
+      npBeforeUse: 20_000,
+      npConsumed: 20_000,
+    });
+    expect(
+      findUnitLocation(started.result.state.formation, "ally-b")?.unit.np,
+    ).toBe(0);
+  });
+
   it("connects the common attack resolver to each card and its action boundary", () => {
     let prepared = mixedSelection(battle());
     for (const target of ["enemy-a", "enemy-b", "enemy-c"]) {

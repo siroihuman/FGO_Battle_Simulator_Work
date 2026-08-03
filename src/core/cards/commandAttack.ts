@@ -21,6 +21,7 @@ import type { BattleState } from "../battle/state";
 import type {
   AttackRngStreams,
 } from "../battle/attack";
+import type { DeterministicRng } from "../rng";
 import {
   createEffectRuntimeCounters,
 } from "../../effects/runtime";
@@ -39,6 +40,12 @@ import {
 import type {
   CommandCardSelection,
 } from "./selection";
+import {
+  resolveCommandCardCritical,
+  resolveCommandStarDistribution,
+  type CommandCardCriticalResult,
+  type CommandStarDistribution,
+} from "./critical";
 
 export type AllyAttackDataSkipReason =
   | "source_attack_data_missing"
@@ -57,17 +64,21 @@ export type AllyCommandAttackDetail =
       targetInstanceIds: string[];
       calculation: AttackCalculationData;
       overchargeStage: NoblePhantasmOverchargeStage | null;
+      critical: CommandCardCriticalResult | null;
       resolution: BattleAttackSequenceResolution;
     };
+
+export interface AllyCommandRngStreams extends AttackRngStreams {
+  critical: DeterministicRng;
+}
 
 export interface ResolveAllyCommandAttacksInput {
   state: BattleState;
   selection: CommandCardSelection;
   registry: BattleAttackDataRegistry;
-  rng: AttackRngStreams;
+  rng: AllyCommandRngStreams;
   counters?: EffectRuntimeCounters;
   requestedTargetInstanceId?: string;
-  criticalCardIds?: readonly string[];
   additionalOverchargeStagesByCardId?: Readonly<
     Record<string, number>
   >;
@@ -75,6 +86,7 @@ export interface ResolveAllyCommandAttacksInput {
 
 export interface AllyCommandAttacksResult {
   sequence: AllyCommandSequenceStartResult;
+  starDistribution: CommandStarDistribution;
   counters: EffectRuntimeCounters;
 }
 
@@ -82,12 +94,14 @@ interface ResolvedAllyActionData {
   targetScope: AttackTargetScope;
   calculation: AttackCalculationData;
   overchargeStage: NoblePhantasmOverchargeStage | null;
+  critical: CommandCardCriticalResult | null;
 }
 
 function resolveAllyActionData(
   input: AllyCommandActionResolverInput,
   registry: BattleAttackDataRegistry,
-  criticalCardIds: ReadonlySet<string>,
+  starDistribution: CommandStarDistribution,
+  criticalRng: DeterministicRng,
   additionalOverchargeStagesByCardId: Readonly<
     Record<string, number>
   >,
@@ -113,13 +127,6 @@ function resolveAllyActionData(
       reason: "source_attack_data_missing",
     };
   }
-  const isCritical =
-    input.action.kind === "selected_card"
-    && input.action.calculation.card.kind === "normal"
-    && criticalCardIds.has(
-      input.action.calculation.card.cardId,
-    );
-
   if (input.action.kind === "extra_attack") {
     const hitWeights = combatant.extraAttackHitWeights;
     if (!hitWeights) {
@@ -133,6 +140,7 @@ function resolveAllyActionData(
       data: {
         targetScope: "single",
         overchargeStage: null,
+        critical: null,
         calculation: {
           cardType: "extra",
           isNoblePhantasm: false,
@@ -169,15 +177,22 @@ function resolveAllyActionData(
         reason: "command_card_attack_data_missing",
       };
     }
+    const critical = resolveCommandCardCritical(
+      card.cardId,
+      context.firstCardBonus.criticalRatePermille,
+      starDistribution,
+      criticalRng,
+    );
     return {
       accepted: true,
       data: {
         targetScope: "single",
         overchargeStage: null,
+        critical,
         calculation: {
           cardType: card.type,
           isNoblePhantasm: false,
-          isCritical,
+          isCritical: critical.isCritical,
           cardDamageValuePermille:
             context.cardDamageValuePermille,
           cardNpValuePermille:
@@ -229,6 +244,7 @@ function resolveAllyActionData(
     data: {
       targetScope: noblePhantasm.targetScope,
       overchargeStage,
+      critical: null,
       calculation: {
         cardType: card.type,
         isNoblePhantasm: true,
@@ -280,8 +296,10 @@ export function resolveAllyCommandAttacks(
 ): AllyCommandAttacksResult {
   let counters = input.counters
     ?? createEffectRuntimeCounters();
-  const criticalCardIds = new Set(
-    input.criticalCardIds ?? [],
+  const starDistribution = resolveCommandStarDistribution(
+    input.state,
+    input.registry,
+    input.rng.critical,
   );
   const additionalOverchargeStagesByCardId =
     input.additionalOverchargeStagesByCardId ?? {};
@@ -292,7 +310,8 @@ export function resolveAllyCommandAttacks(
       const actionData = resolveAllyActionData(
         resolverInput,
         input.registry,
-        criticalCardIds,
+        starDistribution,
+        input.rng.critical,
         additionalOverchargeStagesByCardId,
       );
       if (!actionData.accepted) {
@@ -339,11 +358,12 @@ export function resolveAllyCommandAttacks(
           calculation: actionData.data.calculation,
           overchargeStage:
             actionData.data.overchargeStage,
+          critical: actionData.data.critical,
           resolution,
         } satisfies AllyCommandAttackDetail,
       };
     },
     input.requestedTargetInstanceId,
   );
-  return { sequence, counters };
+  return { sequence, starDistribution, counters };
 }

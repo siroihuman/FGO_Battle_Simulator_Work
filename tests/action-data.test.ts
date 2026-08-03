@@ -73,6 +73,13 @@ describe("battle-instance attack data", () => {
         }),
       ])
     ).toThrow(/total must be positive/);
+    expect(() =>
+      createBattleAttackDataRegistry([
+        combatantData("ally-a", "servant", {
+          starWeight: -1,
+        }),
+      ])
+    ).toThrow(/starWeight must be a non-negative safe integer/);
   });
 
   it("rejects stale instance data when a formation instance changes dataId", () => {
