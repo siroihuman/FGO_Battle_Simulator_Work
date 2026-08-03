@@ -354,6 +354,14 @@ describe("complete battle-turn coordinator", () => {
       state: { phase: "finished", outcome: "defeat" },
     });
     expect(result.enemyTurnEnd).not.toBeNull();
+    expect(result.battleLog.records.at(-1)).toMatchObject({
+      recordType: "turn_end",
+      side: "enemy",
+      checkpoint: {
+        kind: "battle_finished",
+        battleOutcome: "defeat",
+      },
+    });
   });
 
   it("leaves later stages untouched when the requested target is rejected", () => {
@@ -380,5 +388,17 @@ describe("complete battle-turn coordinator", () => {
     expect(rng.stream("effects").snapshot().drawCount).toBe(0);
     expect(rng.stream("damage").snapshot().drawCount).toBe(0);
     expect(rng.stream("stars").snapshot().drawCount).toBe(0);
+    expect(result.battleLog).toMatchObject({
+      seed: "rejected-battle-turn",
+      stopReason: "ally_command_rejected",
+      before: { phase: "ally_action", battleTurn: 1 },
+      after: { phase: "ally_action", battleTurn: 1 },
+      records: [
+        {
+          recordType: "action_batch",
+          batch: { status: "rejected" },
+        },
+      ],
+    });
   });
 });

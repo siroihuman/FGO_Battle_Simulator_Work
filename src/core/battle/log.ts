@@ -10,6 +10,7 @@ import type {
 import type {
   TriggerEventResolutionResult,
 } from "../../effects/triggerExecution";
+import type { CommonActionResult } from "../../effects/actions";
 import type {
   ActionBoundaryResult,
   EnemyTargetAnchor,
@@ -381,18 +382,20 @@ export function createBattleLogContext(
 }
 
 export function createBattleLogUnitIndex(
-  state: BattleState,
+  ...states: readonly BattleState[]
 ): BattleLogUnitIndex {
   return new Map(
-    listedUnits(state).map((unit) => [
-      unit.instanceId,
-      {
-        instanceId: unit.instanceId,
-        dataId: unit.dataId,
-        name: unit.name,
-        side: unit.side,
-      },
-    ]),
+    states.flatMap((state) =>
+      listedUnits(state).map((unit) => [
+        unit.instanceId,
+        {
+          instanceId: unit.instanceId,
+          dataId: unit.dataId,
+          name: unit.name,
+          side: unit.side,
+        },
+      ] as const)
+    ),
   );
 }
 
@@ -500,10 +503,8 @@ function survivalLog(
   };
 }
 
-function commonActionResultLog(
-  result: TriggerEventResolutionResult[
-    "activations"
-  ][number]["actions"][number]["batch"]["results"][number],
+export function createBattleLogCommonActionResult(
+  result: CommonActionResult,
   fallbackTargetInstanceId: string | null,
 ): BattleLogCommonActionResult {
   return {
@@ -557,7 +558,7 @@ function commonActionResultLog(
   };
 }
 
-function triggerLog(
+export function createBattleLogTriggerStage(
   result: TriggerEventResolutionResult,
   stageNumber: number,
 ): BattleLogTriggerStage {
@@ -586,7 +587,7 @@ function triggerLog(
         actionKind: action.action.action.kind,
         targetInstanceIds: [...action.targetInstanceIds],
         results: action.batch.results.map((resultItem, index) =>
-          commonActionResultLog(
+          createBattleLogCommonActionResult(
             resultItem,
             action.targetInstanceIds[index] ?? null,
           )
@@ -612,7 +613,7 @@ function triggerStages(
     ...resolution.deaths,
   ];
   return ordered.map((trigger, index) =>
-    triggerLog(trigger, index + 1)
+    createBattleLogTriggerStage(trigger, index + 1)
   );
 }
 
