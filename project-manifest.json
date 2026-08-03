@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.24.0",
-  "status": "battle-turn-integration",
+  "dataSchemaVersion": "1.25.0",
+  "status": "battle-turn-timeline-log",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -129,6 +129,26 @@
       "wave_advanced"
     ],
     "battleTurnRngSource": "single_battle_rng",
+    "battleTurnLogSchemaVersion": 1,
+    "battleTurnLogRecordOrder": [
+      "ally_action_batch",
+      "ally_turn_end",
+      "enemy_action_batch",
+      "enemy_turn_end"
+    ],
+    "battleTurnLogIncludes": [
+      "seed",
+      "rng_positions",
+      "turn_end_activations",
+      "breaks",
+      "hp_settlements",
+      "durations",
+      "cooldowns",
+      "replacements",
+      "wave_transition",
+      "battle_outcome"
+    ],
+    "battleTurnLogJsonSerializable": true,
     "servantSkillLevel": "max",
     "mysticCodeLevel": "max",
     "servantNpLevels": [

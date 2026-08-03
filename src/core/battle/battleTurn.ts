@@ -26,8 +26,19 @@ import type {
 import type {
   BattleAttackDataRegistry,
 } from "./actionData";
-import type { BattleLogBatch } from "./log";
+import {
+  captureBattleLogRng,
+  type BattleLogBatch,
+} from "./log";
 import type { BattleState } from "./state";
+import {
+  createAllyTurnEndLogRecord,
+  createBattleLogActionBatchRecord,
+  createBattleTurnLog,
+  createEnemyTurnEndLogRecord,
+  type BattleTurnLog,
+  type BattleTurnLogRecord,
+} from "./turnLog";
 import {
   resolveAllyTurnEnd,
   resolveEnemyTurnEnd,
@@ -82,8 +93,10 @@ export interface BattleTurnResolution {
   allyTurnEnd: AllyTurnEndResolution | null;
   enemyAttacks: EnemyAttacksResult | null;
   enemyTurnEnd: EnemyTurnEndResolution | null;
-  /** Action batches only; turn-end and checkpoint logs are added separately. */
+  /** Action-only compatibility view in execution order. */
   actionLogBatches: BattleLogBatch[];
+  /** Ordered actions, turn ends, Wave checkpoints, and outcome for this turn. */
+  battleLog: BattleTurnLog;
 }
 
 function checkpointReason(
@@ -123,6 +136,7 @@ function checkpointReason(
 export function resolveBattleTurn(
   input: ResolveBattleTurnInput,
 ): BattleTurnResolution {
+  const rngBefore = input.rng.snapshot();
   const initialCounters = input.counters
     ?? createEffectRuntimeCounters();
   const effects = input.rng.stream("effects");
@@ -145,39 +159,70 @@ export function resolveBattleTurn(
       input.ally?.additionalOverchargeStagesByCardId,
   });
   const actionLogBatches = [allyAttacks.battleLog];
+  const logRecords: BattleTurnLogRecord[] = [
+    createBattleLogActionBatchRecord(allyAttacks.battleLog),
+  ];
 
   if (!allyAttacks.sequence.accepted) {
+    const stopReason = "ally_command_rejected";
     return {
       state: input.state,
       counters: allyAttacks.counters,
-      stopReason: "ally_command_rejected",
+      stopReason,
       allyAttacks,
       allyTurnEnd: null,
       enemyAttacks: null,
       enemyTurnEnd: null,
       actionLogBatches,
+      battleLog: createBattleTurnLog({
+        beforeState: input.state,
+        afterState: input.state,
+        stopReason,
+        rngBefore,
+        rngAfter: input.rng.snapshot(),
+        records: logRecords,
+      }),
     };
   }
 
-  const allyTurnEnd = resolveAllyTurnEnd(
-    allyAttacks.sequence.result.state,
-    allyAttacks.counters,
-    effects,
+  const allyTurnEndState = allyAttacks.sequence.result.state;
+  const allyTurnEndCapture = captureBattleLogRng(
+    { effects },
+    () => resolveAllyTurnEnd(
+      allyTurnEndState,
+      allyAttacks.counters,
+      effects,
+    ),
   );
+  const allyTurnEnd = allyTurnEndCapture.result;
+  logRecords.push(createAllyTurnEndLogRecord({
+    beforeState: allyTurnEndState,
+    resolution: allyTurnEnd,
+    rngEvents: allyTurnEndCapture.events,
+  }));
   if (allyTurnEnd.state.phase !== "enemy_action") {
+    const stopReason = checkpointReason(
+      allyTurnEnd.state,
+      input.state.waveNumber,
+      "ally",
+    );
     return {
       state: allyTurnEnd.state,
       counters: allyTurnEnd.counters,
-      stopReason: checkpointReason(
-        allyTurnEnd.state,
-        input.state.waveNumber,
-        "ally",
-      ),
+      stopReason,
       allyAttacks,
       allyTurnEnd,
       enemyAttacks: null,
       enemyTurnEnd: null,
       actionLogBatches,
+      battleLog: createBattleTurnLog({
+        beforeState: input.state,
+        afterState: allyTurnEnd.state,
+        stopReason,
+        rngBefore,
+        rngAfter: input.rng.snapshot(),
+        records: logRecords,
+      }),
     };
   }
 
@@ -194,24 +239,46 @@ export function resolveBattleTurn(
     aiRng: input.rng.stream("ai"),
   });
   actionLogBatches.push(enemyAttacks.battleLog);
-  const enemyTurnEnd = resolveEnemyTurnEnd(
-    enemyAttacks.sequence.state,
-    enemyAttacks.counters,
-    effects,
+  logRecords.push(
+    createBattleLogActionBatchRecord(enemyAttacks.battleLog),
+  );
+  const enemyTurnEndState = enemyAttacks.sequence.state;
+  const enemyTurnEndCapture = captureBattleLogRng(
+    { effects },
+    () => resolveEnemyTurnEnd(
+      enemyTurnEndState,
+      enemyAttacks.counters,
+      effects,
+    ),
+  );
+  const enemyTurnEnd = enemyTurnEndCapture.result;
+  logRecords.push(createEnemyTurnEndLogRecord({
+    beforeState: enemyTurnEndState,
+    resolution: enemyTurnEnd,
+    rngEvents: enemyTurnEndCapture.events,
+  }));
+  const stopReason = checkpointReason(
+    enemyTurnEnd.state,
+    input.state.waveNumber,
+    "enemy",
   );
 
   return {
     state: enemyTurnEnd.state,
     counters: enemyTurnEnd.counters,
-    stopReason: checkpointReason(
-      enemyTurnEnd.state,
-      input.state.waveNumber,
-      "enemy",
-    ),
+    stopReason,
     allyAttacks,
     allyTurnEnd,
     enemyAttacks,
     enemyTurnEnd,
     actionLogBatches,
+    battleLog: createBattleTurnLog({
+      beforeState: input.state,
+      afterState: enemyTurnEnd.state,
+      stopReason,
+      rngBefore,
+      rngAfter: input.rng.snapshot(),
+      records: logRecords,
+    }),
   };
 }

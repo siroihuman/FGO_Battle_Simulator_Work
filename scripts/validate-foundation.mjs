@@ -275,6 +275,38 @@ if (manifest) {
     manifest.coreRules.battleTurnRngSource === "single_battle_rng",
     "1戦闘ターンは単一のBattleRngから用途別乱数列を受け取らなければなりません"
   );
+  assert(
+    manifest.coreRules.battleTurnLogSchemaVersion === 1,
+    "1戦闘ターンログ形式バージョンは1でなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.battleTurnLogRecordOrder) === JSON.stringify([
+      "ally_action_batch",
+      "ally_turn_end",
+      "enemy_action_batch",
+      "enemy_turn_end"
+    ]),
+    "1戦闘ターンログの記録順が一致しません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.battleTurnLogIncludes) === JSON.stringify([
+      "seed",
+      "rng_positions",
+      "turn_end_activations",
+      "breaks",
+      "hp_settlements",
+      "durations",
+      "cooldowns",
+      "replacements",
+      "wave_transition",
+      "battle_outcome"
+    ]),
+    "1戦闘ターンログの必須詳細が一致しません"
+  );
+  assert(
+    manifest.coreRules.battleTurnLogJsonSerializable === true,
+    "1戦闘ターンログはJSONへ保存可能でなければなりません"
+  );
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
   assert(manifest.coreRules.fixedSeedReplayRequired === true, "固定シード再現は必須です");
 
