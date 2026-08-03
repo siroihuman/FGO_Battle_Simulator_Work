@@ -48,6 +48,15 @@ export interface AllyCommandActionResolverInput {
   action: AllyCommandSequenceAction;
   target: EnemyTargetAnchor;
   chain: CommandCardChainAnalysis;
+  preflight:
+    | Extract<
+        CommandCardExecutionResult,
+        { outcome: "ready" }
+      >
+    | Extract<
+        ExtraAttackExecutionResult,
+        { outcome: "ready" }
+      >;
 }
 
 export interface AllyCommandActionResolverResult {
@@ -266,6 +275,7 @@ export function resolveAllyCommandSequence(
         action,
         target: targetAtStart,
         chain,
+        preflight,
       });
       assertResolverState(resolved.state);
       currentState = resolved.state;

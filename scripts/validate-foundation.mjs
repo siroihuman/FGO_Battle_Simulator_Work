@@ -140,6 +140,34 @@ if (manifest) {
     manifest.coreRules.beforeDamageInstantDeathStopsAttackHits === true,
     "ダメージ前即死成功後は攻撃Hitを開始してはいけません"
   );
+  assert(
+    manifest.coreRules.attackDataIdentity === "battle_instance_id",
+    "攻撃データは戦闘個体IDへ結び付けなければなりません"
+  );
+  assert(
+    manifest.coreRules.duplicateDataIdsMayUseDifferentAttackData === true,
+    "同じサーヴァントデータIDでも個体ごとに別の攻撃値を許可しなければなりません"
+  );
+  assert(
+    manifest.coreRules.attackInputPreparedAfterBeforeAttack === true,
+    "計算入力は攻撃前効果の反映後に構築しなければなりません"
+  );
+  assert(
+    manifest.coreRules.missingEnemyAttackNumericData === "safe_noop",
+    "敵攻撃数値の未設定は安全な不発として扱わなければなりません"
+  );
+  assert(
+    manifest.coreRules.defaultEnemySingleTarget === "frontmost_living_ally",
+    "最小敵攻撃の単体対象は先頭の生存味方でなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.cardResistanceAppliesTo) === JSON.stringify([
+      "damage",
+      "attack_np",
+      "stars"
+    ]),
+    "カード耐性はダメージ・攻撃時NP・スターへ共通適用しなければなりません"
+  );
   assert(manifest.coreRules.maxBreakGauges === 10, "ブレイクゲージ上限は10でなければなりません");
   assert(manifest.coreRules.starCap === 99, "スター上限は99でなければなりません");
   assert(

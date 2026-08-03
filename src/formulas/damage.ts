@@ -9,6 +9,7 @@ export interface DamageInput {
   npDamageMultiplierPermille?: number;
   cardDamageValuePermille: number;
   cardPerformanceModPermille?: number;
+  cardResistancePermille?: number;
   firstCardBonusPermille?: number;
   classAttackCoefficientPermille: number;
   classAffinityPermille: number;
@@ -78,7 +79,15 @@ export function calculateDamage(input: DamageInput): DamageBreakdown {
     "cardDamageValuePermille",
   );
   const cardMod = integer(input.cardPerformanceModPermille, 0, "cardPerformanceModPermille");
-  const cardFactorPermille = Math.max(0, 1000 + cardMod);
+  const cardResistance = integer(
+    input.cardResistancePermille,
+    0,
+    "cardResistancePermille",
+  );
+  const cardFactorPermille = Math.max(
+    0,
+    Math.min(5000, 1000 + cardMod) - cardResistance,
+  );
   const firstBonus = nonNegative(
     integer(input.firstCardBonusPermille, 0, "firstCardBonusPermille"),
     "firstCardBonusPermille",
