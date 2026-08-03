@@ -173,6 +173,41 @@ export function battleActionEffectSequence(
   return data.actions.find((action) => action.stableId === stableId) ?? null;
 }
 
+export interface NoblePhantasmEffectPhases {
+  beforeAttack: readonly DeclaredActionEffect[];
+  afterAttack: readonly DeclaredActionEffect[];
+}
+
+/** Splits one source-ordered NP sequence around its damaging attack marker. */
+export function noblePhantasmEffectPhases(
+  sequence: BattleActionEffectSequence,
+): NoblePhantasmEffectPhases {
+  if (
+    sequence.kind !== "noble_phantasm"
+    || sequence.attackOrder === null
+  ) {
+    throw new RangeError(
+      `${sequence.stableId} is not a noble phantasm effect sequence`,
+    );
+  }
+  return {
+    beforeAttack: sequence.effects.filter(
+      ({ order }) => order < sequence.attackOrder!,
+    ),
+    afterAttack: sequence.effects.filter(
+      ({ order }) => order > sequence.attackOrder!,
+    ),
+  };
+}
+
+export function hasUnsupportedDeclaredEffects(
+  sequence: BattleActionEffectSequence,
+): boolean {
+  return sequence.effects.some(
+    ({ action }) => action.kind === "unsupported",
+  );
+}
+
 export function unresolvedActionEffectStableIds(
   data: CombatantActionEffectData,
 ): string[] {

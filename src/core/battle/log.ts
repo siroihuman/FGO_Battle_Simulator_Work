@@ -12,6 +12,9 @@ import type {
 } from "../../effects/triggerExecution";
 import type { CommonActionResult } from "../../effects/actions";
 import type {
+  DeclaredActionEffectGroupResult,
+} from "../../effects/actionExecution";
+import type {
   ActionBoundaryResult,
   EnemyTargetAnchor,
 } from "./actionBoundary";
@@ -32,7 +35,7 @@ import {
   type RngStreamName,
 } from "../rng";
 
-export const BATTLE_LOG_SCHEMA_VERSION = 1 as const;
+export const BATTLE_LOG_SCHEMA_VERSION = 2 as const;
 
 export type BattleLogBatchKind =
   | "ally_command"
@@ -230,6 +233,23 @@ export interface BattleLogCommonActionResult {
   } | null;
 }
 
+export interface BattleLogDeclaredEffect {
+  effectStableId: string;
+  order: number;
+  outcome: "resolved" | "no_target" | "unsupported";
+  targetInstanceIds: string[];
+  resolvedAmount: number | null;
+  unsupportedMechanicId: string | null;
+  results: BattleLogCommonActionResult[];
+}
+
+export interface BattleLogDeclaredEffectGroup {
+  phase: DeclaredActionEffectGroupResult["phase"];
+  sourceInstanceId: string;
+  effects: BattleLogDeclaredEffect[];
+  unresolvedEffectStableIds: string[];
+}
+
 export interface BattleLogTriggerStage {
   stageNumber: number;
   timing: string;
@@ -318,6 +338,7 @@ export interface BattleActionLogEntry {
   calculation: AttackCalculationData | null;
   overchargeStage: number | null;
   critical: BattleLogCritical | null;
+  declaredEffects: BattleLogDeclaredEffectGroup[];
   attack: BattleLogAttack | null;
   boundary: BattleLogBoundary;
   rngEvents: BattleLogRngEvent[];
@@ -347,6 +368,7 @@ export interface CreateBattleActionLogEntryInput {
   calculation: AttackCalculationData | null;
   overchargeStage: number | null;
   critical: BattleLogCritical | null;
+  declaredEffectGroups?: readonly DeclaredActionEffectGroupResult[];
   attackSequence: BattleAttackSequenceResolution | null;
   boundary: ActionBoundaryResult;
   rngEvents?: readonly BattleLogRngEvent[];
@@ -556,6 +578,33 @@ export function createBattleLogCommonActionResult(
         }
       : null,
   };
+}
+
+function declaredEffectGroups(
+  groups: readonly DeclaredActionEffectGroupResult[],
+): BattleLogDeclaredEffectGroup[] {
+  return groups.map(({ phase, result }) => ({
+    phase,
+    sourceInstanceId: result.sourceInstanceId,
+    effects: result.effects.map((effect) => ({
+      effectStableId: effect.effectStableId,
+      order: effect.order,
+      outcome: effect.outcome,
+      targetInstanceIds: [...effect.targetInstanceIds],
+      resolvedAmount: effect.resolvedAmount ?? null,
+      unsupportedMechanicId:
+        effect.unsupportedMechanicId ?? null,
+      results: (effect.batch?.results ?? []).map(
+        (item, index) => createBattleLogCommonActionResult(
+          item,
+          effect.targetInstanceIds[index] ?? null,
+        ),
+      ),
+    })),
+    unresolvedEffectStableIds: [
+      ...result.unresolvedEffectStableIds,
+    ],
+  }));
 }
 
 export function createBattleLogTriggerStage(
@@ -801,6 +850,9 @@ export function createBattleActionLogEntry(
     calculation: input.calculation,
     overchargeStage: input.overchargeStage,
     critical: input.critical,
+    declaredEffects: declaredEffectGroups(
+      input.declaredEffectGroups ?? [],
+    ),
     attack: input.attackSequence
       ? attackLog(
           input.attackSequence,

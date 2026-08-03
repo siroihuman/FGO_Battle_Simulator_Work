@@ -219,8 +219,8 @@ if (manifest) {
     "クリティカル率0%・100%は乱数を消費してはいけません"
   );
   assert(
-    manifest.coreRules.battleLogSchemaVersion === 1,
-    "戦闘ログ形式バージョンは1でなければなりません"
+    manifest.coreRules.battleLogSchemaVersion === 2,
+    "戦闘ログ形式バージョンは2でなければなりません"
   );
   assert(
     manifest.coreRules.battleLogGranularity === "completed_action",
@@ -230,6 +230,7 @@ if (manifest) {
     JSON.stringify(manifest.coreRules.battleLogIncludes) === JSON.stringify([
       "outcome",
       "calculation",
+      "declared_effects",
       "hits",
       "triggers",
       "departures",
@@ -362,6 +363,42 @@ if (manifest) {
   assert(
     manifest.coreRules.declaredActionUnsupportedPolicy === "reject_before_state_or_rng_change",
     "未対応の宣言効果は状態・乱数変更前に拒否しなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.noblePhantasmDeclaredSequenceOrder) === JSON.stringify([
+      "common_before_attack",
+      "declared_before_attack",
+      "hits_on_hit_on_attack_on_damage_taken",
+      "common_after_attack",
+      "declared_after_attack",
+      "on_death",
+      "completed_action_boundary"
+    ]),
+    "宝具の宣言効果・攻撃・死亡・行動境界の順序が一致しません"
+  );
+  assert(
+    manifest.coreRules.declaredPreAttackRebuildsActiveTargets === true,
+    "宝具攻撃前効果後は生存対象から攻撃入力を再構築しなければなりません"
+  );
+  assert(
+    manifest.coreRules.unresolvedDeclaredActionConsumesNpOrCharge === false,
+    "未対応宣言効果は宝具NP・敵チャージを消費してはいけません"
+  );
+  assert(
+    manifest.coreRules.enemySkillSingleTargetSource === "ai_request",
+    "敵スキルの単体対象はAI要求から渡さなければなりません"
+  );
+  assert(
+    manifest.coreRules.enemySkillCompletedActionBoundary === true,
+    "敵スキル効果後は完了済み行動境界を通らなければなりません"
+  );
+  assert(
+    manifest.coreRules.declaredActionLogUsesExecutionResults === true,
+    "宣言効果ログは実行済み結果から作らなければなりません"
+  );
+  assert(
+    manifest.coreRules.enemyNoblePhantasmScaledDeclaredValues === "unsupported_until_context_data",
+    "敵宝具の段階別宣言値は文脈データ追加まで未対応でなければなりません"
   );
   assert(
     manifest.coreRules.servantPassiveInitializationOrder === "formation_order_including_reserve",

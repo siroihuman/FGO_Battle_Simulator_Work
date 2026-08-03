@@ -77,6 +77,16 @@ export type AllyCommandActionResolver = (
   input: AllyCommandActionResolverInput,
 ) => AllyCommandActionResolverResult;
 
+export interface AllyCommandActionGuardInput {
+  state: BattleState;
+  action: AllyCommandSequenceAction;
+  target: EnemyTargetAnchor;
+}
+
+export type AllyCommandActionGuard = (
+  input: AllyCommandActionGuardInput,
+) => readonly CommandCardExecutionRestriction[];
+
 export type ExtraAttackExecutionResult =
   | {
       outcome: "ready";
@@ -305,6 +315,7 @@ export function resolveAllyCommandSequence(
   selection: CommandCardSelection,
   resolver: AllyCommandActionResolver,
   requestedTargetInstanceId?: string,
+  actionGuard?: AllyCommandActionGuard,
 ): AllyCommandSequenceStartResult {
   const starting = resolveStartingTarget(
     state,
@@ -327,11 +338,20 @@ export function resolveAllyCommandSequence(
   for (const action of plan) {
     if (!target) break;
     const targetAtStart = target;
+    const additionalRestrictions =
+      action.kind === "selected_card" && actionGuard
+        ? actionGuard({
+            state: currentState,
+            action,
+            target: targetAtStart,
+          })
+        : [];
     const preflight =
       action.kind === "selected_card"
         ? beginCommandCardExecution(
             currentState,
             action.calculation.card,
+            additionalRestrictions,
           )
         : beginExtraAttackExecution(
             currentState,

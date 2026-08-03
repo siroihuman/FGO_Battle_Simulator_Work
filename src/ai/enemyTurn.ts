@@ -17,6 +17,7 @@ export const ENEMY_NORMAL_ACTION_BUDGET = 3 as const;
 export interface EnemyPrioritySkillRequest {
   actorInstanceId: string;
   skillStableId: string;
+  selectedTargetInstanceId?: string;
 }
 
 export interface EnemyPrioritySkillStep {
@@ -27,6 +28,7 @@ export interface EnemyPrioritySkillStep {
   request: {
     kind: "skill";
     skillStableId: string;
+    selectedTargetInstanceId?: string;
   };
   consumesNormalAction: false;
 }
@@ -62,6 +64,7 @@ export type EnemyActionRequest =
   | {
       kind: "skill";
       skillStableId: string;
+      selectedTargetInstanceId?: string;
     }
   | {
       kind: "noble_phantasm";
@@ -78,7 +81,10 @@ export type EnemyActionSkipReason =
   | "normal_attack_not_configured"
   | "skill_not_configured"
   | "noble_phantasm_not_configured"
-  | "noble_phantasm_charge_not_full";
+  | "noble_phantasm_charge_not_full"
+  | "action_effects_unresolved"
+  | "action_effect_target_required"
+  | "action_effect_target_invalid";
 
 export type EnemyActorExecutionSkipReason = Extract<
   EnemyActionSkipReason,
@@ -165,6 +171,12 @@ export function planEnemyPrioritySkills(
       request: {
         kind: "skill",
         skillStableId: request.skillStableId,
+        ...(request.selectedTargetInstanceId === undefined
+          ? {}
+          : {
+              selectedTargetInstanceId:
+                request.selectedTargetInstanceId,
+            }),
       },
       consumesNormalAction: false,
     };
@@ -323,6 +335,7 @@ export function beginEnemyActionExecution(
   actorInstanceId: string,
   request: EnemyActionRequest,
   source: EnemyActionSource,
+  additionalSkipReason: EnemyActionSkipReason | null = null,
 ): EnemyActionExecutionResult {
   assertEnemyActionPhase(state);
   const normalActionConsumed = source === "normal";
@@ -363,6 +376,7 @@ export function beginEnemyActionExecution(
     }
     return skipped(resolved.reason);
   }
+  if (additionalSkipReason) return skipped(additionalSkipReason);
 
   if (request.kind !== "noble_phantasm") {
     return {

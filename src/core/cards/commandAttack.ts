@@ -37,6 +37,21 @@ import type { DeterministicRng } from "../rng";
 import {
   createEffectRuntimeCounters,
 } from "../../effects/runtime";
+import {
+  battleActionEffectSequence,
+  combatantActionEffectData,
+  hasUnsupportedDeclaredEffects,
+  noblePhantasmEffectPhases,
+  type BattleActionEffectDataRegistry,
+  type BattleActionEffectSequence,
+} from "../../effects/actionData";
+import {
+  declaredActionEffectsStopAttackHits,
+  declaredActionTargetSelectionIssue,
+  executeDeclaredActionEffects,
+  type DeclaredActionEffectGroupResult,
+  type DeclaredActionExecutionContext,
+} from "../../effects/actionExecution";
 import type {
   EffectRuntimeCounters,
 } from "../../effects/types";
@@ -51,6 +66,7 @@ import {
   type AllyCommandSequenceStartResult,
 } from "./turnCoordinator";
 import type {
+  CommandCardExecutionRestriction,
   CommandCardSelection,
 } from "./selection";
 import {
@@ -78,6 +94,7 @@ export type AllyCommandAttackDetail =
       calculation: AttackCalculationData;
       overchargeStage: NoblePhantasmOverchargeStage | null;
       critical: CommandCardCriticalResult | null;
+      declaredEffects: DeclaredActionEffectGroupResult[];
       resolution: BattleAttackSequenceResolution;
     };
 
@@ -89,6 +106,8 @@ export interface ResolveAllyCommandAttacksInput {
   state: BattleState;
   selection: CommandCardSelection;
   registry: BattleAttackDataRegistry;
+  /** Optional typed skill/NP effect data keyed by the same battle instance. */
+  actionEffectRegistry?: BattleActionEffectDataRegistry;
   rng: AllyCommandRngStreams;
   counters?: EffectRuntimeCounters;
   requestedTargetInstanceId?: string;
@@ -109,6 +128,60 @@ interface ResolvedAllyActionData {
   calculation: AttackCalculationData;
   overchargeStage: NoblePhantasmOverchargeStage | null;
   critical: CommandCardCriticalResult | null;
+}
+
+function noblePhantasmEffectSequence(
+  state: BattleState,
+  registry: BattleActionEffectDataRegistry | undefined,
+  sourceInstanceId: string,
+  stableId: string,
+): BattleActionEffectSequence | null {
+  if (!registry) return null;
+  const source = findUnitLocation(
+    state.formation,
+    sourceInstanceId,
+  )?.unit;
+  if (!source) return null;
+  const combatant = combatantActionEffectData(registry, source);
+  return combatant
+    ? battleActionEffectSequence(combatant, stableId)
+    : null;
+}
+
+function allyActionEffectRestrictions(
+  state: BattleState,
+  action: AllyCommandActionResolverInput["action"],
+  targetInstanceId: string,
+  registry: BattleActionEffectDataRegistry | undefined,
+): CommandCardExecutionRestriction[] {
+  if (action.kind !== "selected_card") return [];
+  const card = action.calculation.card;
+  if (card.kind !== "noble_phantasm") return [];
+  const sequence = noblePhantasmEffectSequence(
+    state,
+    registry,
+    action.ownerInstanceId,
+    card.noblePhantasmStableId,
+  );
+  if (!sequence) return [];
+  if (
+    sequence.kind !== "noble_phantasm"
+    || hasUnsupportedDeclaredEffects(sequence)
+  ) {
+    return ["action_effects_unresolved"];
+  }
+  const targetIssue = declaredActionTargetSelectionIssue(
+    state,
+    action.ownerInstanceId,
+    sequence.effects,
+    targetInstanceId,
+  );
+  if (targetIssue === "selected_target_required") {
+    return ["action_effect_target_required"];
+  }
+  return targetIssue === "selected_target_invalid"
+    ? ["action_effect_target_invalid"]
+    : [];
 }
 
 function resolveAllyActionData(
@@ -438,6 +511,10 @@ function createAllyCommandBattleLog(
         detail?.outcome === "resolved"
           ? detail.critical
           : null,
+      declaredEffectGroups:
+        detail?.outcome === "resolved"
+          ? detail.declaredEffects
+          : [],
       attackSequence:
         detail?.outcome === "resolved"
           ? detail.resolution
@@ -517,6 +594,39 @@ export function resolveAllyCommandAttacks(
             actionData.data.targetScope,
             resolverInput.target.instanceId,
           );
+          const selectedCard =
+            resolverInput.action.kind === "selected_card"
+              ? resolverInput.action.calculation.card
+              : null;
+          const effectSequence =
+            selectedCard?.kind === "noble_phantasm"
+              ? noblePhantasmEffectSequence(
+                  resolverInput.state,
+                  input.actionEffectRegistry,
+                  resolverInput.action.ownerInstanceId,
+                  selectedCard.noblePhantasmStableId,
+                )
+              : null;
+          const effectPhases = effectSequence
+            ? noblePhantasmEffectPhases(effectSequence)
+            : null;
+          let effectContext: DeclaredActionExecutionContext | null = null;
+          if (selectedCard?.kind === "noble_phantasm") {
+            if (actionData.data.overchargeStage === null) {
+              throw new RangeError(
+                "resolved noble phantasm is missing overcharge stage",
+              );
+            }
+            effectContext = {
+              noblePhantasmLevel:
+                selectedCard.noblePhantasmLevel,
+              overchargeStage:
+                actionData.data.overchargeStage,
+              selectedTargetInstanceId:
+                resolverInput.target.instanceId,
+            };
+          }
+          const declaredEffects: DeclaredActionEffectGroupResult[] = [];
           const resolution = resolveBattleAttackSequence(
             resolverInput.state,
             {
@@ -524,6 +634,62 @@ export function resolveAllyCommandAttacks(
                 resolverInput.action.ownerInstanceId,
               targetInstanceIds,
               rng: input.rng,
+              ...(effectPhases
+                  && effectContext
+                  && effectPhases.beforeAttack.length > 0
+                ? {
+                    beforeDamage: ({
+                      state,
+                      counters: phaseCounters,
+                    }) => {
+                      const result = executeDeclaredActionEffects(
+                        state,
+                        resolverInput.action.ownerInstanceId,
+                        effectPhases.beforeAttack,
+                        effectContext!,
+                        phaseCounters,
+                        input.rng.effects,
+                      );
+                      declaredEffects.push({
+                        phase: "before_attack",
+                        result,
+                      });
+                      return {
+                        state: result.state,
+                        counters: result.counters,
+                        stopAttackHits:
+                          declaredActionEffectsStopAttackHits(result),
+                      };
+                    },
+                  }
+                : {}),
+              ...(effectPhases
+                  && effectContext
+                  && effectPhases.afterAttack.length > 0
+                ? {
+                    afterAttackEffects: ({
+                      state,
+                      counters: phaseCounters,
+                    }) => {
+                      const result = executeDeclaredActionEffects(
+                        state,
+                        resolverInput.action.ownerInstanceId,
+                        effectPhases.afterAttack,
+                        effectContext!,
+                        phaseCounters,
+                        input.rng.effects,
+                      );
+                      declaredEffects.push({
+                        phase: "after_attack",
+                        result,
+                      });
+                      return {
+                        state: result.state,
+                        counters: result.counters,
+                      };
+                    },
+                  }
+                : {}),
               prepareAttack: (
                 state,
                 activeTargetInstanceIds,
@@ -548,6 +714,7 @@ export function resolveAllyCommandAttacks(
               overchargeStage:
                 actionData.data.overchargeStage,
               critical: actionData.data.critical,
+              declaredEffects,
               resolution,
             } satisfies AllyCommandAttackDetail,
           };
@@ -560,6 +727,13 @@ export function resolveAllyCommandAttacks(
       return captured.result;
     },
     input.requestedTargetInstanceId,
+    ({ state, action, target }) =>
+      allyActionEffectRestrictions(
+        state,
+        action,
+        target.instanceId,
+        input.actionEffectRegistry,
+      ),
   );
   const battleLog = createAllyCommandBattleLog(
     input.state,

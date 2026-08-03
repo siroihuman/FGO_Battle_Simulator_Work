@@ -64,6 +64,20 @@ export interface DeclaredActionEffectsResult {
   unresolvedEffectStableIds: string[];
 }
 
+export type DeclaredActionEffectPhase =
+  | "before_attack"
+  | "after_attack"
+  | "non_damaging";
+
+export interface DeclaredActionEffectGroupResult {
+  phase: DeclaredActionEffectPhase;
+  result: DeclaredActionEffectsResult;
+}
+
+export type DeclaredActionTargetSelectionIssue =
+  | "selected_target_required"
+  | "selected_target_invalid";
+
 export interface PassiveEffectGroupResult {
   sourceInstanceId: string;
   groupStableId: string;
@@ -91,6 +105,49 @@ export function resolveDeclaredActionInteger(
     );
   }
   return value.values[stage - 1];
+}
+
+/**
+ * Validates the one runtime-selected target shared by a declared action.
+ * The check is performed before cooldown, NP/charge, state, or RNG changes.
+ */
+export function declaredActionTargetSelectionIssue(
+  state: BattleState,
+  sourceInstanceId: string,
+  effects: readonly DeclaredActionEffect[],
+  selectedTargetInstanceId?: string,
+): DeclaredActionTargetSelectionIssue | null {
+  const selectedEffects = effects.filter(
+    ({ target }) =>
+      target.relation !== "self"
+      && target.selection === "single",
+  );
+  if (selectedEffects.length === 0) return null;
+  if (!selectedTargetInstanceId) {
+    return "selected_target_required";
+  }
+  const everyTargetIsValid = selectedEffects.every((effect) =>
+    resolveTargetLocations(
+      state.formation,
+      sourceInstanceId,
+      {
+        ...effect.target,
+        selectedInstanceId: selectedTargetInstanceId,
+      },
+    ).length === 1
+  );
+  return everyTargetIsValid ? null : "selected_target_invalid";
+}
+
+export function declaredActionEffectsStopAttackHits(
+  result: DeclaredActionEffectsResult,
+): boolean {
+  return result.effects.some(({ batch }) =>
+    batch?.results.some(
+      ({ instantDeathResult }) =>
+        instantDeathResult?.skipAttackHits === true,
+    ) === true
+  );
 }
 
 function replaceIfPresent(
