@@ -251,6 +251,30 @@ if (manifest) {
     manifest.coreRules.fixedChanceAuditDraws === 0,
     "確率0%・100%の監査記録は乱数を消費してはいけません"
   );
+  assert(
+    JSON.stringify(manifest.coreRules.battleTurnStageOrder) === JSON.stringify([
+      "ally_command",
+      "ally_turn_end",
+      "enemy_turn",
+      "enemy_turn_end"
+    ]),
+    "1戦闘ターンの処理順が一致しません"
+  );
+  assert(
+    manifest.coreRules.acceptedCommandRequiresTurnEnd === true,
+    "成立した味方コマンド列の後は味方ターン終了を省略してはいけません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.enemyTurnSkippedAfterAllyCheckpoint) === JSON.stringify([
+      "battle_finished",
+      "wave_advanced"
+    ]),
+    "味方終了時判定後に敵ターンを省略する条件が一致しません"
+  );
+  assert(
+    manifest.coreRules.battleTurnRngSource === "single_battle_rng",
+    "1戦闘ターンは単一のBattleRngから用途別乱数列を受け取らなければなりません"
+  );
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
   assert(manifest.coreRules.fixedSeedReplayRequired === true, "固定シード再現は必須です");
 
