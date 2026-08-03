@@ -47,4 +47,51 @@ describe("deterministic named RNG streams", () => {
     expect(rng.chance(1000)).toBe(true);
     expect(rng.snapshot().drawCount).toBe(0);
   });
+
+  it("audits logical draws without changing the generated sequence", () => {
+    const audited = new DeterministicRng(456n);
+    const plain = new DeterministicRng(456n);
+    const events: Parameters<
+      Parameters<typeof audited.addAuditListener>[0]
+    >[0][] = [];
+    const remove = audited.addAuditListener((event) => {
+      events.push(event);
+    });
+
+    expect(audited.nextIntInclusive(10, 20)).toBe(
+      plain.nextIntInclusive(10, 20),
+    );
+    expect(audited.chance(500)).toBe(plain.chance(500));
+    expect(audited.chance(1000)).toBe(plain.chance(1000));
+    remove();
+
+    expect(audited.snapshot()).toEqual(plain.snapshot());
+    expect(events).toEqual([
+      expect.objectContaining({
+        operation: "integer",
+        drawNumberStart: 1,
+        drawNumberEnd: 1,
+        drawsConsumed: 1,
+        minimum: 10,
+        maximum: 20,
+      }),
+      expect.objectContaining({
+        operation: "chance",
+        drawNumberStart: 2,
+        drawNumberEnd: 2,
+        drawsConsumed: 1,
+        ratePermille: 500,
+        roll: expect.any(Number),
+      }),
+      {
+        operation: "chance",
+        drawNumberStart: null,
+        drawNumberEnd: null,
+        drawsConsumed: 0,
+        ratePermille: 1000,
+        roll: null,
+        succeeded: true,
+      },
+    ]);
+  });
 });

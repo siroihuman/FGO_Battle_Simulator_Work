@@ -10,6 +10,18 @@ import {
   type BattleAttackSequenceResolution,
 } from "../battle/attackSequence";
 import {
+  BATTLE_LOG_SCHEMA_VERSION,
+  battleLogBatchId,
+  captureBattleLogRng,
+  createBattleActionLogEntry,
+  createBattleLogContext,
+  createBattleLogUnitIndex,
+  type BattleLogActionDescriptor,
+  type BattleLogActionOutcome,
+  type BattleLogBatch,
+  type BattleLogRngEvent,
+} from "../battle/log";
+import {
   prepareBattleAttackInput,
   type AttackCalculationData,
 } from "../battle/attackInput";
@@ -34,6 +46,7 @@ import {
 } from "./chain";
 import {
   resolveAllyCommandSequence,
+  type AllyCommandActionResolution,
   type AllyCommandActionResolverInput,
   type AllyCommandSequenceStartResult,
 } from "./turnCoordinator";
@@ -88,6 +101,7 @@ export interface AllyCommandAttacksResult {
   sequence: AllyCommandSequenceStartResult;
   starDistribution: CommandStarDistribution;
   counters: EffectRuntimeCounters;
+  battleLog: BattleLogBatch;
 }
 
 interface ResolvedAllyActionData {
@@ -286,6 +300,165 @@ function actionTargets(
     .map(({ unit }) => unit.instanceId);
 }
 
+function allyActionDetail(
+  action: AllyCommandActionResolution,
+): AllyCommandAttackDetail | null {
+  if (!action.resolverCalled) return null;
+  const detail = action.resolverDetail;
+  if (
+    !detail
+    || typeof detail !== "object"
+    || !("outcome" in detail)
+    || (
+      detail.outcome !== "resolved"
+      && detail.outcome !== "skipped"
+    )
+  ) {
+    throw new RangeError(
+      "resolved ally command action is missing its typed detail",
+    );
+  }
+  return detail as AllyCommandAttackDetail;
+}
+
+function allyActionDescriptor(
+  action: AllyCommandActionResolution,
+): BattleLogActionDescriptor {
+  if (action.action.kind === "extra_attack") {
+    return {
+      kind: "extra_attack",
+      stage: "extra",
+      sequence: action.action.sequence,
+      stableId: "extra_attack",
+      name: "Extra Attack",
+      cardId: null,
+      cardType: "extra",
+    };
+  }
+  const card = action.action.calculation.card;
+  if (card.kind === "normal") {
+    return {
+      kind: "normal_command",
+      stage: "selected",
+      sequence: action.action.sequence,
+      stableId: card.cardId,
+      name: null,
+      cardId: card.cardId,
+      cardType: card.type,
+    };
+  }
+  return {
+    kind: "noble_phantasm",
+    stage: "selected",
+    sequence: action.action.sequence,
+    stableId: card.noblePhantasmStableId,
+    name: card.noblePhantasmName,
+    cardId: card.cardId,
+    cardType: card.type,
+  };
+}
+
+function allyActionOutcome(
+  action: AllyCommandActionResolution,
+  detail: AllyCommandAttackDetail | null,
+): BattleLogActionOutcome {
+  if (action.preflight.outcome === "fizzled") {
+    return {
+      status: "fizzled",
+      reasons: [...action.preflight.restrictions],
+      resolverCalled: false,
+    };
+  }
+  if (detail?.outcome === "skipped") {
+    return {
+      status: "skipped",
+      reasons: [detail.reason],
+      resolverCalled: true,
+    };
+  }
+  if (detail?.outcome === "resolved") {
+    return {
+      status: "resolved",
+      reasons: [],
+      resolverCalled: true,
+    };
+  }
+  throw new RangeError(
+    "ready ally command action is missing its resolution detail",
+  );
+}
+
+function createAllyCommandBattleLog(
+  stateAtStart: BattleState,
+  sequence: AllyCommandSequenceStartResult,
+  setupRngEvents: readonly BattleLogRngEvent[],
+  actionRngEvents: ReadonlyMap<number, readonly BattleLogRngEvent[]>,
+): BattleLogBatch {
+  const context = createBattleLogContext(stateAtStart);
+  const kind = "ally_command" as const;
+  const batchId = battleLogBatchId(context, kind);
+  if (!sequence.accepted) {
+    return {
+      schemaVersion: BATTLE_LOG_SCHEMA_VERSION,
+      batchId,
+      kind,
+      context,
+      status: "rejected",
+      stopReason: sequence.reason,
+      setupRngEvents: [...setupRngEvents],
+      entries: [],
+    };
+  }
+  const unitIndex = createBattleLogUnitIndex(stateAtStart);
+  const entries = sequence.result.actions.map((action, index) => {
+    const detail = allyActionDetail(action);
+    const targetInstanceIds =
+      detail?.outcome === "resolved"
+        ? detail.targetInstanceIds
+        : [action.targetAtStart.instanceId];
+    return createBattleActionLogEntry({
+      batchId,
+      context,
+      unitIndex,
+      side: "ally",
+      actionNumber: index + 1,
+      actorInstanceId: action.action.ownerInstanceId,
+      action: allyActionDescriptor(action),
+      outcome: allyActionOutcome(action, detail),
+      targetInstanceIds,
+      calculation:
+        detail?.outcome === "resolved"
+          ? detail.calculation
+          : null,
+      overchargeStage:
+        detail?.outcome === "resolved"
+          ? detail.overchargeStage
+          : null,
+      critical:
+        detail?.outcome === "resolved"
+          ? detail.critical
+          : null,
+      attackSequence:
+        detail?.outcome === "resolved"
+          ? detail.resolution
+          : null,
+      boundary: action.boundary,
+      rngEvents:
+        actionRngEvents.get(action.action.sequence) ?? [],
+    });
+  });
+  return {
+    schemaVersion: BATTLE_LOG_SCHEMA_VERSION,
+    batchId,
+    kind,
+    context,
+    status: "completed",
+    stopReason: sequence.result.stopReason,
+    setupRngEvents: [...setupRngEvents],
+    entries,
+  };
+}
+
 /**
  * Runs the existing command coordinator with a concrete resolver backed by
  * battle-instance attack data. Missing numeric data becomes a logged no-op;
@@ -296,74 +469,103 @@ export function resolveAllyCommandAttacks(
 ): AllyCommandAttacksResult {
   let counters = input.counters
     ?? createEffectRuntimeCounters();
-  const starDistribution = resolveCommandStarDistribution(
-    input.state,
-    input.registry,
-    input.rng.critical,
+  const starDistributionCapture = captureBattleLogRng(
+    { critical: input.rng.critical },
+    () => resolveCommandStarDistribution(
+      input.state,
+      input.registry,
+      input.rng.critical,
+    ),
   );
+  const starDistribution = starDistributionCapture.result;
+  const actionRngEvents = new Map<
+    number,
+    readonly BattleLogRngEvent[]
+  >();
   const additionalOverchargeStagesByCardId =
     input.additionalOverchargeStagesByCardId ?? {};
   const sequence = resolveAllyCommandSequence(
     input.state,
     input.selection,
     (resolverInput) => {
-      const actionData = resolveAllyActionData(
-        resolverInput,
-        input.registry,
-        starDistribution,
-        input.rng.critical,
-        additionalOverchargeStagesByCardId,
-      );
-      if (!actionData.accepted) {
-        return {
-          state: resolverInput.state,
-          detail: {
-            outcome: "skipped",
-            reason: actionData.reason,
-          } satisfies AllyCommandAttackDetail,
-        };
-      }
-      const targetInstanceIds = actionTargets(
-        resolverInput.state,
-        actionData.data.targetScope,
-        resolverInput.target.instanceId,
-      );
-      const resolution = resolveBattleAttackSequence(
-        resolverInput.state,
+      const captured = captureBattleLogRng(
         {
-          sourceInstanceId:
-            resolverInput.action.ownerInstanceId,
-          targetInstanceIds,
-          rng: input.rng,
-          prepareAttack: (
-            state,
-            activeTargetInstanceIds,
-          ) => prepareBattleAttackInput(
-            state,
-            input.registry,
-            resolverInput.action.ownerInstanceId,
-            activeTargetInstanceIds,
-            actionData.data.calculation,
-          ).input,
+          effects: input.rng.effects,
+          critical: input.rng.critical,
+          damage: input.rng.damage,
+          stars: input.rng.stars,
         },
-        counters,
+        () => {
+          const actionData = resolveAllyActionData(
+            resolverInput,
+            input.registry,
+            starDistribution,
+            input.rng.critical,
+            additionalOverchargeStagesByCardId,
+          );
+          if (!actionData.accepted) {
+            return {
+              state: resolverInput.state,
+              detail: {
+                outcome: "skipped",
+                reason: actionData.reason,
+              } satisfies AllyCommandAttackDetail,
+            };
+          }
+          const targetInstanceIds = actionTargets(
+            resolverInput.state,
+            actionData.data.targetScope,
+            resolverInput.target.instanceId,
+          );
+          const resolution = resolveBattleAttackSequence(
+            resolverInput.state,
+            {
+              sourceInstanceId:
+                resolverInput.action.ownerInstanceId,
+              targetInstanceIds,
+              rng: input.rng,
+              prepareAttack: (
+                state,
+                activeTargetInstanceIds,
+              ) => prepareBattleAttackInput(
+                state,
+                input.registry,
+                resolverInput.action.ownerInstanceId,
+                activeTargetInstanceIds,
+                actionData.data.calculation,
+              ).input,
+            },
+            counters,
+          );
+          counters = resolution.counters;
+          return {
+            state: resolution.state,
+            detail: {
+              outcome: "resolved",
+              targetScope: actionData.data.targetScope,
+              targetInstanceIds,
+              calculation: actionData.data.calculation,
+              overchargeStage:
+                actionData.data.overchargeStage,
+              critical: actionData.data.critical,
+              resolution,
+            } satisfies AllyCommandAttackDetail,
+          };
+        },
       );
-      counters = resolution.counters;
-      return {
-        state: resolution.state,
-        detail: {
-          outcome: "resolved",
-          targetScope: actionData.data.targetScope,
-          targetInstanceIds,
-          calculation: actionData.data.calculation,
-          overchargeStage:
-            actionData.data.overchargeStage,
-          critical: actionData.data.critical,
-          resolution,
-        } satisfies AllyCommandAttackDetail,
-      };
+      actionRngEvents.set(
+        resolverInput.action.sequence,
+        captured.events,
+      );
+      return captured.result;
     },
     input.requestedTargetInstanceId,
   );
-  return { sequence, starDistribution, counters };
+  const battleLog = createAllyCommandBattleLog(
+    input.state,
+    sequence,
+    starDistributionCapture.events,
+    actionRngEvents,
+  );
+  return { sequence, starDistribution, counters, battleLog };
 }
