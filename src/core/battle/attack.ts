@@ -79,6 +79,23 @@ export interface AttackRngStreams {
   stars: DeterministicRng;
 }
 
+export interface AttackHitBatchContext {
+  hitNumber: number;
+  source: BattleUnitState | null;
+  targets: readonly BattleUnitState[];
+  /** Results for this Hit in target order. */
+  hits: readonly AttackHitResolution[];
+}
+
+export interface AttackHitBatchUpdate {
+  source: BattleUnitState | null;
+  targets: readonly BattleUnitState[];
+}
+
+export type AttackHitBatchHook = (
+  context: AttackHitBatchContext,
+) => AttackHitBatchUpdate;
+
 export interface ResolveAttackInput {
   source: BattleUnitState | null;
   /**
@@ -90,6 +107,12 @@ export interface ResolveAttackInput {
   defense: Omit<AttackDefenseContext, "phase">;
   sourceNpLevel?: NoblePhantasmLevel;
   rng: AttackRngStreams;
+  /**
+   * Runs once after the current Hit has resolved against every target and
+   * before the next Hit starts. It may update the same source and targets,
+   * but cannot replace their identities or sides.
+   */
+  afterHitBatch?: AttackHitBatchHook;
 }
 
 export interface AttackHitResolution {
@@ -188,6 +211,46 @@ function assertAttackInput(input: ResolveAttackInput): void {
       );
     }
   });
+}
+
+function applyHitBatchUpdate(
+  currentSource: BattleUnitState | null,
+  targets: readonly MutableTargetResolution[],
+  update: AttackHitBatchUpdate,
+): BattleUnitState | null {
+  if (currentSource === null) {
+    if (update.source !== null) {
+      throw new RangeError(
+        "after-Hit hook cannot add an attack source",
+      );
+    }
+  } else if (
+    update.source === null
+    || update.source.instanceId !== currentSource.instanceId
+    || update.source.side !== currentSource.side
+  ) {
+    throw new RangeError(
+      "after-Hit hook cannot replace the attack source",
+    );
+  }
+  if (update.targets.length !== targets.length) {
+    throw new RangeError(
+      "after-Hit hook must return every attack target",
+    );
+  }
+  update.targets.forEach((target, index) => {
+    const current = targets[index].target;
+    if (
+      target.instanceId !== current.instanceId
+      || target.side !== current.side
+    ) {
+      throw new RangeError(
+        "after-Hit hook cannot replace attack targets",
+      );
+    }
+    targets[index].target = target;
+  });
+  return update.source;
 }
 
 function damageInputWithAttackDefense(
@@ -366,6 +429,7 @@ export function resolveAttack(input: ResolveAttackInput): AttackResolution {
   let generatedStars = 0;
 
   for (let hitIndex = 0; hitIndex < input.hitWeights.length; hitIndex += 1) {
+    const firstHitResultIndex = hits.length;
     const hitContext: AttackDefenseContext = {
       ...input.defense,
       phase: "hit",
@@ -445,6 +509,20 @@ export function resolveAttack(input: ResolveAttackInput): AttackResolution {
         survival: applied.survival,
         star,
       });
+    }
+
+    if (input.afterHitBatch) {
+      const update = input.afterHitBatch({
+        hitNumber: hitIndex + 1,
+        source: currentSource,
+        targets: targets.map(({ target }) => target),
+        hits: hits.slice(firstHitResultIndex),
+      });
+      currentSource = applyHitBatchUpdate(
+        currentSource,
+        targets,
+        update,
+      );
     }
   }
 

@@ -1,5 +1,6 @@
 import {
   resolveAttack,
+  type AttackHitBatchContext,
   type AttackResolution,
   type AttackTargetInput,
   type ResolveAttackInput,
@@ -26,17 +27,33 @@ export interface BattleAttackTargetInput
 export interface ResolveBattleAttackInput
   extends Omit<
     ResolveAttackInput,
-    "source" | "targets"
+    "source" | "targets" | "afterHitBatch"
   > {
   sourceInstanceId: string | null;
   targets: readonly BattleAttackTargetInput[];
+  afterHitBatch?: BattleAttackHitBatchHook;
 }
+
+export interface BattleAttackHitBatchContext
+  extends AttackHitBatchContext {
+  state: BattleState;
+}
+
+export interface BattleAttackHitBatchHookResult {
+  state: BattleState;
+  detail?: unknown;
+}
+
+export type BattleAttackHitBatchHook = (
+  context: BattleAttackHitBatchContext,
+) => BattleAttackHitBatchHookResult;
 
 export interface BattleAttackResolution {
   state: BattleState;
   attack: AttackResolution;
   updatedInstanceIds: string[];
   starAddition: BattleStarAddition;
+  hitBatchDetails: unknown[];
 }
 
 function assertActionPhase(state: BattleState): void {
@@ -126,6 +143,7 @@ function orderedTargetInputs(
 export function applyAttackResolutionToBattleState(
   state: BattleState,
   attack: AttackResolution,
+  hitBatchDetails: readonly unknown[] = [],
 ): BattleAttackResolution {
   assertActionPhase(state);
   if (
@@ -177,6 +195,54 @@ export function applyAttackResolutionToBattleState(
     attack,
     updatedInstanceIds,
     starAddition,
+    hitBatchDetails: [...hitBatchDetails],
+  };
+}
+
+function applyTransientAttackUnits(
+  state: BattleState,
+  source: AttackHitBatchContext["source"],
+  targets: AttackHitBatchContext["targets"],
+): BattleState {
+  let formation = state.formation;
+  if (source) formation = replaceUnit(formation, source);
+  for (const target of targets) {
+    formation = replaceUnit(formation, target);
+  }
+  return setBattleFormation(state, formation);
+}
+
+function refreshedHitBatchUpdate(
+  state: BattleState,
+  context: AttackHitBatchContext,
+) {
+  const source =
+    context.source === null
+      ? null
+      : findUnitLocation(
+          state.formation,
+          context.source.instanceId,
+        )?.unit;
+  if (context.source !== null && !source) {
+    throw new RangeError(
+      `after-Hit state removed attack source: ${context.source.instanceId}`,
+    );
+  }
+  const targets = context.targets.map((target) => {
+    const current = findUnitLocation(
+      state.formation,
+      target.instanceId,
+    )?.unit;
+    if (!current) {
+      throw new RangeError(
+        `after-Hit state removed attack target: ${target.instanceId}`,
+      );
+    }
+    return current;
+  });
+  return {
+    source: source ?? null,
+    targets,
   };
 }
 
@@ -192,10 +258,19 @@ export function resolveBattleAttack(
   const {
     sourceInstanceId,
     targets: targetInputs,
+    afterHitBatch,
     ...attackInput
   } = input;
   const source = currentSource(state, sourceInstanceId);
   const targets = orderedTargetInputs(state, targetInputs);
+  if (
+    source
+    && targets.some(({ target }) => target.side === source.side)
+  ) {
+    throw new RangeError(
+      "battle attacks must target the opposing side",
+    );
+  }
   if (
     targets.some(({ stars }) => stars !== undefined)
     && source?.side !== "ally"
@@ -204,10 +279,38 @@ export function resolveBattleAttack(
       "only an ally attack can request star generation",
     );
   }
+  let currentState = state;
+  const hitBatchDetails: unknown[] = [];
   const attack = resolveAttack({
     ...attackInput,
     source,
     targets,
+    ...(afterHitBatch
+      ? {
+          afterHitBatch: (context: AttackHitBatchContext) => {
+            currentState = applyTransientAttackUnits(
+              currentState,
+              context.source,
+              context.targets,
+            );
+            const resolved = afterHitBatch({
+              ...context,
+              state: currentState,
+            });
+            assertActionPhase(resolved.state);
+            currentState = resolved.state;
+            hitBatchDetails.push(resolved.detail);
+            return refreshedHitBatchUpdate(
+              currentState,
+              context,
+            );
+          },
+        }
+      : {}),
   });
-  return applyAttackResolutionToBattleState(state, attack);
+  return applyAttackResolutionToBattleState(
+    currentState,
+    attack,
+    hitBatchDetails,
+  );
 }

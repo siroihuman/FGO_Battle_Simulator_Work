@@ -59,7 +59,11 @@ export function collectTriggerActivations(
 ): TriggerActivation[] {
   return locationsInResolutionOrder.flatMap((location) => {
     const owner = location.unit;
-    if (!owner.alive) return [];
+    const ownerIsAvailable =
+      event.timing === "on_death"
+        ? !owner.alive
+        : owner.alive;
+    if (!ownerIsAvailable) return [];
     return owner.effects
       .filter(
         (effect) =>

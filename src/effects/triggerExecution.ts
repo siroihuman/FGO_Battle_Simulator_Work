@@ -101,9 +101,13 @@ export function resolveTriggerEvent(
       currentFormation,
       candidate.ownerInstanceId,
     );
+    const ownerIsAvailable =
+      event.timing === "on_death"
+        ? ownerLocation?.unit.alive === false
+        : ownerLocation?.unit.alive === true;
     if (
       !ownerLocation
-      || !ownerLocation.unit.alive
+      || !ownerIsAvailable
       || (
         ownerLocation.area === "reserve"
         && candidate.effect.flags.activeWhileReserve !== true
