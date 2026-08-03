@@ -96,6 +96,7 @@ const TARGET_DAMAGE_EFFECT_TYPES = [
   COMMON_EFFECT_TYPES.defense,
   COMMON_EFFECT_TYPES.specialDefense,
   COMMON_EFFECT_TYPES.damageCut,
+  COMMON_EFFECT_TYPES.targetFixedDamage,
 ] as const;
 
 function flagString(
@@ -390,7 +391,12 @@ export function resolveAttackTargetDefense(
     targetMatches[COMMON_EFFECT_TYPES.damageCut],
     "damage cut total",
   );
-  assertSafeInteger(-damageCut, "target fixed damage");
+  const receivedFixedDamage = sumValues(
+    targetMatches[COMMON_EFFECT_TYPES.targetFixedDamage],
+    "received fixed damage total",
+  );
+  const targetFixedDamage = receivedFixedDamage - damageCut;
+  assertSafeInteger(targetFixedDamage, "target fixed damage");
 
   const consumed = consumeEffects(
     currentTarget,
@@ -416,7 +422,7 @@ export function resolveAttackTargetDefense(
     defenseModPermille,
     specialDefenseModPermille,
     damageCut,
-    targetFixedDamage: -damageCut,
+    targetFixedDamage,
     consumedTargetEffectInstanceIds,
   };
 }

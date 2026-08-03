@@ -27,6 +27,16 @@ describe("final damage formula", () => {
     ).toBe(3_450);
   });
 
+  it("caps source card performance before subtracting target resistance", () => {
+    const result = calculateDamage({
+      ...neutral,
+      cardPerformanceModPermille: 6_000,
+      cardResistancePermille: 1_000,
+    });
+    expect(result.cardFactorPermille).toBe(4_000);
+    expect(result.damage).toBe(9_200);
+  });
+
   it("keeps independent attack, critical, power and special buckets", () => {
     const result = calculateDamage({
       ...neutral,

@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.20.0",
-  "status": "attack-trigger-sequence",
+  "dataSchemaVersion": "1.21.0",
+  "status": "action-data-input",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -69,6 +69,16 @@
     "damageTakenTriggerAfterProtectionBlock": true,
     "gutsSuppressesDeathTrigger": true,
     "beforeDamageInstantDeathStopsAttackHits": true,
+    "attackDataIdentity": "battle_instance_id",
+    "duplicateDataIdsMayUseDifferentAttackData": true,
+    "attackInputPreparedAfterBeforeAttack": true,
+    "missingEnemyAttackNumericData": "safe_noop",
+    "defaultEnemySingleTarget": "frontmost_living_ally",
+    "cardResistanceAppliesTo": [
+      "damage",
+      "attack_np",
+      "stars"
+    ],
     "maxBreakGauges": 10,
     "starCap": 99,
     "starBuckets": [

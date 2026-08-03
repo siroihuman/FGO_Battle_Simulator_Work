@@ -316,4 +316,28 @@ describe("attack protection resolution", () => {
       countsAsSuccessfulHit: true,
     });
   });
+
+  it("nets received fixed damage against damage cut in the E slot", () => {
+    const target = addEffects(unit("enemy-a", "enemy"), [
+      effect("cut", COMMON_EFFECT_TYPES.damageCut, {
+        value: 500,
+      }),
+      effect(
+        "received-fixed",
+        COMMON_EFFECT_TYPES.targetFixedDamage,
+        { value: 700 },
+      ),
+    ]);
+    const defense = resolveAttackDefense(
+      null,
+      target,
+      { phase: "attack" },
+      new BattleRng("received-fixed").stream("effects"),
+    );
+
+    expect(defense).toMatchObject({
+      damageCut: 500,
+      targetFixedDamage: 200,
+    });
+  });
 });

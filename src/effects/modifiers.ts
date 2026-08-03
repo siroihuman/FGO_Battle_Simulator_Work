@@ -3,6 +3,7 @@ import { assertSafeInteger } from "../core/numeric";
 import type { AppliedEffect, EffectClassification } from "./types";
 
 export const COMMON_EFFECT_TYPES = {
+  attack: "attack",
   buffImmunity: "buff_immunity",
   buffRemovalResistance: "buff_removal_resistance",
   buffSuccess: "buff_success",
@@ -23,6 +24,18 @@ export const COMMON_EFFECT_TYPES = {
   invincibility: "invincibility",
   invincibilityPierce: "invincibility_pierce",
   maxHpChange: "max_hp_change",
+  cardPerformance: "card_performance",
+  cardResistance: "card_resistance",
+  criticalDamage: "critical_damage",
+  fixedDamage: "fixed_damage",
+  noblePhantasmDamage: "noble_phantasm_damage",
+  npGain: "np_gain",
+  power: "power",
+  receivedNpGain: "received_np_gain",
+  starGeneration: "star_generation",
+  targetDamage: "target_damage",
+  targetFixedDamage: "target_fixed_damage",
+  targetStarGeneration: "target_star_generation",
   noblePhantasmSeal: "noble_phantasm_seal",
   receivedBuffSuccess: "received_buff_success",
   receivedHpRecovery: "received_hp_recovery",
