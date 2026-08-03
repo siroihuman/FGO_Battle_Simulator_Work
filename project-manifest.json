@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.22.0",
-  "status": "command-critical-distribution",
+  "dataSchemaVersion": "1.23.0",
+  "status": "battle-action-log",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -102,6 +102,21 @@
     "criticalRatePermillePerStar": 100,
     "commandStarDistributionRng": "critical",
     "fixedCriticalRatesConsumeRng": false,
+    "battleLogSchemaVersion": 1,
+    "battleLogGranularity": "completed_action",
+    "battleLogIncludes": [
+      "outcome",
+      "calculation",
+      "hits",
+      "triggers",
+      "departures",
+      "arrivals",
+      "retargeting",
+      "rng_audit"
+    ],
+    "battleLogJsonSerializable": true,
+    "rngAuditChangesSequence": false,
+    "fixedChanceAuditDraws": 0,
     "servantSkillLevel": "max",
     "mysticCodeLevel": "max",
     "servantNpLevels": [

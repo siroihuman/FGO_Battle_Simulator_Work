@@ -218,6 +218,39 @@ if (manifest) {
     manifest.coreRules.fixedCriticalRatesConsumeRng === false,
     "クリティカル率0%・100%は乱数を消費してはいけません"
   );
+  assert(
+    manifest.coreRules.battleLogSchemaVersion === 1,
+    "戦闘ログ形式バージョンは1でなければなりません"
+  );
+  assert(
+    manifest.coreRules.battleLogGranularity === "completed_action",
+    "戦闘ログは完了済み1行動単位で記録しなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.battleLogIncludes) === JSON.stringify([
+      "outcome",
+      "calculation",
+      "hits",
+      "triggers",
+      "departures",
+      "arrivals",
+      "retargeting",
+      "rng_audit"
+    ]),
+    "戦闘ログの必須詳細が一致しません"
+  );
+  assert(
+    manifest.coreRules.battleLogJsonSerializable === true,
+    "戦闘ログはJSONへ保存可能でなければなりません"
+  );
+  assert(
+    manifest.coreRules.rngAuditChangesSequence === false,
+    "乱数監査で抽選結果や乱数位置を変更してはいけません"
+  );
+  assert(
+    manifest.coreRules.fixedChanceAuditDraws === 0,
+    "確率0%・100%の監査記録は乱数を消費してはいけません"
+  );
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
   assert(manifest.coreRules.fixedSeedReplayRequired === true, "固定シード再現は必須です");
 

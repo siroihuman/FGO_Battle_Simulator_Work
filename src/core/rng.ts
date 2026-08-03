@@ -26,6 +26,33 @@ export interface BattleRngSnapshot {
   streams: Record<RngStreamName, RngStreamSnapshot>;
 }
 
+interface RngAuditBase {
+  /** One-based underlying SplitMix64 draw numbers, or null for fixed results. */
+  drawNumberStart: number | null;
+  drawNumberEnd: number | null;
+  drawsConsumed: number;
+}
+
+export type RngAuditEvent =
+  | (RngAuditBase & {
+      operation: "uint64";
+      valueHex: string;
+    })
+  | (RngAuditBase & {
+      operation: "integer";
+      minimum: number;
+      maximum: number;
+      value: number;
+    })
+  | (RngAuditBase & {
+      operation: "chance";
+      ratePermille: number;
+      roll: number | null;
+      succeeded: boolean;
+    });
+
+export type RngAuditListener = (event: RngAuditEvent) => void;
+
 function fnv1a64(value: string): bigint {
   let hash = 0xcbf29ce484222325n;
   for (const character of new TextEncoder().encode(value)) {
@@ -51,19 +78,69 @@ function normalizeSeed(seed: string | number): string {
 export class DeterministicRng {
   private state: bigint;
   private draws: number;
+  private readonly auditListeners = new Set<RngAuditListener>();
 
   constructor(state: bigint, drawCount = 0) {
     this.state = state & UINT64_MASK;
     this.draws = drawCount;
   }
 
-  nextUint64(): bigint {
+  private drawUint64(): bigint {
     this.state = (this.state + 0x9e3779b97f4a7c15n) & UINT64_MASK;
     let value = this.state;
     value = ((value ^ (value >> 30n)) * 0xbf58476d1ce4e5b9n) & UINT64_MASK;
     value = ((value ^ (value >> 27n)) * 0x94d049bb133111ebn) & UINT64_MASK;
     this.draws += 1;
     return (value ^ (value >> 31n)) & UINT64_MASK;
+  }
+
+  private emitAudit(event: RngAuditEvent): void {
+    for (const listener of this.auditListeners) listener(event);
+  }
+
+  /**
+   * Adds a synchronous observer without changing the generated sequence.
+   * The returned function must be called when the audited operation ends.
+   */
+  addAuditListener(listener: RngAuditListener): () => void {
+    this.auditListeners.add(listener);
+    return () => {
+      this.auditListeners.delete(listener);
+    };
+  }
+
+  nextUint64(): bigint {
+    const value = this.drawUint64();
+    this.emitAudit({
+      operation: "uint64",
+      drawNumberStart: this.draws,
+      drawNumberEnd: this.draws,
+      drawsConsumed: 1,
+      valueHex: value.toString(16).padStart(16, "0"),
+    });
+    return value;
+  }
+
+  private drawIntInclusive(
+    minimum: number,
+    maximum: number,
+  ): {
+    value: number;
+    drawNumberStart: number;
+    drawNumberEnd: number;
+  } {
+    const drawNumberStart = this.draws + 1;
+    const range = BigInt(maximum - minimum + 1);
+    const acceptanceLimit = UINT64_RANGE - (UINT64_RANGE % range);
+    let draw: bigint;
+    do {
+      draw = this.drawUint64();
+    } while (draw >= acceptanceLimit);
+    return {
+      value: minimum + Number(draw % range),
+      drawNumberStart,
+      drawNumberEnd: this.draws,
+    };
   }
 
   nextIntInclusive(minimum: number, maximum: number): number {
@@ -74,22 +151,50 @@ export class DeterministicRng {
       throw new RangeError("minimum must not exceed maximum");
     }
 
-    const range = BigInt(maximum - minimum + 1);
-    const acceptanceLimit = UINT64_RANGE - (UINT64_RANGE % range);
-    let draw: bigint;
-    do {
-      draw = this.nextUint64();
-    } while (draw >= acceptanceLimit);
-    return minimum + Number(draw % range);
+    const result = this.drawIntInclusive(minimum, maximum);
+    this.emitAudit({
+      operation: "integer",
+      drawNumberStart: result.drawNumberStart,
+      drawNumberEnd: result.drawNumberEnd,
+      drawsConsumed:
+        result.drawNumberEnd - result.drawNumberStart + 1,
+      minimum,
+      maximum,
+      value: result.value,
+    });
+    return result.value;
   }
 
   chance(ratePermille: number): boolean {
     if (!Number.isInteger(ratePermille) || ratePermille < 0 || ratePermille > 1000) {
       throw new RangeError("ratePermille must be an integer from 0 to 1000");
     }
-    if (ratePermille === 0) return false;
-    if (ratePermille === 1000) return true;
-    return this.nextIntInclusive(1, 1000) <= ratePermille;
+    if (ratePermille === 0 || ratePermille === 1000) {
+      const succeeded = ratePermille === 1000;
+      this.emitAudit({
+        operation: "chance",
+        drawNumberStart: null,
+        drawNumberEnd: null,
+        drawsConsumed: 0,
+        ratePermille,
+        roll: null,
+        succeeded,
+      });
+      return succeeded;
+    }
+    const result = this.drawIntInclusive(1, 1000);
+    const succeeded = result.value <= ratePermille;
+    this.emitAudit({
+      operation: "chance",
+      drawNumberStart: result.drawNumberStart,
+      drawNumberEnd: result.drawNumberEnd,
+      drawsConsumed:
+        result.drawNumberEnd - result.drawNumberStart + 1,
+      ratePermille,
+      roll: result.value,
+      succeeded,
+    });
+    return succeeded;
   }
 
   snapshot(): RngStreamSnapshot {
