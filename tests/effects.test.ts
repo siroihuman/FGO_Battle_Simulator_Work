@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { orderedLocations } from "../src/core/battle/formation";
+import {
+  findUnitLocation,
+  orderedLocations,
+  replaceUnit,
+} from "../src/core/battle/formation";
 import { BattleRng } from "../src/core/rng";
 import {
   categoryForGrantedTrait,
@@ -15,6 +19,7 @@ import {
   attemptTriggerActivation,
   collectTriggerActivations,
 } from "../src/effects/triggers";
+import { resolveTriggerEvent } from "../src/effects/triggerExecution";
 import type { EffectTemplate } from "../src/effects/types";
 import { formation, unit } from "./helpers/battle";
 
@@ -223,5 +228,76 @@ describe("common triggers", () => {
       consumedUse: false,
       effect: { remainingUses: 2 },
     });
+  });
+
+  it("allows only a defeated owner to execute its on-death trigger", () => {
+    let counters = createEffectRuntimeCounters();
+    const state = formation();
+    const registered = applyEffect(
+      state.ally.frontline[0]!,
+      {
+        stableId: "death-np",
+        name: "退場時NP",
+        effectType: "death-np",
+        category: "buff",
+        trigger: {
+          timing: "on_death",
+          actions: [
+            {
+              target: {
+                relation: "allies",
+                selection: "single",
+                selectedInstanceId: "ally-b",
+              },
+              action: {
+                kind: "change_np",
+                amount: 100,
+                npLevel: 1,
+              },
+            },
+          ],
+        },
+      },
+      null,
+      counters,
+    );
+    counters = registered.counters;
+    state.ally.frontline[0] = {
+      ...registered.unit,
+      hp: 0,
+      alive: false,
+    };
+    const owner = findUnitLocation(state, "ally-a");
+    if (!owner) throw new Error("missing ally-a");
+    const result = resolveTriggerEvent(
+      state,
+      [owner],
+      {
+        timing: "on_death",
+        actorInstanceId: "ally-a",
+        actorSide: "ally",
+        targetInstanceId: "ally-a",
+        targetSide: "ally",
+      },
+      counters,
+      new BattleRng("death-trigger").stream("effects"),
+    );
+
+    expect(result.activations[0]?.outcome).toBe("activated");
+    expect(
+      findUnitLocation(result.formation, "ally-b")?.unit.np,
+    ).toBe(100);
+
+    const aliveAgain = replaceUnit(result.formation, {
+      ...owner.unit,
+      hp: 1,
+      alive: true,
+    });
+    expect(
+      collectTriggerActivations(
+        orderedLocations(aliveAgain, "ally", true),
+        { timing: "on_death" },
+      ),
+    ).toEqual([]);
   });
 });

@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.19.0",
-  "status": "battle-attack-star-state",
+  "dataSchemaVersion": "1.20.0",
+  "status": "attack-trigger-sequence",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -58,6 +58,17 @@
     "multiTargetHitOrder": "hit_then_frontline",
     "sourceAttackStateConsumesPerTarget": false,
     "protectionAllowsNpAndStarWork": true,
+    "attackTriggerOrder": [
+      "before_attack",
+      "on_hit_per_hit_batch",
+      "on_attack",
+      "on_damage_taken_per_target",
+      "after_attack",
+      "on_death"
+    ],
+    "damageTakenTriggerAfterProtectionBlock": true,
+    "gutsSuppressesDeathTrigger": true,
+    "beforeDamageInstantDeathStopsAttackHits": true,
     "maxBreakGauges": 10,
     "starCap": 99,
     "starBuckets": [

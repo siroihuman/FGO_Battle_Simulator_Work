@@ -117,6 +117,29 @@ if (manifest) {
     manifest.coreRules.protectionAllowsNpAndStarWork === true,
     "防御によるダメージ無効後もNP・スター処理を継続しなければなりません"
   );
+  assert(
+    JSON.stringify(manifest.coreRules.attackTriggerOrder) === JSON.stringify([
+      "before_attack",
+      "on_hit_per_hit_batch",
+      "on_attack",
+      "on_damage_taken_per_target",
+      "after_attack",
+      "on_death"
+    ]),
+    "攻撃トリガーは攻撃前、Hit、攻撃時、被ダメージ時、攻撃後、死亡時の順でなければなりません"
+  );
+  assert(
+    manifest.coreRules.damageTakenTriggerAfterProtectionBlock === true,
+    "ダメージ無効時も無条件の被ダメージ時トリガーを処理しなければなりません"
+  );
+  assert(
+    manifest.coreRules.gutsSuppressesDeathTrigger === true,
+    "ガッツ復活時に死亡時トリガーを処理してはいけません"
+  );
+  assert(
+    manifest.coreRules.beforeDamageInstantDeathStopsAttackHits === true,
+    "ダメージ前即死成功後は攻撃Hitを開始してはいけません"
+  );
   assert(manifest.coreRules.maxBreakGauges === 10, "ブレイクゲージ上限は10でなければなりません");
   assert(manifest.coreRules.starCap === 99, "スター上限は99でなければなりません");
   assert(

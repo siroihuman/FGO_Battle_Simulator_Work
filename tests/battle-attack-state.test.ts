@@ -392,6 +392,50 @@ describe("BattleState attack adapter", () => {
     expect(result.state.nextCommandStars).toBe(0);
   });
 
+  it("preserves non-target BattleState changes from each after-Hit hook", () => {
+    const random = streams("battle-after-hit");
+    const result = resolveBattleAttack(battle(), {
+      sourceInstanceId: "ally-a",
+      targets: [
+        {
+          targetInstanceId: "enemy-a",
+          damage: damageInput(),
+        },
+      ],
+      hitWeights: [1, 1],
+      defense: {},
+      rng: random.streams,
+      afterHitBatch: ({ state, hitNumber }) => {
+        const bystander = findUnitLocation(
+          state.formation,
+          "ally-b",
+        )?.unit;
+        if (!bystander) throw new Error("missing ally-b");
+        return {
+          state: setBattleFormation(
+            state,
+            replaceUnit(state.formation, {
+              ...bystander,
+              hp: bystander.hp - 1_000,
+            }),
+          ),
+          detail: `hit-${hitNumber}`,
+        };
+      },
+    });
+
+    expect(
+      findUnitLocation(
+        result.state.formation,
+        "ally-b",
+      )?.unit.hp,
+    ).toBe(8_000);
+    expect(result.hitBatchDetails).toEqual([
+      "hit-1",
+      "hit-2",
+    ]);
+  });
+
   it("rejects missing units and enemy star requests before consuming RNG", () => {
     const random = streams("invalid-battle-attack");
     const base = battle();
@@ -428,6 +472,20 @@ describe("BattleState attack adapter", () => {
         rng: random.streams,
       })
     ).toThrow(/only an ally attack can request star generation/);
+    expect(() =>
+      resolveBattleAttack(base, {
+        sourceInstanceId: "ally-a",
+        targets: [
+          {
+            targetInstanceId: "ally-b",
+            damage: damageInput(),
+          },
+        ],
+        hitWeights: [1],
+        defense: {},
+        rng: random.streams,
+      })
+    ).toThrow(/must target the opposing side/);
     expect(
       Object.values(random.rng.snapshot().streams).every(
         ({ drawCount }) => drawCount === 0,

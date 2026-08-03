@@ -465,6 +465,82 @@ describe("complete attack Hit resolution", () => {
     expect(battleRng.stream("stars").snapshot().drawCount).toBe(0);
   });
 
+  it("runs one after-Hit hook after every target in the same Hit and uses its state for the next Hit", () => {
+    const batches: Array<{
+      hitNumber: number;
+      targetIds: string[];
+    }> = [];
+    const { result } = resolve("after-hit-batch", {
+      targets: [
+        targetInput(
+          unit("enemy-a", "enemy", {
+            hp: 100_000,
+            maxHp: 100_000,
+            baseMaxHp: 100_000,
+          }),
+        ),
+        targetInput(
+          unit("enemy-b", "enemy", {
+            hp: 100_000,
+            maxHp: 100_000,
+            baseMaxHp: 100_000,
+          }),
+        ),
+      ],
+      hitWeights: [1, 1],
+      afterHitBatch: (context) => {
+        batches.push({
+          hitNumber: context.hitNumber,
+          targetIds: context.hits.map(
+            ({ targetInstanceId }) => targetInstanceId,
+          ),
+        });
+        return {
+          source: context.source,
+          targets:
+            context.hitNumber === 1
+              ? context.targets.map((target) => ({
+                  ...target,
+                  hp: 90_000,
+                }))
+              : context.targets,
+        };
+      },
+    });
+
+    expect(batches).toEqual([
+      {
+        hitNumber: 1,
+        targetIds: ["enemy-a", "enemy-b"],
+      },
+      {
+        hitNumber: 2,
+        targetIds: ["enemy-a", "enemy-b"],
+      },
+    ]);
+    expect(
+      result.hits
+        .filter(({ hitNumber }) => hitNumber === 2)
+        .map(({ hpBefore }) => hpBefore),
+    ).toEqual([90_000, 90_000]);
+  });
+
+  it("rejects an after-Hit hook that replaces a combatant identity", () => {
+    expect(() =>
+      resolve("invalid-after-hit", {
+        afterHitBatch: (context) => ({
+          source: context.source,
+          targets: [
+            {
+              ...context.targets[0],
+              instanceId: "replacement",
+            },
+          ],
+        }),
+      })
+    ).toThrow(/cannot replace attack targets/);
+  });
+
   it("replays the complete multi-stream result from the same seed", () => {
     const attack = (seed: string) =>
       resolve(seed, {
