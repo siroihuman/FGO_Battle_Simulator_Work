@@ -4,6 +4,9 @@ import {
   applyMaxHpState,
   reconcileMaxHp,
 } from "./maxHp";
+import {
+  assertValidNoblePhantasmCardTypeChangeTemplate,
+} from "./noblePhantasmCardType";
 import type {
   AppliedEffect,
   EffectTrigger,
@@ -163,6 +166,7 @@ export function applyEffect(
   assertOptionalCount(template.remainingUses, "remainingUses");
   assertSafeInteger(template.value ?? 0, "effect value");
   assertValidEffectTrigger(template.trigger);
+  assertValidNoblePhantasmCardTypeChangeTemplate(template);
   const classifications = [...new Set(template.classifications ?? [])];
   if (classifications.some((classification) => classification.length === 0)) {
     throw new RangeError("effect classifications must not contain empty strings");

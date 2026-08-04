@@ -14,6 +14,9 @@ import type {
 import { NP_FULL_GAUGE } from "../../formulas/np";
 import { isActionDisabled } from "../../effects/classification";
 import { COMMON_EFFECT_TYPES } from "../../effects/modifiers";
+import {
+  resolveNoblePhantasmCardType,
+} from "../../effects/noblePhantasmCardType";
 import type { CommandCard } from "./deck";
 
 export const COMMAND_CARD_SELECTION_SIZE = 3 as const;
@@ -169,9 +172,10 @@ function noblePhantasmRestrictions(
     return { unit: owner.unit, restrictions };
   }
   const current = owner.unit.noblePhantasm;
+  const cardType = resolveNoblePhantasmCardType(owner.unit);
   if (
     current.stableId !== card.noblePhantasmStableId
-    || current.cardType !== card.type
+    || cardType?.cardType !== card.type
     || current.level !== card.noblePhantasmLevel
   ) {
     restrictions.push("noble_phantasm_changed");
@@ -223,11 +227,13 @@ function noblePhantasmChoice(
 ): CommandCardChoice | null {
   const noblePhantasm = unit.noblePhantasm;
   if (!noblePhantasm) return null;
+  const cardType = resolveNoblePhantasmCardType(unit);
+  if (!cardType) return null;
   const card: SelectedNoblePhantasmCard = {
     kind: "noble_phantasm",
     cardId: noblePhantasmCardId(unit.instanceId),
     ownerInstanceId: unit.instanceId,
-    type: noblePhantasm.cardType,
+    type: cardType.cardType,
     noblePhantasmStableId: noblePhantasm.stableId,
     noblePhantasmName: noblePhantasm.name,
     noblePhantasmLevel: noblePhantasm.level,

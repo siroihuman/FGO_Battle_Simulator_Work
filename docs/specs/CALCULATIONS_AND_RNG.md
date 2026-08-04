@@ -7,6 +7,7 @@
 - https://w.atwiki.jp/f_go/pages/304.html
 - https://w.atwiki.jp/f_go/pages/2030.html
 - https://w.atwiki.jp/f_go/pages/145.html
+- https://w.atwiki.jp/f_go/pages/955.html
 - https://w.atwiki.jp/f_go/pages/4673.html
 - https://atlasacademy.github.io/fgo-docs/deeper/battle/damage.html
 - https://webview.fate-go.jp/webview/help/
@@ -17,6 +18,8 @@
 初回実装確認日: 2026-07-30
 
 スター集中度・配分手順再確認日: 2026-08-03
+
+宝具カード種別変更再確認日: 2026-08-04
 
 ## 内部単位
 
@@ -65,6 +68,7 @@
 - 通常カードの1stボーナスは、Busterがダメージ項へ500、ArtsがNP項へ1000、Quickがスター発生率へ200とクリティカル率へ200を加える。
 - Mightyチェインでは通常カードへ上記3色の1stボーナスをすべて加える。
 - 宝具は選択位置にかかわらず自身の色の1st位置入力値を使い、1stボーナスを受けない。
+- 宝具カード種別変更中は現在有効な種別の1st位置入力値・カード性能・対象カード耐性を使う。Hit配分、N/A、宝具Lv倍率、NPゲージは固有データを維持する。
 - Extra Attackはダメージ・NP・スターのカード値を各1000とし、Extra補正を混色・Mighty Braveで2000、同色Braveで3500とする。
 - Busterチェインの固定加算は`ATK × 200 ÷ 1000`とし、通常カードだけに適用する。
 

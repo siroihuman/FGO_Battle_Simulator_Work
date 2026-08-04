@@ -23,6 +23,9 @@ import {
   type CombatantActionEffectData,
 } from "../src/effects/actionData";
 import { createTraitGrantEffect } from "../src/effects/classification";
+import {
+  createNoblePhantasmCardTypeChangeEffect,
+} from "../src/effects/noblePhantasmCardType";
 import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
 import {
   applyEffect,
@@ -769,6 +772,92 @@ describe("ally command data-to-attack integration", () => {
       }],
     });
     expect(random.rng.stream("effects").snapshot().drawCount).toBe(0);
+  });
+
+  it("uses a temporary Buster NP type through chain, attack input, triggers, and logs", () => {
+    const baseState = battle();
+    const changed = applyEffect(
+      baseState.formation.ally.frontline[0]!,
+      createNoblePhantasmCardTypeChangeEffect(
+        "buster",
+        "宝具タイプをBusterに変更",
+        { remainingTurns: 1 },
+      ),
+      "ally-b",
+      createEffectRuntimeCounters(),
+    );
+    const state = withHand({
+      ...baseState,
+      formation: replaceUnit(baseState.formation, changed.unit),
+    }, [
+      ["ally-a", 0],
+      ["ally-a", 1],
+    ]);
+    const selected = selection(state, [
+      cardId(state, "ally-a"),
+      cardId(state, "ally-a", 0),
+      cardId(state, "ally-a", 1),
+    ]);
+    expect(selected.cards[0]).toMatchObject({
+      kind: "noble_phantasm",
+      type: "buster",
+      noblePhantasmLevel: 2,
+    });
+    expect(state.formation.ally.frontline[0]?.noblePhantasm)
+      .toMatchObject({ cardType: "arts", level: 2 });
+
+    const random = streams("temporary-buster-np");
+    const resolved = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      counters: changed.counters,
+      rng: random.streams,
+    });
+    const replayRandom = streams("temporary-buster-np");
+    const replay = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      counters: changed.counters,
+      rng: replayRandom.streams,
+    });
+    expect(resolved.sequence.accepted).toBe(true);
+    if (!resolved.sequence.accepted) return;
+    expect(resolved.sequence.result.chain).toMatchObject({
+      colorChain: "buster",
+      braveChain: true,
+      quickChainStars: 0,
+      artsChainNpUnits: 0,
+      extraAttack: { extraCardModifierPermille: 3_500 },
+    });
+    expect(resolved.battleLog.entries[0]).toMatchObject({
+      action: {
+        kind: "noble_phantasm",
+        cardType: "buster",
+      },
+      calculation: {
+        cardType: "buster",
+        hitWeights: [1, 1],
+        npDamageMultiplierPermille: 4_000,
+      },
+    });
+    expect(
+      resolved.battleLog.entries[0]?.attack?.triggerStages
+        .find(({ timing }) => timing === "after_attack"),
+    ).toMatchObject({
+      attackKind: "noble_phantasm",
+      cardType: "buster",
+    });
+    expect(findUnitLocation(
+      resolved.sequence.result.state.formation,
+      "ally-a",
+    )?.unit.noblePhantasm).toMatchObject({
+      cardType: "arts",
+      level: 2,
+    });
+    expect(replay.sequence).toEqual(resolved.sequence);
+    expect(replay.battleLog).toEqual(resolved.battleLog);
   });
 
   it("uses a declared pre-attack trait grant for the same NP's conditional special attack", () => {

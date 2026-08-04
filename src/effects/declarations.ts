@@ -1,4 +1,7 @@
 import type { CommonAction } from "./actions";
+import {
+  assertValidNoblePhantasmCardTypeChangeTemplate,
+} from "./noblePhantasmCardType";
 import { assertValidEffectTrigger } from "./runtime";
 import type {
   TargetLifeFilter,
@@ -293,6 +296,10 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
       assertValidEffectTrigger(
         template.trigger,
         `${name}.effects[${index}].template.trigger`,
+      );
+      assertValidNoblePhantasmCardTypeChangeTemplate(
+        template,
+        `${name}.effects[${index}].template`,
       );
       if (template.remainingTurns !== undefined && template.remainingTurns !== null) {
         assertNonNegative(
