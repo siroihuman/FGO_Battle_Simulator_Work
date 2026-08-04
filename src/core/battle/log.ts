@@ -35,7 +35,7 @@ import {
   type RngStreamName,
 } from "../rng";
 
-export const BATTLE_LOG_SCHEMA_VERSION = 2 as const;
+export const BATTLE_LOG_SCHEMA_VERSION = 3 as const;
 
 export type BattleLogBatchKind =
   | "ally_command"
@@ -202,6 +202,9 @@ export interface BattleLogCommonActionResult {
   targetInstanceId: string | null;
   hpChange: number | null;
   npChange: number | null;
+  skillCooldownsBefore: number[] | null;
+  skillCooldownsAfter: number[] | null;
+  enemyChargeChange: number | null;
   applications: Array<{
     specIndex: number;
     stableId: string;
@@ -240,6 +243,13 @@ export interface BattleLogDeclaredEffect {
   targetInstanceIds: string[];
   resolvedAmount: number | null;
   unsupportedMechanicId: string | null;
+  starAddition: {
+    bucket: "command" | "next_command";
+    requested: number;
+    before: number;
+    added: number;
+    after: number;
+  } | null;
   results: BattleLogCommonActionResult[];
 }
 
@@ -537,6 +547,15 @@ export function createBattleLogCommonActionResult(
       result.target?.instanceId ?? fallbackTargetInstanceId,
     hpChange: result.hpChange ?? null,
     npChange: result.npChange ?? null,
+    skillCooldownsBefore:
+      result.skillCooldownsBefore
+        ? [...result.skillCooldownsBefore]
+        : null,
+    skillCooldownsAfter:
+      result.skillCooldownsAfter
+        ? [...result.skillCooldownsAfter]
+        : null,
+    enemyChargeChange: result.enemyChargeChange ?? null,
     applications: (result.applicationResults ?? []).map(
       (application) => ({
         specIndex: application.specIndex,
@@ -594,6 +613,15 @@ function declaredEffectGroups(
       resolvedAmount: effect.resolvedAmount ?? null,
       unsupportedMechanicId:
         effect.unsupportedMechanicId ?? null,
+      starAddition: effect.starAddition
+        ? {
+            bucket: effect.starAddition.bucket,
+            requested: effect.starAddition.requested,
+            before: effect.starAddition.before,
+            added: effect.starAddition.added,
+            after: effect.starAddition.after,
+          }
+        : null,
       results: (effect.batch?.results ?? []).map(
         (item, index) => createBattleLogCommonActionResult(
           item,

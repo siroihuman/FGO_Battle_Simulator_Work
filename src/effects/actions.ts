@@ -1,5 +1,8 @@
 import type { BattleUnitState } from "../core/battle/types";
-import { assertSafeInteger, clampInteger } from "../core/numeric";
+import {
+  assertSafeInteger,
+  clampInteger,
+} from "../core/numeric";
 import type { DeterministicRng } from "../core/rng";
 import { addNp, npCap } from "../formulas/np";
 import type { NoblePhantasmLevel } from "../formulas/np";
@@ -74,6 +77,21 @@ export type CommonAction =
       npLevel?: NoblePhantasmLevel;
     }
   | {
+      /** Reduces every listed skill cooldown without going below zero. */
+      kind: "advance_skill_cooldowns";
+      amount: number;
+    }
+  | {
+      /** Adds a percentage of the target's current NP to that same target. */
+      kind: "increase_np_by_current_rate";
+      ratePermille: number;
+    }
+  | {
+      /** Signed enemy charge change, clamped from zero through chargeMax. */
+      kind: "change_enemy_charge";
+      amount: number;
+    }
+  | {
       kind: "apply_effects";
       effects: readonly EffectApplicationSpec[];
     }
@@ -93,6 +111,9 @@ export interface CommonActionResult {
   counters: EffectRuntimeCounters;
   hpChange?: number;
   npChange?: number;
+  skillCooldownsBefore?: number[];
+  skillCooldownsAfter?: number[];
+  enemyChargeChange?: number;
   applicationResults?: EffectApplicationResult[];
   removalAttempts?: EffectRemovalAttempt[];
   survivalResult?: LethalHpResolution;
@@ -251,6 +272,112 @@ export function executeCommonAction(
       target: np === target.np ? target : { ...target, np },
       counters,
       npChange: np - target.np,
+    };
+  }
+
+  if (action.kind === "advance_skill_cooldowns") {
+    assertSafeInteger(action.amount, "skill cooldown advance amount");
+    if (action.amount < 0) {
+      throw new RangeError(
+        "skill cooldown advance amount must not be negative",
+      );
+    }
+    const before = [...target.skillCooldowns];
+    const after = before.map((cooldown, index) => {
+      assertSafeInteger(
+        cooldown,
+        `${target.instanceId}.skillCooldowns[${index}]`,
+      );
+      if (cooldown < 0) {
+        throw new RangeError(
+          `${target.instanceId}.skillCooldowns[${index}] must not be negative`,
+        );
+      }
+      return Math.max(0, cooldown - action.amount);
+    });
+    const changed = after.some(
+      (cooldown, index) => cooldown !== before[index],
+    );
+    return {
+      action,
+      outcome: changed ? "changed" : "unchanged",
+      target: changed ? { ...target, skillCooldowns: after } : target,
+      counters,
+      skillCooldownsBefore: before,
+      skillCooldownsAfter: after,
+    };
+  }
+
+  if (action.kind === "increase_np_by_current_rate") {
+    assertSafeInteger(
+      action.ratePermille,
+      "current NP increase rate",
+    );
+    if (action.ratePermille < 0) {
+      throw new RangeError(
+        "current NP increase rate must not be negative",
+      );
+    }
+    const npLevel = target.noblePhantasm?.level ?? 1;
+    const cap = npCap(npLevel);
+    const cappedCurrent = clampInteger(target.np, 0, cap);
+    const requestedIncrease =
+      BigInt(cappedCurrent) * BigInt(action.ratePermille) / 1_000n;
+    const remainingCapacity = BigInt(cap - cappedCurrent);
+    const safeIncrease = Number(
+      requestedIncrease > remainingCapacity
+        ? remainingCapacity
+        : requestedIncrease,
+    );
+    const np = addNp(cappedCurrent, safeIncrease, npLevel);
+    return {
+      action,
+      outcome: np === target.np ? "unchanged" : "changed",
+      target: np === target.np ? target : { ...target, np },
+      counters,
+      npChange: np - target.np,
+    };
+  }
+
+  if (action.kind === "change_enemy_charge") {
+    assertSafeInteger(action.amount, "enemy charge change amount");
+    const enemyAction = target.enemyAction;
+    if (target.side !== "enemy" || !enemyAction) {
+      return { action, outcome: "unchanged", target, counters };
+    }
+    assertSafeInteger(enemyAction.charge, "enemy charge");
+    assertSafeInteger(enemyAction.chargeMax, "enemy maximum charge");
+    if (
+      enemyAction.charge < 0
+      || enemyAction.chargeMax < 0
+      || enemyAction.charge > enemyAction.chargeMax
+    ) {
+      throw new RangeError(
+        "enemy charge must be from zero through chargeMax",
+      );
+    }
+    const requestedCharge =
+      BigInt(enemyAction.charge) + BigInt(action.amount);
+    const charge = Number(
+      requestedCharge < 0n
+        ? 0n
+        : requestedCharge > BigInt(enemyAction.chargeMax)
+          ? BigInt(enemyAction.chargeMax)
+          : requestedCharge,
+    );
+    return {
+      action,
+      outcome:
+        charge === enemyAction.charge ? "unchanged" : "changed",
+      target:
+        charge === enemyAction.charge
+          ? target
+          : {
+              ...target,
+              enemyAction: { ...enemyAction, charge },
+            },
+      counters,
+      enemyChargeChange: charge - enemyAction.charge,
     };
   }
 

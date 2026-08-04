@@ -48,6 +48,12 @@ export type DeclaredEffectAction =
       amount: DeclaredActionInteger;
     }
   | {
+      /** Stars gained before selection use command; attack-time gains use next_command. */
+      kind: "gain_stars";
+      amount: DeclaredActionInteger;
+      destination: "command" | "next_command";
+    }
+  | {
       /** Explicit marker for a known content effect not supported by the engine. */
       kind: "unsupported";
       mechanicId: string;
@@ -85,6 +91,10 @@ const DECLARED_ACTION_KINDS: readonly string[] = [
   "absorb_hp",
   "instant_death",
   "change_np",
+  "advance_skill_cooldowns",
+  "increase_np_by_current_rate",
+  "change_enemy_charge",
+  "gain_stars",
   "apply_effects",
   "remove_effects",
   "unsupported",
@@ -210,6 +220,22 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
     assertValidDeclaredActionInteger(action.amount, `${name}.amount`);
     return;
   }
+  if (action.kind === "gain_stars") {
+    assertValidDeclaredActionInteger(action.amount, `${name}.amount`);
+    const values = typeof action.amount === "number"
+      ? [action.amount]
+      : action.amount.values;
+    values.forEach((value, index) =>
+      assertNonNegative(value, `${name}.amount.values[${index}]`)
+    );
+    if (
+      action.destination !== "command"
+      && action.destination !== "next_command"
+    ) {
+      throw new RangeError(`${name}.destination is invalid`);
+    }
+    return;
+  }
   if (action.kind === "unsupported") {
     if (!/^[a-z][a-z0-9_]*$/.test(action.mechanicId)) {
       throw new RangeError(`${name}.mechanicId must be lower_snake_case`);
@@ -225,6 +251,12 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
 
   if (action.kind === "heal_hp" || action.kind === "reduce_hp") {
     assertNonNegative(action.amount, `${name}.amount`);
+  } else if (action.kind === "advance_skill_cooldowns") {
+    assertNonNegative(action.amount, `${name}.amount`);
+  } else if (action.kind === "increase_np_by_current_rate") {
+    assertNonNegative(action.ratePermille, `${name}.ratePermille`);
+  } else if (action.kind === "change_enemy_charge") {
+    assertSafeInteger(action.amount, `${name}.amount`);
   } else if (action.kind === "absorb_hp") {
     assertNonNegative(action.amount, `${name}.amount`);
     if (action.recoveryRatePermille !== undefined) {
@@ -308,4 +340,15 @@ export function assertValidDeclaredActionEffect(
   }
   assertValidDeclaredActionTarget(effect.target, `${name}.target`);
   assertAction(effect.action, `${name}.action`);
+  if (
+    effect.action.kind === "gain_stars"
+    && (
+      effect.target.relation !== "self"
+      || effect.target.selection !== "single"
+    )
+  ) {
+    throw new RangeError(
+      `${name}.action gain_stars must use a self target`,
+    );
+  }
 }

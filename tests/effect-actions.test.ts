@@ -215,6 +215,102 @@ describe("common state-changing actions", () => {
     expect(result.npChange).toBe(150);
   });
 
+  it("advances every skill cooldown without crossing zero", () => {
+    const result = executeCommonAction(
+      null,
+      unit("ally-a", "ally", { skillCooldowns: [8, 2, 0] }),
+      { kind: "advance_skill_cooldowns", amount: 2 },
+      createEffectRuntimeCounters(),
+      new BattleRng("cooldown-advance").stream("effects"),
+    );
+    expect(result.target?.skillCooldowns).toEqual([6, 0, 0]);
+    expect(result).toMatchObject({
+      outcome: "changed",
+      skillCooldownsBefore: [8, 2, 0],
+      skillCooldownsAfter: [6, 0, 0],
+    });
+  });
+
+  it("increases NP from its current value and respects the selected NP cap", () => {
+    const result = executeCommonAction(
+      null,
+      unit("ally-a", "ally", {
+        np: 5_000,
+        noblePhantasm: {
+          stableId: "test-np",
+          name: "検査宝具",
+          cardType: "buster",
+          level: 1,
+        },
+      }),
+      { kind: "increase_np_by_current_rate", ratePermille: 1_000 },
+      createEffectRuntimeCounters(),
+      new BattleRng("current-np-rate").stream("effects"),
+    );
+    expect(result.target?.np).toBe(10_000);
+    expect(result.npChange).toBe(5_000);
+
+    const extreme = executeCommonAction(
+      null,
+      unit("ally-b", "ally", { np: 1 }),
+      {
+        kind: "increase_np_by_current_rate",
+        ratePermille: Number.MAX_SAFE_INTEGER,
+      },
+      createEffectRuntimeCounters(),
+      new BattleRng("current-np-rate-extreme").stream("effects"),
+    );
+    expect(extreme.target?.np).toBe(10_000);
+  });
+
+  it("changes only configured enemy charge and clamps it to its gauge", () => {
+    const enemy = unit("enemy-a", "enemy", {
+      enemyAction: {
+        maxActions: "auto",
+        normalAttack: null,
+        skills: [],
+        noblePhantasm: {
+          stableId: "enemy-np",
+          name: "敵宝具",
+        },
+        charge: 3,
+        chargeMax: 5,
+      },
+    });
+    const reduced = executeCommonAction(
+      null,
+      enemy,
+      { kind: "change_enemy_charge", amount: -10 },
+      createEffectRuntimeCounters(),
+      new BattleRng("enemy-charge-change").stream("effects"),
+    );
+    expect(reduced.target?.enemyAction?.charge).toBe(0);
+    expect(reduced.enemyChargeChange).toBe(-3);
+
+    const filled = executeCommonAction(
+      null,
+      enemy,
+      {
+        kind: "change_enemy_charge",
+        amount: Number.MAX_SAFE_INTEGER,
+      },
+      createEffectRuntimeCounters(),
+      new BattleRng("enemy-charge-fill").stream("effects"),
+    );
+    expect(filled.target?.enemyAction?.charge).toBe(5);
+    expect(filled.enemyChargeChange).toBe(2);
+
+    const ally = unit("ally-a", "ally");
+    const ignored = executeCommonAction(
+      null,
+      ally,
+      { kind: "change_enemy_charge", amount: 1 },
+      createEffectRuntimeCounters(),
+      new BattleRng("ally-charge-ignored").stream("effects"),
+    );
+    expect(ignored).toMatchObject({ outcome: "unchanged", target: ally });
+  });
+
   it("executes status application and removal in declared action order", () => {
     const result = executeCommonActions(
       unit("ally-a", "ally"),
