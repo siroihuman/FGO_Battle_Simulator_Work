@@ -434,6 +434,35 @@ if (manifest) {
     "ターン終了トリガーのスター獲得対応状態が一致しません"
   );
   assert(
+    manifest.coreRules.noblePhantasmCardTypeChangeCategory === "buff",
+    "宝具カード種別変更は強化状態でなければなりません"
+  );
+  assert(
+    manifest.coreRules.noblePhantasmCardTypeChangeMutatesIntrinsicType === false,
+    "宝具カード種別変更で固有の宝具カード種別を書き換えてはいけません"
+  );
+  assert(
+    manifest.coreRules.noblePhantasmCardTypeChangeOverlapPriority === "latest_registration",
+    "重複した宝具カード種別変更は最新登録を優先しなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.noblePhantasmCardTypeChangePreserves) === JSON.stringify([
+      "hit_count",
+      "attack_np_rate",
+      "noble_phantasm_level",
+      "np_gauge"
+    ]),
+    "宝具カード種別変更で維持する値が一致しません"
+  );
+  assert(
+    manifest.coreRules.commandSelectionUsesEffectiveNoblePhantasmCardType === true,
+    "コマンド選択は現在有効な宝具カード種別を使わなければなりません"
+  );
+  assert(
+    manifest.coreRules.noblePhantasmCardTypeRecheckedBeforeExecution === true,
+    "宝具カード種別は実行直前に再確認しなければなりません"
+  );
+  assert(
     JSON.stringify(manifest.coreRules.noblePhantasmDeclaredSequenceOrder) === JSON.stringify([
       "common_before_attack",
       "declared_before_attack",

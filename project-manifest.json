@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.31.0",
-  "status": "conditional-attack-triggers",
+  "dataSchemaVersion": "1.32.0",
+  "status": "temporary-np-card-type-change",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -200,6 +200,17 @@
     "conditionalAttackTriggerMismatchConsumesRng": false,
     "triggerStarGainDestinationRequired": true,
     "turnEndTriggerStarGain": "not_yet_supported",
+    "noblePhantasmCardTypeChangeCategory": "buff",
+    "noblePhantasmCardTypeChangeMutatesIntrinsicType": false,
+    "noblePhantasmCardTypeChangeOverlapPriority": "latest_registration",
+    "noblePhantasmCardTypeChangePreserves": [
+      "hit_count",
+      "attack_np_rate",
+      "noble_phantasm_level",
+      "np_gauge"
+    ],
+    "commandSelectionUsesEffectiveNoblePhantasmCardType": true,
+    "noblePhantasmCardTypeRecheckedBeforeExecution": true,
     "noblePhantasmDeclaredSequenceOrder": [
       "common_before_attack",
       "declared_before_attack",

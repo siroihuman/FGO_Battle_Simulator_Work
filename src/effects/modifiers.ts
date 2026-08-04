@@ -29,6 +29,8 @@ export const COMMON_EFFECT_TYPES = {
   criticalDamage: "critical_damage",
   fixedDamage: "fixed_damage",
   noblePhantasmDamage: "noble_phantasm_damage",
+  noblePhantasmCardTypeChange:
+    "noble_phantasm_card_type_change",
   npGain: "np_gain",
   power: "power",
   receivedNpGain: "received_np_gain",
