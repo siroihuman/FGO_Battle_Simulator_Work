@@ -388,6 +388,11 @@ export function resolveSideTurnEnd(
     const actionResults: TurnEndActionResult[] = [];
     const actions = currentEffect.trigger.actions ?? [];
     for (const [actionIndex, action] of actions.entries()) {
+      if (action.action.kind === "gain_stars") {
+        throw new RangeError(
+          "turn_end gain_stars requires the future battle-state resolver",
+        );
+      }
       const targetLocations = resolveTargetLocations(
         currentFormation,
         candidate.ownerInstanceId,

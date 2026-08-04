@@ -112,14 +112,14 @@ export function resolveAllyTurnEnd(
       event.instanceId,
     );
     const trigger = resolveTriggerEvent(
-      currentState.formation,
+      currentState,
       owner ? [owner] : [],
       event.triggerEvent,
       currentCounters,
       rng,
     );
     currentCounters = trigger.counters;
-    currentState = applyFormation(currentState, trigger.formation);
+    currentState = trigger.state;
     breakTriggers.push(trigger);
 
     const replacement = resolveEnemyReplacement(

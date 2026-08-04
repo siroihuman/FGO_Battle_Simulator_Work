@@ -635,6 +635,15 @@ export function resolveAllyCommandAttacks(
               sourceInstanceId:
                 resolverInput.action.ownerInstanceId,
               targetInstanceIds,
+              triggerContext: {
+                attackKind:
+                  selectedCard?.kind === "noble_phantasm"
+                    ? "noble_phantasm"
+                    : resolverInput.action.kind === "extra_attack"
+                      ? "extra_attack"
+                      : "normal_command",
+                cardType: actionData.data.calculation.cardType,
+              },
               rng: input.rng,
               ...(effectPhases
                   && effectContext

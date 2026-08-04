@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.30.0",
-  "status": "declared-battle-state-actions",
+  "dataSchemaVersion": "1.31.0",
+  "status": "conditional-attack-triggers",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -102,7 +102,7 @@
     "criticalRatePermillePerStar": 100,
     "commandStarDistributionRng": "critical",
     "fixedCriticalRatesConsumeRng": false,
-    "battleLogSchemaVersion": 3,
+    "battleLogSchemaVersion": 4,
     "battleLogGranularity": "completed_action",
     "battleLogIncludes": [
       "outcome",
@@ -180,6 +180,26 @@
       "command",
       "next_command"
     ],
+    "attackTriggerContextFields": [
+      "attack_kind",
+      "card_type"
+    ],
+    "conditionalAttackTriggerKinds": [
+      "normal_command",
+      "noble_phantasm",
+      "extra_attack",
+      "enemy_normal_attack"
+    ],
+    "conditionalAttackTriggerCardTypes": [
+      "quick",
+      "arts",
+      "buster",
+      "extra"
+    ],
+    "conditionalAttackTriggerMismatchConsumesUse": false,
+    "conditionalAttackTriggerMismatchConsumesRng": false,
+    "triggerStarGainDestinationRequired": true,
+    "turnEndTriggerStarGain": "not_yet_supported",
     "noblePhantasmDeclaredSequenceOrder": [
       "common_before_attack",
       "declared_before_attack",

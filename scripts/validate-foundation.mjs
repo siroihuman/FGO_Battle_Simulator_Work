@@ -219,8 +219,8 @@ if (manifest) {
     "クリティカル率0%・100%は乱数を消費してはいけません"
   );
   assert(
-    manifest.coreRules.battleLogSchemaVersion === 3,
-    "戦闘ログ形式バージョンは3でなければなりません"
+    manifest.coreRules.battleLogSchemaVersion === 4,
+    "戦闘ログ形式バージョンは4でなければなりません"
   );
   assert(
     manifest.coreRules.battleLogGranularity === "completed_action",
@@ -391,6 +391,47 @@ if (manifest) {
       "next_command"
     ]),
     "宣言スター獲得は現在使用分と次回用を明示しなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.attackTriggerContextFields) === JSON.stringify([
+      "attack_kind",
+      "card_type"
+    ]),
+    "攻撃トリガー文脈は攻撃種別とカード種別を保持しなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.conditionalAttackTriggerKinds) === JSON.stringify([
+      "normal_command",
+      "noble_phantasm",
+      "extra_attack",
+      "enemy_normal_attack"
+    ]),
+    "条件付き攻撃トリガーの攻撃種別一覧が一致しません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.conditionalAttackTriggerCardTypes) === JSON.stringify([
+      "quick",
+      "arts",
+      "buster",
+      "extra"
+    ]),
+    "条件付き攻撃トリガーのカード種別一覧が一致しません"
+  );
+  assert(
+    manifest.coreRules.conditionalAttackTriggerMismatchConsumesUse === false,
+    "攻撃条件不一致時にトリガー回数を消費してはいけません"
+  );
+  assert(
+    manifest.coreRules.conditionalAttackTriggerMismatchConsumesRng === false,
+    "攻撃条件不一致時に効果乱数を消費してはいけません"
+  );
+  assert(
+    manifest.coreRules.triggerStarGainDestinationRequired === true,
+    "トリガーのスター獲得は加算先を必須指定しなければなりません"
+  );
+  assert(
+    manifest.coreRules.turnEndTriggerStarGain === "not_yet_supported",
+    "ターン終了トリガーのスター獲得対応状態が一致しません"
   );
   assert(
     JSON.stringify(manifest.coreRules.noblePhantasmDeclaredSequenceOrder) === JSON.stringify([

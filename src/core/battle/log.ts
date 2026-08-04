@@ -35,7 +35,7 @@ import {
   type RngStreamName,
 } from "../rng";
 
-export const BATTLE_LOG_SCHEMA_VERSION = 3 as const;
+export const BATTLE_LOG_SCHEMA_VERSION = 4 as const;
 
 export type BattleLogBatchKind =
   | "ally_command"
@@ -267,6 +267,8 @@ export interface BattleLogTriggerStage {
   targetInstanceId: string | null;
   hit: boolean | null;
   damage: number | null;
+  attackKind: string | null;
+  cardType: string | null;
   activations: Array<{
     ownerInstanceId: string;
     effectInstanceId: string;
@@ -281,6 +283,13 @@ export interface BattleLogTriggerStage {
       actionIndex: number;
       actionKind: string;
       targetInstanceIds: string[];
+      starAddition: {
+        bucket: "command" | "next_command";
+        requested: number;
+        before: number;
+        added: number;
+        after: number;
+      } | null;
       results: BattleLogCommonActionResult[];
     }>;
   }>;
@@ -646,6 +655,8 @@ export function createBattleLogTriggerStage(
     targetInstanceId: result.event.targetInstanceId ?? null,
     hit: result.event.hit ?? null,
     damage: result.event.damage ?? null,
+    attackKind: result.event.attackKind ?? null,
+    cardType: result.event.cardType ?? null,
     activations: result.activations.map((activation) => ({
       ownerInstanceId: activation.ownerInstanceId,
       effectInstanceId: activation.effectInstanceId,
@@ -663,6 +674,15 @@ export function createBattleLogTriggerStage(
         actionIndex: action.actionIndex,
         actionKind: action.action.action.kind,
         targetInstanceIds: [...action.targetInstanceIds],
+        starAddition: action.starAddition
+          ? {
+              bucket: action.starAddition.bucket,
+              requested: action.starAddition.requested,
+              before: action.starAddition.before,
+              added: action.starAddition.added,
+              after: action.starAddition.after,
+            }
+          : null,
         results: action.batch.results.map((resultItem, index) =>
           createBattleLogCommonActionResult(
             resultItem,
