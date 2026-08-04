@@ -555,8 +555,17 @@ if (manifest) {
 const mandatoryFiles = [
   "README.md",
   "AGENTS.md",
+  "docs/INDEX.md",
+  "docs/START_HERE.md",
+  "docs/PROJECT_RULES.md",
+  "docs/IMPLEMENTATION_STATUS.md",
+  "docs/DECISION_LOG.md",
   "docs/NEW_CHAT_GUIDE.md",
   "docs/HANDOFF_TEMPLATE.md",
+  "docs/archive/README.md",
+  "docs/archive/2026-08-04/PROJECT_RULES_v1.0.0.md",
+  "docs/archive/2026-08-04/IMPLEMENTATION_STATUS_v1.0.0.md",
+  "docs/archive/2026-08-04/DECISION_LOG_v1.0.0.md",
   "docs/roles/SYSTEM.md",
   "docs/roles/SERVANT.md",
   "docs/roles/CRAFT_ESSENCE.md",
@@ -576,6 +585,20 @@ for (const path of mandatoryFiles) {
 const agents = await readText("AGENTS.md");
 assert(agents.includes("リポジトリを唯一の正本"), "AGENTS.md に正本規則がありません");
 assert(agents.includes("特殊勝利条件・特殊敗北条件を追加する"), "AGENTS.md に特殊勝敗条件の禁止がありません");
+assert(agents.includes("docs/START_HERE.md"), "AGENTS.md に作業開始ページへの案内がありません");
+
+const startHere = await readText("docs/START_HERE.md");
+assert(startHere.includes("## 現在地点"), "作業開始ページに現在地点がありません");
+assert(startHere.includes("## 次の作業"), "作業開始ページに次の作業がありません");
+assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
+
+const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
+assert(implementationStatus.includes("## 現在地点"), "実装状況に現在地点がありません");
+assert(implementationStatus.includes("## 次の実装"), "実装状況に次の実装がありません");
+
+const archiveReadme = await readText("docs/archive/README.md");
+assert(archiveReadme.includes("IMPLEMENTATION_STATUS_v1.0.0.md"), "実装状況の履歴アーカイブへの案内がありません");
+assert(archiveReadme.includes("DECISION_LOG_v1.0.0.md"), "決定記録の履歴アーカイブへの案内がありません");
 
 for (const path of [
   "docs/roles/SYSTEM.md",

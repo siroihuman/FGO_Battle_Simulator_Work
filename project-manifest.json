@@ -3,10 +3,11 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.32.0",
-  "status": "temporary-np-card-type-change",
+  "status": "initial-servant-data-next",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
+    "docs/START_HERE.md",
     "docs/PROJECT_RULES.md",
     "docs/ARCHITECTURE.md",
     "docs/IMPLEMENTATION_STATUS.md",
