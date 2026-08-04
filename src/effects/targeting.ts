@@ -9,6 +9,7 @@ import type {
   BattleUnitState,
   UnitLocation,
 } from "../core/battle/types";
+import { hasAllBattleTraits } from "./traits";
 
 export type TargetRelation = "self" | "allies" | "enemies";
 export type TargetSelection = "single" | "all" | "frontmost" | "rearmost";
@@ -34,7 +35,7 @@ function matchesLife(unit: BattleUnitState, life: TargetLifeFilter): boolean {
 }
 
 function matchesTraits(unit: BattleUnitState, traits: readonly string[]): boolean {
-  return traits.every((trait) => unit.traits.includes(trait));
+  return hasAllBattleTraits(unit, traits);
 }
 
 export function resolveTargetLocations(

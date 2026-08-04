@@ -357,6 +357,8 @@ function resolveAllyActionData(
           noblePhantasm.specialAttackPermilleByOvercharge?.[
             overchargeStage - 1
           ],
+        npSpecialAttackRequiredTargetTraits:
+          noblePhantasm.specialAttackRequiredTargetTraits,
       },
     },
   };

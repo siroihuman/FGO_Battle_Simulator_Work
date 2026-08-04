@@ -13,6 +13,7 @@ import {
 } from "./attackModifiers";
 import { findUnitLocation } from "./formation";
 import type { BattleState } from "./state";
+import { hasAllBattleTraits } from "../../effects/traits";
 
 export interface AttackCalculationData {
   cardType: AttackModifierCardType;
@@ -29,6 +30,8 @@ export interface AttackCalculationData {
   hitWeights: readonly number[];
   npDamageMultiplierPermille?: number;
   npSpecialAttackPermille?: number;
+  /** Every listed trait must be effective on each target individually. */
+  npSpecialAttackRequiredTargetTraits?: readonly string[];
 }
 
 export interface PreparedAttackInputResult {
@@ -57,6 +60,29 @@ function assertActionData(action: AttackCalculationData): void {
       );
     }
   }
+  if (
+    action.npSpecialAttackRequiredTargetTraits
+    && action.npSpecialAttackPermille === undefined
+  ) {
+    throw new RangeError(
+      "npSpecialAttackRequiredTargetTraits requires npSpecialAttackPermille",
+    );
+  }
+  const traits = action.npSpecialAttackRequiredTargetTraits ?? [];
+  const seenTraits = new Set<string>();
+  traits.forEach((traitId, index) => {
+    if (traitId.trim().length === 0) {
+      throw new RangeError(
+        `npSpecialAttackRequiredTargetTraits[${index}] must not be empty`,
+      );
+    }
+    if (seenTraits.has(traitId)) {
+      throw new RangeError(
+        `npSpecialAttackRequiredTargetTraits contains duplicate value: ${traitId}`,
+      );
+    }
+    seenTraits.add(traitId);
+  });
 }
 
 /**
@@ -116,6 +142,10 @@ export function prepareBattleAttackInput(
     });
     const sourceModifiers = modifiers.source;
     const targetModifiers = modifiers.target;
+    const specialAttackMatches = hasAllBattleTraits(
+      target,
+      action.npSpecialAttackRequiredTargetTraits ?? [],
+    );
     return {
       targetInstanceId,
       damage: {
@@ -157,7 +187,9 @@ export function prepareBattleAttackInput(
         npDamageModPermille:
           sourceModifiers.npDamageModPermille,
         npSpecialAttackPermille:
-          action.npSpecialAttackPermille,
+          specialAttackMatches
+            ? action.npSpecialAttackPermille
+            : undefined,
         fixedDamage: sourceModifiers.fixedDamage,
         busterChainModPermille:
           action.busterChainModPermille,

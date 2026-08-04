@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.28.0",
-  "status": "declared-action-sequence-integration",
+  "dataSchemaVersion": "1.29.0",
+  "status": "dynamic-traits-conditional-special-attack",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -177,6 +177,15 @@
       "completed_action_boundary"
     ],
     "declaredPreAttackRebuildsActiveTargets": true,
+    "effectiveTraitSources": [
+      "base",
+      "active_trait_grants"
+    ],
+    "traitGrantMutatesBaseTraits": false,
+    "duplicateTraitGrantLifetimesIndependent": true,
+    "conditionalNpSpecialAttackTraitMatch": "all_required_traits",
+    "conditionalNpSpecialAttackTiming": "after_declared_pre_attack",
+    "conditionalNpSpecialAttackMismatchPermille": 1000,
     "unresolvedDeclaredActionConsumesNpOrCharge": false,
     "enemySkillSingleTargetSource": "ai_request",
     "enemySkillCompletedActionBoundary": true,

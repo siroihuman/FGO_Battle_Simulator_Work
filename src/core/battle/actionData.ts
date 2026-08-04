@@ -31,6 +31,8 @@ export interface NoblePhantasmAttackData {
     number,
     number,
   ];
+  /** Every listed trait must be effective on the target at damage setup. */
+  specialAttackRequiredTargetTraits?: readonly string[];
 }
 
 export interface EnemyAttackActionData {
@@ -150,6 +152,20 @@ function validateMultiplierTuple(
   );
 }
 
+function validateTraitIds(
+  values: readonly string[],
+  name: string,
+): void {
+  const seen = new Set<string>();
+  values.forEach((value, index) => {
+    assertNonEmptyKey(value, `${name}[${index}]`);
+    if (seen.has(value)) {
+      throw new RangeError(`${name} contains duplicate value: ${value}`);
+    }
+    seen.add(value);
+  });
+}
+
 function validateCombatant(data: CombatantAttackData): void {
   assertNonEmptyKey(data.instanceId, "instanceId");
   assertNonEmptyKey(data.dataId, `${data.instanceId}.dataId`);
@@ -217,6 +233,17 @@ function validateCombatant(data: CombatantAttackData): void {
       validateMultiplierTuple(
         noblePhantasm.specialAttackPermilleByOvercharge,
         `${data.instanceId}.${noblePhantasm.stableId}.specialAttackPermilleByOvercharge`,
+      );
+    }
+    if (noblePhantasm.specialAttackRequiredTargetTraits) {
+      if (!noblePhantasm.specialAttackPermilleByOvercharge) {
+        throw new RangeError(
+          `${data.instanceId}.${noblePhantasm.stableId}.specialAttackRequiredTargetTraits requires special-attack multipliers`,
+        );
+      }
+      validateTraitIds(
+        noblePhantasm.specialAttackRequiredTargetTraits,
+        `${data.instanceId}.${noblePhantasm.stableId}.specialAttackRequiredTargetTraits`,
       );
     }
   }

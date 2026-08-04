@@ -381,6 +381,30 @@ if (manifest) {
     "宝具攻撃前効果後は生存対象から攻撃入力を再構築しなければなりません"
   );
   assert(
+    JSON.stringify(manifest.coreRules.effectiveTraitSources) === JSON.stringify(["base", "active_trait_grants"]),
+    "有効特性は基礎特性と付与中の特性状態から構築しなければなりません"
+  );
+  assert(
+    manifest.coreRules.traitGrantMutatesBaseTraits === false,
+    "特性付与状態を基礎特性へ書き込んではいけません"
+  );
+  assert(
+    manifest.coreRules.duplicateTraitGrantLifetimesIndependent === true,
+    "重複した特性付与状態の期限は独立していなければなりません"
+  );
+  assert(
+    manifest.coreRules.conditionalNpSpecialAttackTraitMatch === "all_required_traits",
+    "条件付き宝具特攻は必須対象特性をすべて満たす場合だけ成立しなければなりません"
+  );
+  assert(
+    manifest.coreRules.conditionalNpSpecialAttackTiming === "after_declared_pre_attack",
+    "条件付き宝具特攻は宝具攻撃前宣言効果後に判定しなければなりません"
+  );
+  assert(
+    manifest.coreRules.conditionalNpSpecialAttackMismatchPermille === 1000,
+    "条件不一致の宝具特殊威力は100%でなければなりません"
+  );
+  assert(
     manifest.coreRules.unresolvedDeclaredActionConsumesNpOrCharge === false,
     "未対応宣言効果は宝具NP・敵チャージを消費してはいけません"
   );

@@ -1,5 +1,6 @@
 import type { BattleUnitState } from "../core/battle/types";
 import type { EffectCategory, EffectTemplate } from "./types";
+import { TRAIT_GRANT_EFFECT_TYPE } from "./traits";
 
 export const ROMA_TRAIT_ID = "roma";
 export const ACTION_DISABLED_CLASSIFICATION = "immobilize";
@@ -29,7 +30,7 @@ export function createTraitGrantEffect(
     ...options,
     stableId: options.stableId ?? `trait-grant:${traitId}`,
     name,
-    effectType: "trait_grant",
+    effectType: TRAIT_GRANT_EFFECT_TYPE,
     category: categoryForGrantedTrait(traitId),
     flags: { ...(options.flags ?? {}), traitId },
     removalPolicy:
