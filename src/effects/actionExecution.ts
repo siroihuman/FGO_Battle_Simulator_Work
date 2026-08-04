@@ -7,6 +7,12 @@ import {
   setBattleFormation,
   type BattleState,
 } from "../core/battle/state";
+import {
+  addCommandStars,
+  addNextCommandStars,
+  type BattleStarAddition,
+  type BattleStarBucket,
+} from "../core/battle/starState";
 import type {
   BattleFormation,
   BattleUnitState,
@@ -53,6 +59,7 @@ export interface DeclaredActionEffectResult {
   targetInstanceIds: string[];
   resolvedAmount?: number;
   batch?: CommonActionBatchResult;
+  starAddition?: BattleStarAddition;
   unsupportedMechanicId?: string;
 }
 
@@ -191,10 +198,23 @@ function runtimeSelector(
   };
 }
 
-function commonAction(
+type PreparedDeclaredAction =
+  | {
+      kind: "common";
+      action: CommonAction;
+      resolvedAmount?: number;
+    }
+  | {
+      kind: "gain_stars";
+      amount: number;
+      destination: BattleStarBucket;
+      resolvedAmount: number;
+    };
+
+function preparedAction(
   effect: DeclaredActionEffect,
   context: DeclaredActionExecutionContext,
-): { action: CommonAction; resolvedAmount?: number } | null {
+): PreparedDeclaredAction | null {
   if (effect.action.kind === "unsupported") return null;
   if (effect.action.kind === "change_np") {
     const amount = resolveDeclaredActionInteger(
@@ -202,11 +222,24 @@ function commonAction(
       context,
     );
     return {
+      kind: "common",
       action: { kind: "change_np", amount },
       resolvedAmount: amount,
     };
   }
-  return { action: effect.action };
+  if (effect.action.kind === "gain_stars") {
+    const amount = resolveDeclaredActionInteger(
+      effect.action.amount,
+      context,
+    );
+    return {
+      kind: "gain_stars",
+      amount,
+      destination: effect.action.destination,
+      resolvedAmount: amount,
+    };
+  }
+  return { kind: "common", action: effect.action };
 }
 
 /** Executes source-ordered declarative effects against the current formation. */
@@ -229,7 +262,7 @@ export function executeDeclaredActionEffects(
   const unresolvedEffectStableIds: string[] = [];
 
   for (const effect of [...effects].sort((left, right) => left.order - right.order)) {
-    const prepared = commonAction(effect, context);
+    const prepared = preparedAction(effect, context);
     if (!prepared) {
       unresolvedEffectStableIds.push(effect.stableId);
       results.push({
@@ -249,6 +282,34 @@ export function executeDeclaredActionEffects(
       sourceInstanceId,
       runtimeSelector(effect, context),
     );
+    if (prepared.kind === "gain_stars") {
+      if (targetLocations.length === 0) {
+        results.push({
+          effectStableId: effect.stableId,
+          order: effect.order,
+          outcome: "no_target",
+          targetInstanceIds: [],
+          resolvedAmount: prepared.resolvedAmount,
+        });
+        continue;
+      }
+      const addition =
+        prepared.destination === "command"
+          ? addCommandStars(currentState, prepared.amount)
+          : addNextCommandStars(currentState, prepared.amount);
+      currentState = addition.state;
+      results.push({
+        effectStableId: effect.stableId,
+        order: effect.order,
+        outcome: "resolved",
+        targetInstanceIds: targetLocations.map(
+          ({ unit }) => unit.instanceId,
+        ),
+        resolvedAmount: prepared.resolvedAmount,
+        starAddition: addition,
+      });
+      continue;
+    }
     const targets = targetLocations.length > 0
       ? targetLocations.map(({ unit }) => unit)
       : [null];

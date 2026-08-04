@@ -306,6 +306,103 @@ describe("declared action-effect execution", () => {
     expect(rng.snapshot().drawCount).toBe(0);
   });
 
+  it("adds declared stars to the explicit 99-cap command buckets without RNG", () => {
+    const rng = new BattleRng("declared-star-gain").stream("effects");
+    const state = {
+      ...battle(),
+      commandStars: 90,
+      nextCommandStars: 95,
+    };
+    const result = executeDeclaredActionEffects(
+      state,
+      "ally-a",
+      [
+        {
+          kind: "effect",
+          stableId: "gain-command-stars",
+          order: 1,
+          description: "スターを獲得する",
+          target: { relation: "self", selection: "single" },
+          action: {
+            kind: "gain_stars",
+            amount: 20,
+            destination: "command",
+          },
+        },
+        {
+          kind: "effect",
+          stableId: "gain-next-command-stars",
+          order: 2,
+          description: "次回用スターを獲得する",
+          target: { relation: "self", selection: "single" },
+          action: {
+            kind: "gain_stars",
+            amount: 10,
+            destination: "next_command",
+          },
+        },
+      ],
+      {},
+      createEffectRuntimeCounters(),
+      rng,
+    );
+    expect(result.state).toMatchObject({
+      commandStars: 99,
+      nextCommandStars: 99,
+    });
+    expect(result.effects.map(({ starAddition }) => starAddition)).toMatchObject([
+      {
+        bucket: "command",
+        requested: 20,
+        before: 90,
+        added: 9,
+        after: 99,
+      },
+      {
+        bucket: "next_command",
+        requested: 10,
+        before: 95,
+        added: 4,
+        after: 99,
+      },
+    ]);
+    expect(rng.snapshot().drawCount).toBe(0);
+  });
+
+  it("rejects negative or unit-targeted declared star gains", () => {
+    const invalidTarget = actionData();
+    invalidTarget.actions[0].effects = [{
+      kind: "effect",
+      stableId: "invalid-star-target",
+      order: 1,
+      description: "不正な対象のスター獲得",
+      target: { relation: "allies", selection: "all" },
+      action: {
+        kind: "gain_stars",
+        amount: 10,
+        destination: "command",
+      },
+    }];
+    expect(() => createBattleActionEffectDataRegistry([invalidTarget]))
+      .toThrow(/gain_stars must use a self target/);
+
+    const negative = actionData();
+    negative.actions[0].effects = [{
+      kind: "effect",
+      stableId: "negative-star-gain",
+      order: 1,
+      description: "不正な負数のスター獲得",
+      target: { relation: "self", selection: "single" },
+      action: {
+        kind: "gain_stars",
+        amount: -1,
+        destination: "command",
+      },
+    }];
+    expect(() => createBattleActionEffectDataRegistry([negative]))
+      .toThrow(/must not be negative/);
+  });
+
   it("initializes passive groups once for frontline and reserve instances with global counters", () => {
     const registry = createBattleActionEffectDataRegistry([
       actionData("ally-a", {
@@ -364,6 +461,44 @@ describe("ally declared skill use", () => {
     expect(findUnitLocation(result.state.formation, "ally-b")?.unit.np)
       .toBe(30_000);
     expect(result.boundary.allyReplacement.events).toEqual([]);
+  });
+
+  it("lets a just-used skill advance its own cooldown after setting the maximum", () => {
+    const data = actionData("ally-a", {
+      actions: [{
+        stableId: "cooldown-skill",
+        name: "CT短縮スキル",
+        kind: "skill",
+        skillSlot: 1,
+        cooldownAtMax: 8,
+        attackOrder: null,
+        effects: [{
+          kind: "effect",
+          stableId: "cooldown-skill-advance",
+          order: 1,
+          description: "味方単体のスキルCTを2進める",
+          target: { relation: "allies", selection: "single" },
+          action: { kind: "advance_skill_cooldowns", amount: 2 },
+        }],
+      }],
+    });
+    const result = resolveAllySkillUse({
+      state: battle(),
+      registry: createBattleActionEffectDataRegistry([data]),
+      sourceInstanceId: "ally-a",
+      skillStableId: "cooldown-skill",
+      selectedTargetInstanceId: "ally-a",
+      counters: createEffectRuntimeCounters(),
+      rng: new BattleRng("self-cooldown-advance").stream("effects"),
+    });
+    expect(result.accepted).toBe(true);
+    if (!result.accepted) return;
+    expect(findUnitLocation(result.state.formation, "ally-a")?.unit.skillCooldowns)
+      .toEqual([6, 0, 0]);
+    expect(result.effects.effects[0]?.batch?.results[0]).toMatchObject({
+      skillCooldownsBefore: [8, 0, 0],
+      skillCooldownsAfter: [6, 0, 0],
+    });
   });
 
   it("rejects missing targets, cooldowns, and unsupported effects without changing state or RNG", () => {

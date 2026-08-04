@@ -468,6 +468,109 @@ describe("ally command data-to-attack integration", () => {
     expect(replay.sequence).toEqual(resolved.sequence);
   });
 
+  it("logs declared NP star gain and signed enemy charge reduction", () => {
+    const baseState = battle();
+    const chargedState = {
+      ...baseState,
+      formation: {
+        ...baseState.formation,
+        enemy: {
+          ...baseState.formation.enemy,
+          frontline: baseState.formation.enemy.frontline.map((target) =>
+            target
+              ? {
+                  ...target,
+                  enemyAction: {
+                    maxActions: "auto" as const,
+                    normalAttack: null,
+                    skills: [],
+                    noblePhantasm: {
+                      stableId: `${target.instanceId}-np`,
+                      name: "敵宝具",
+                    },
+                    charge: 3,
+                    chargeMax: 5,
+                  },
+                }
+              : null
+          ),
+        },
+      },
+    };
+    const state = withHand(chargedState, [
+      ["ally-b", 0],
+      ["ally-c", 0],
+    ]);
+    const selected = selection(state, [
+      cardId(state, "ally-a"),
+      cardId(state, "ally-b", 0),
+      cardId(state, "ally-c", 0),
+    ]);
+    const actionEffects = npEffectData([
+      {
+        kind: "effect",
+        stableId: "np-a-stars",
+        order: 1,
+        description: "次回用スターを獲得する",
+        target: { relation: "self", selection: "single" },
+        action: {
+          kind: "gain_stars",
+          amount: 7,
+          destination: "next_command",
+        },
+      },
+      {
+        kind: "effect",
+        stableId: "np-a-charge-down",
+        order: 3,
+        description: "敵全体のチャージを1減らす",
+        target: { relation: "enemies", selection: "all" },
+        action: { kind: "change_enemy_charge", amount: -1 },
+      },
+    ]);
+    const random = streams("np-state-actions");
+    const resolved = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      actionEffectRegistry: actionEffects,
+      rng: random.streams,
+    });
+    expect(resolved.sequence.accepted).toBe(true);
+    if (!resolved.sequence.accepted) return;
+    for (const instanceId of ["enemy-a", "enemy-b"]) {
+      expect(findUnitLocation(
+        resolved.sequence.result.state.formation,
+        instanceId,
+      )?.unit.enemyAction?.charge).toBe(2);
+    }
+    expect(resolved.battleLog.entries[0]?.declaredEffects).toMatchObject([
+      {
+        phase: "before_attack",
+        effects: [{
+          effectStableId: "np-a-stars",
+          starAddition: {
+            bucket: "next_command",
+            requested: 7,
+            before: 0,
+            added: 7,
+            after: 7,
+          },
+        }],
+      },
+      {
+        phase: "after_attack",
+        effects: [{
+          effectStableId: "np-a-charge-down",
+          results: [
+            { targetInstanceId: "enemy-a", enemyChargeChange: -1 },
+            { targetInstanceId: "enemy-b", enemyChargeChange: -1 },
+          ],
+        }],
+      },
+    ]);
+  });
+
   it("uses a declared pre-attack trait grant for the same NP's conditional special attack", () => {
     const state = withHand(battle(), [
       ["ally-b", 0],

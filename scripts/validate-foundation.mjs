@@ -219,8 +219,8 @@ if (manifest) {
     "クリティカル率0%・100%は乱数を消費してはいけません"
   );
   assert(
-    manifest.coreRules.battleLogSchemaVersion === 2,
-    "戦闘ログ形式バージョンは2でなければなりません"
+    manifest.coreRules.battleLogSchemaVersion === 3,
+    "戦闘ログ形式バージョンは3でなければなりません"
   );
   assert(
     manifest.coreRules.battleLogGranularity === "completed_action",
@@ -363,6 +363,34 @@ if (manifest) {
   assert(
     manifest.coreRules.declaredActionUnsupportedPolicy === "reject_before_state_or_rng_change",
     "未対応の宣言効果は状態・乱数変更前に拒否しなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.declaredUnitStateActions) === JSON.stringify([
+      "advance_skill_cooldowns",
+      "increase_np_by_current_rate",
+      "change_enemy_charge",
+      "gain_stars"
+    ]),
+    "宣言効果の戦闘状態操作一覧が一致しません"
+  );
+  assert(
+    manifest.coreRules.declaredSkillCooldownMinimum === 0,
+    "スキルCT短縮は0未満にしてはいけません"
+  );
+  assert(
+    manifest.coreRules.declaredCurrentNpIncreaseRateUnit === "permille_of_current_np",
+    "現在NP倍率の単位は現在NPに対するpermilleでなければなりません"
+  );
+  assert(
+    manifest.coreRules.declaredEnemyChargeRange === "zero_to_charge_max",
+    "敵チャージ増減は0から最大値の範囲でなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.declaredStarGainDestinations) === JSON.stringify([
+      "command",
+      "next_command"
+    ]),
+    "宣言スター獲得は現在使用分と次回用を明示しなければなりません"
   );
   assert(
     JSON.stringify(manifest.coreRules.noblePhantasmDeclaredSequenceOrder) === JSON.stringify([
