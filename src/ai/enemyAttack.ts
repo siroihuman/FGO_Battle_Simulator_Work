@@ -590,6 +590,13 @@ export function resolveEnemyAttacks(
               sourceInstanceId:
                 resolverInput.actorInstanceId,
               targetInstanceIds: targets,
+              triggerContext: {
+                attackKind:
+                  request.kind === "noble_phantasm"
+                    ? "noble_phantasm"
+                    : "enemy_normal_attack",
+                cardType: action.cardType,
+              },
               rng: input.rng,
               ...(effectPhases
                   && effectPhases.beforeAttack.length > 0

@@ -1,4 +1,7 @@
-import type { BattleSide } from "../core/battle/types";
+import type {
+  BattleSide,
+  CommandCardType,
+} from "../core/battle/types";
 import type { CommonAction } from "./actions";
 import type { TargetSelector } from "./targeting";
 
@@ -22,11 +25,21 @@ export type TriggerTiming =
 
 export type TriggerRelation = "owner" | "ally" | "enemy" | "any";
 
+export type TriggerAttackKind =
+  | "normal_command"
+  | "noble_phantasm"
+  | "extra_attack"
+  | "enemy_normal_attack";
+
+export type TriggerAttackCardType = CommandCardType | "extra";
+
 export interface TriggerCondition {
   actor?: TriggerRelation;
   target?: TriggerRelation;
   requiresHit?: boolean;
   requiresDamage?: boolean;
+  attackKinds?: readonly TriggerAttackKind[];
+  cardTypes?: readonly TriggerAttackCardType[];
 }
 
 export interface EffectTrigger {
@@ -48,7 +61,13 @@ export type TurnEndSettlementKind =
  */
 export interface TriggerAction {
   target: TargetSelector;
-  action: CommonAction;
+  action:
+    | CommonAction
+    | {
+        kind: "gain_stars";
+        amount: number;
+        destination: "command" | "next_command";
+      };
   /**
    * Standard recurring HP recovery and slip damage are collected per target
    * and settled together after all eligible turn-end triggers activate.
@@ -109,6 +128,8 @@ export interface TriggerEvent {
   targetSide?: BattleSide;
   hit?: boolean;
   damage?: number;
+  attackKind?: TriggerAttackKind;
+  cardType?: TriggerAttackCardType;
 }
 
 export interface TriggerActivation {

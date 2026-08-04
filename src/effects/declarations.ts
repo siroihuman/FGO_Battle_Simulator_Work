@@ -1,4 +1,5 @@
 import type { CommonAction } from "./actions";
+import { assertValidEffectTrigger } from "./runtime";
 import type {
   TargetLifeFilter,
   TargetRelation,
@@ -288,6 +289,10 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
       assertSafeInteger(
         template.value ?? 0,
         `${name}.effects[${index}].template.value`,
+      );
+      assertValidEffectTrigger(
+        template.trigger,
+        `${name}.effects[${index}].template.trigger`,
       );
       if (template.remainingTurns !== undefined && template.remainingTurns !== null) {
         assertNonNegative(

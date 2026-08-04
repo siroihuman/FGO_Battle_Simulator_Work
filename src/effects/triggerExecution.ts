@@ -2,6 +2,15 @@ import {
   findUnitLocation,
   replaceUnit,
 } from "../core/battle/formation";
+import {
+  setBattleFormation,
+  type BattleState,
+} from "../core/battle/state";
+import {
+  addCommandStars,
+  addNextCommandStars,
+  type BattleStarAddition,
+} from "../core/battle/starState";
 import type {
   BattleFormation,
   BattleUnitState,
@@ -36,6 +45,7 @@ export interface TriggerEventActionResult {
   action: TriggerAction;
   targetInstanceIds: string[];
   batch: CommonActionBatchResult;
+  starAddition?: BattleStarAddition;
 }
 
 export interface TriggerEventActivationResult {
@@ -49,6 +59,7 @@ export interface TriggerEventActivationResult {
 }
 
 export interface TriggerEventResolutionResult {
+  state: BattleState;
   formation: BattleFormation;
   counters: EffectRuntimeCounters;
   event: TriggerEvent;
@@ -66,14 +77,17 @@ function replaceIfPresent(
 }
 
 function applyBatch(
-  formation: BattleFormation,
+  state: BattleState,
   batch: CommonActionBatchResult,
-): BattleFormation {
-  let current = formation;
+): BattleState {
+  let formation = state.formation;
   for (const target of batch.targets) {
-    current = replaceIfPresent(current, target);
+    formation = replaceIfPresent(formation, target);
   }
-  return replaceIfPresent(current, batch.source);
+  formation = replaceIfPresent(formation, batch.source);
+  return formation === state.formation
+    ? state
+    : setBattleFormation(state, formation);
 }
 
 /**
@@ -82,13 +96,13 @@ function applyBatch(
  * rejected here because they belong to the dedicated turn-end resolver.
  */
 export function resolveTriggerEvent(
-  formation: BattleFormation,
+  state: BattleState,
   locationsInResolutionOrder: readonly UnitLocation[],
   event: TriggerEvent,
   counters: EffectRuntimeCounters,
   rng: DeterministicRng,
 ): TriggerEventResolutionResult {
-  let currentFormation = formation;
+  let currentState = state;
   let currentCounters = counters;
   const candidates = collectTriggerActivations(
     locationsInResolutionOrder,
@@ -98,7 +112,7 @@ export function resolveTriggerEvent(
 
   for (const candidate of candidates) {
     const ownerLocation = findUnitLocation(
-      currentFormation,
+      currentState.formation,
       candidate.ownerInstanceId,
     );
     const ownerIsAvailable =
@@ -161,7 +175,10 @@ export function resolveTriggerEvent(
         ownerLocation.unit,
         currentEffect.instanceId,
       );
-      currentFormation = replaceUnit(currentFormation, consumed.unit);
+      currentState = setBattleFormation(
+        currentState,
+        replaceUnit(currentState.formation, consumed.unit),
+      );
       removedByUse = consumed.removed;
     }
 
@@ -176,7 +193,7 @@ export function resolveTriggerEvent(
         );
       }
       const targetLocations = resolveTargetLocations(
-        currentFormation,
+        currentState.formation,
         candidate.ownerInstanceId,
         action.target,
       );
@@ -188,9 +205,33 @@ export function resolveTriggerEvent(
         currentEffect.sourceInstanceId ?? candidate.ownerInstanceId;
       const source =
         findUnitLocation(
-          currentFormation,
+          currentState.formation,
           sourceInstanceId,
         )?.unit ?? null;
+      if (action.action.kind === "gain_stars") {
+        const addition =
+          targetLocations.length === 0
+            ? undefined
+            : action.action.destination === "command"
+              ? addCommandStars(currentState, action.action.amount)
+              : addNextCommandStars(currentState, action.action.amount);
+        if (addition) currentState = addition.state;
+        actionResults.push({
+          actionIndex,
+          action,
+          targetInstanceIds: targetLocations.map(
+            ({ unit }) => unit.instanceId,
+          ),
+          batch: {
+            source,
+            targets,
+            counters: currentCounters,
+            results: [],
+          },
+          ...(addition ? { starAddition: addition } : {}),
+        });
+        continue;
+      }
       const batch = executeCommonActionForTargets(
         source,
         targets,
@@ -199,7 +240,7 @@ export function resolveTriggerEvent(
         rng,
       );
       currentCounters = batch.counters;
-      currentFormation = applyBatch(currentFormation, batch);
+      currentState = applyBatch(currentState, batch);
       actionResults.push({
         actionIndex,
         action,
@@ -222,7 +263,8 @@ export function resolveTriggerEvent(
   }
 
   return {
-    formation: currentFormation,
+    state: currentState,
+    formation: currentState.formation,
     counters: currentCounters,
     event,
     activations,

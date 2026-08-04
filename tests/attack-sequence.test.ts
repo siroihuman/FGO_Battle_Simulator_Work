@@ -188,6 +188,7 @@ describe("complete attack trigger sequence", () => {
       {
         sourceInstanceId: "ally-a",
         targetInstanceIds: ["enemy-b", "enemy-a"],
+        triggerContext: { attackKind: "normal_command", cardType: "buster" },
         rng: random.streams,
         prepareAttack: (_state, activeTargetInstanceIds) => {
           preparedTargets.push([...activeTargetInstanceIds]);
@@ -317,6 +318,7 @@ describe("complete attack trigger sequence", () => {
       {
         sourceInstanceId: "ally-a",
         targetInstanceIds: ["enemy-a"],
+        triggerContext: { attackKind: "normal_command", cardType: "buster" },
         rng: random.streams,
         prepareAttack: (_state, [targetInstanceId]) => ({
           targets: [
@@ -395,6 +397,7 @@ describe("complete attack trigger sequence", () => {
       {
         sourceInstanceId: "ally-a",
         targetInstanceIds: ["enemy-a"],
+        triggerContext: { attackKind: "normal_command", cardType: "buster" },
         rng: firstRandom.streams,
         prepareAttack: (_state, [targetInstanceId]) => ({
           targets: [
@@ -451,6 +454,7 @@ describe("complete attack trigger sequence", () => {
       {
         sourceInstanceId: "ally-a",
         targetInstanceIds: ["enemy-a"],
+        triggerContext: { attackKind: "normal_command", cardType: "buster" },
         rng: gutsRandom.streams,
         prepareAttack: (_state, [targetInstanceId]) => ({
           targets: [
@@ -558,6 +562,7 @@ describe("complete attack trigger sequence", () => {
       {
         sourceInstanceId: "ally-a",
         targetInstanceIds: ["enemy-a"],
+        triggerContext: { attackKind: "normal_command", cardType: "buster" },
         rng: random.streams,
         prepareAttack: (_state, [targetInstanceId]) => ({
           targets: [
@@ -644,6 +649,7 @@ describe("complete attack trigger sequence", () => {
       {
         sourceInstanceId: "ally-a",
         targetInstanceIds: ["enemy-a"],
+        triggerContext: { attackKind: "normal_command", cardType: "buster" },
         rng: random.streams,
         prepareAttack: () => {
           prepareCalled = true;
@@ -677,6 +683,143 @@ describe("complete attack trigger sequence", () => {
     ).toBe(0);
   });
 
+  it("matches NP-use trigger context, consumes one use, and applies ordered state actions", () => {
+    const registered = applyEffect(
+      unit("ally-a", "ally", {
+        skillCooldowns: [5, 2, 0],
+      }),
+      {
+        stableId: "np-use-state",
+        name: "宝具使用時発動",
+        effectType: "np_use_state",
+        category: "buff",
+        remainingTurns: 1,
+        remainingUses: 1,
+        trigger: {
+          timing: "after_attack",
+          consumeUseOnActivation: true,
+          condition: {
+            actor: "owner",
+            attackKinds: ["noble_phantasm"],
+          },
+          actions: [
+            {
+              target: { relation: "self", selection: "single" },
+              action: { kind: "advance_skill_cooldowns", amount: 1 },
+            },
+            {
+              target: { relation: "self", selection: "single" },
+              action: {
+                kind: "apply_effects",
+                effects: [{
+                  template: {
+                    stableId: "np-use-critical-up",
+                    name: "クリティカル威力アップ",
+                    effectType: COMMON_EFFECT_TYPES.criticalDamage,
+                    category: "buff",
+                    value: 300,
+                    remainingTurns: 3,
+                  },
+                }],
+              },
+            },
+            {
+              target: { relation: "self", selection: "single" },
+              action: {
+                kind: "gain_stars",
+                amount: 15,
+                destination: "next_command",
+              },
+            },
+          ],
+        },
+      },
+      null,
+      createEffectRuntimeCounters(),
+    );
+    const target = unit("enemy-a", "enemy", {
+      hp: 100_000,
+      maxHp: 100_000,
+      baseMaxHp: 100_000,
+    });
+    const random = streams("conditional-np-use-trigger");
+    const prepareAttack = (
+      _state: BattleState,
+      [targetInstanceId]: readonly string[],
+    ) => ({
+      targets: [{ targetInstanceId, damage: damageInput() }],
+      hitWeights: [1],
+      defense: {},
+    });
+    const mismatch = resolveBattleAttackSequence(
+      battle(registered.unit, target),
+      {
+        sourceInstanceId: "ally-a",
+        targetInstanceIds: ["enemy-a"],
+        triggerContext: {
+          attackKind: "normal_command",
+          cardType: "buster",
+        },
+        rng: random.streams,
+        prepareAttack,
+      },
+      registered.counters,
+    );
+    expect(mismatch.afterAttack?.activations).toEqual([]);
+    expect(findUnitLocation(
+      mismatch.state.formation,
+      "ally-a",
+    )?.unit.effects.map(({ stableId }) => stableId)).toEqual([
+      "np-use-state",
+    ]);
+
+    const matched = resolveBattleAttackSequence(
+      mismatch.state,
+      {
+        sourceInstanceId: "ally-a",
+        targetInstanceIds: ["enemy-a"],
+        triggerContext: {
+          attackKind: "noble_phantasm",
+          cardType: "buster",
+        },
+        rng: random.streams,
+        prepareAttack,
+      },
+      mismatch.counters,
+    );
+    expect(matched.afterAttack?.event).toMatchObject({
+      attackKind: "noble_phantasm",
+      cardType: "buster",
+    });
+    expect(matched.afterAttack?.activations[0]).toMatchObject({
+      effectStableId: "np-use-state",
+      outcome: "activated",
+      consumedUse: true,
+      actions: [
+        { action: { action: { kind: "advance_skill_cooldowns" } } },
+        { action: { action: { kind: "apply_effects" } } },
+        {
+          action: { action: { kind: "gain_stars" } },
+          starAddition: {
+            bucket: "next_command",
+            requested: 15,
+            added: 15,
+          },
+        },
+      ],
+    });
+    const source = findUnitLocation(
+      matched.state.formation,
+      "ally-a",
+    )?.unit;
+    expect(source?.skillCooldowns).toEqual([4, 1, 0]);
+    expect(source?.effects.map(({ stableId }) => stableId)).toEqual([
+      "np-use-critical-up",
+    ]);
+    expect(matched.state.nextCommandStars).toBe(15);
+    expect(random.rng.stream("effects").snapshot().drawCount).toBe(0);
+  });
+
   it("rejects friendly targets before any trigger or RNG work", () => {
     const random = streams("invalid-friendly-attack");
     let prepareCalled = false;
@@ -689,6 +832,7 @@ describe("complete attack trigger sequence", () => {
         {
           sourceInstanceId: "ally-a",
           targetInstanceIds: ["ally-b"],
+          triggerContext: { attackKind: "normal_command", cardType: "buster" },
           rng: random.streams,
           prepareAttack: () => {
             prepareCalled = true;

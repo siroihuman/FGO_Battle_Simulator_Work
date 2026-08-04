@@ -4,6 +4,7 @@ import {
   orderedLocations,
   replaceUnit,
 } from "../src/core/battle/formation";
+import { createBattleState } from "../src/core/battle/state";
 import { BattleRng } from "../src/core/rng";
 import {
   categoryForGrantedTrait,
@@ -163,6 +164,45 @@ describe("common triggers", () => {
     ]);
   });
 
+  it("requires both normal-command kind and Buster card type when declared", () => {
+    const state = formation();
+    state.ally.frontline[0] = applyEffect(
+      state.ally.frontline[0]!,
+      {
+        ...attackUp,
+        stableId: "normal-buster-only",
+        trigger: {
+          timing: "after_attack",
+          condition: {
+            actor: "owner",
+            attackKinds: ["normal_command"],
+            cardTypes: ["buster"],
+          },
+        },
+      },
+      null,
+      createEffectRuntimeCounters(),
+    ).unit;
+    const owner = orderedLocations(state, "ally", true).slice(0, 1);
+    const candidates = (attackKind: "normal_command" | "noble_phantasm", cardType: "arts" | "buster") =>
+      collectTriggerActivations(owner, {
+        timing: "after_attack",
+        actorInstanceId: "ally-a",
+        actorSide: "ally",
+        targetInstanceId: "enemy-a",
+        targetSide: "enemy",
+        attackKind,
+        cardType,
+      });
+
+    expect(candidates("noble_phantasm", "buster")).toEqual([]);
+    expect(candidates("normal_command", "arts")).toEqual([]);
+    expect(
+      candidates("normal_command", "buster")
+        .map(({ effect }) => effect.stableId),
+    ).toEqual(["normal-buster-only"]);
+  });
+
   it("does not activate reserve effects unless explicitly allowed", () => {
     const state = formation();
     const reserve = state.ally.reserve[0];
@@ -262,15 +302,24 @@ describe("common triggers", () => {
       counters,
     );
     counters = registered.counters;
-    state.ally.frontline[0] = {
-      ...registered.unit,
-      hp: 0,
-      alive: false,
+    state.ally.frontline[0] = registered.unit;
+    const initialBattleState = createBattleState({
+      ally: state.ally,
+      waves: [{ enemy: state.enemy }],
+      enemyFrontlineLimit: 3,
+    });
+    const battleState = {
+      ...initialBattleState,
+      formation: replaceUnit(initialBattleState.formation, {
+        ...registered.unit,
+        hp: 0,
+        alive: false,
+      }),
     };
-    const owner = findUnitLocation(state, "ally-a");
+    const owner = findUnitLocation(battleState.formation, "ally-a");
     if (!owner) throw new Error("missing ally-a");
     const result = resolveTriggerEvent(
-      state,
+      battleState,
       [owner],
       {
         timing: "on_death",
@@ -285,7 +334,7 @@ describe("common triggers", () => {
 
     expect(result.activations[0]?.outcome).toBe("activated");
     expect(
-      findUnitLocation(result.formation, "ally-b")?.unit.np,
+      findUnitLocation(result.state.formation, "ally-b")?.unit.np,
     ).toBe(100);
 
     const aliveAgain = replaceUnit(result.formation, {

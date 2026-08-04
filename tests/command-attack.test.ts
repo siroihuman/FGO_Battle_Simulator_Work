@@ -4,6 +4,7 @@ import {
 } from "../src/core/battle/actionData";
 import {
   findUnitLocation,
+  replaceUnit,
 } from "../src/core/battle/formation";
 import {
   createBattleState,
@@ -22,6 +23,11 @@ import {
   type CombatantActionEffectData,
 } from "../src/effects/actionData";
 import { createTraitGrantEffect } from "../src/effects/classification";
+import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
+import {
+  applyEffect,
+  createEffectRuntimeCounters,
+} from "../src/effects/runtime";
 import {
   listCommandCardChoices,
   selectCommandCards,
@@ -569,6 +575,200 @@ describe("ally command data-to-attack integration", () => {
         }],
       },
     ]);
+  });
+
+  it("passes NP trigger context through command execution and logs triggered stars", () => {
+    const baseState = battle();
+    const registered = applyEffect(
+      {
+        ...baseState.formation.ally.frontline[0]!,
+        skillCooldowns: [4, 2, 0],
+      },
+      {
+        stableId: "np-use-trigger",
+        name: "宝具使用時発動",
+        effectType: "np_use_trigger",
+        category: "buff",
+        remainingTurns: 1,
+        remainingUses: 1,
+        trigger: {
+          timing: "after_attack",
+          consumeUseOnActivation: true,
+          condition: {
+            actor: "owner",
+            attackKinds: ["noble_phantasm"],
+          },
+          actions: [
+            {
+              target: { relation: "self", selection: "single" },
+              action: { kind: "advance_skill_cooldowns", amount: 1 },
+            },
+            {
+              target: { relation: "self", selection: "single" },
+              action: {
+                kind: "apply_effects",
+                effects: [{
+                  template: {
+                    stableId: "np-use-critical-up",
+                    name: "クリティカル威力アップ",
+                    effectType: COMMON_EFFECT_TYPES.criticalDamage,
+                    category: "buff",
+                    value: 300,
+                    remainingTurns: 3,
+                  },
+                }],
+              },
+            },
+            {
+              target: { relation: "self", selection: "single" },
+              action: {
+                kind: "gain_stars",
+                amount: 15,
+                destination: "next_command",
+              },
+            },
+          ],
+        },
+      },
+      null,
+      createEffectRuntimeCounters(),
+    );
+    const state = withHand({
+      ...baseState,
+      formation: replaceUnit(baseState.formation, registered.unit),
+    }, [
+      ["ally-b", 0],
+      ["ally-c", 0],
+    ]);
+    const selected = selection(state, [
+      cardId(state, "ally-a"),
+      cardId(state, "ally-b", 0),
+      cardId(state, "ally-c", 0),
+    ]);
+    const random = streams("command-np-use-trigger");
+    const resolved = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      counters: registered.counters,
+      rng: random.streams,
+    });
+    const replayRandom = streams("command-np-use-trigger");
+    const replay = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      counters: registered.counters,
+      rng: replayRandom.streams,
+    });
+    expect(resolved.sequence.accepted).toBe(true);
+    if (!resolved.sequence.accepted) return;
+    expect(findUnitLocation(
+      resolved.sequence.result.state.formation,
+      "ally-a",
+    )?.unit).toMatchObject({
+      skillCooldowns: [3, 1, 0],
+      effects: [{ stableId: "np-use-critical-up", value: 300 }],
+    });
+    const afterAttack = resolved.battleLog.entries[0]?.attack?.triggerStages
+      .find(({ timing }) => timing === "after_attack");
+    expect(afterAttack).toMatchObject({
+      attackKind: "noble_phantasm",
+      cardType: "arts",
+      activations: [{
+        effectStableId: "np-use-trigger",
+        outcome: "activated",
+        consumedUse: true,
+        actions: [
+          { actionKind: "advance_skill_cooldowns" },
+          { actionKind: "apply_effects" },
+          {
+            actionKind: "gain_stars",
+            starAddition: {
+              bucket: "next_command",
+              requested: 15,
+              added: 15,
+            },
+          },
+        ],
+      }],
+    });
+    expect(resolved.battleLog.schemaVersion).toBe(4);
+    expect(replay.battleLog).toEqual(resolved.battleLog);
+    expect(replay.sequence).toEqual(resolved.sequence);
+  });
+
+  it("activates a normal-Buster-only state without matching NP or other colors", () => {
+    const baseState = battle();
+    const registered = applyEffect(
+      {
+        ...baseState.formation.ally.frontline[0]!,
+        np: 0,
+      },
+      {
+        stableId: "normal-buster-np-state",
+        name: "Buster通常攻撃時NP獲得",
+        effectType: "normal_buster_np_state",
+        category: "buff",
+        remainingTurns: 3,
+        trigger: {
+          timing: "after_attack",
+          condition: {
+            actor: "owner",
+            attackKinds: ["normal_command"],
+            cardTypes: ["buster"],
+          },
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: { kind: "change_np", amount: 1_000 },
+          }],
+        },
+      },
+      null,
+      createEffectRuntimeCounters(),
+    );
+    const state = withHand({
+      ...baseState,
+      formation: replaceUnit(baseState.formation, registered.unit),
+    }, [
+      ["ally-a", 0],
+      ["ally-b", 0],
+      ["ally-c", 0],
+    ]);
+    const selected = selection(state, [
+      cardId(state, "ally-a", 0),
+      cardId(state, "ally-b", 0),
+      cardId(state, "ally-c", 0),
+    ]);
+    const random = streams("normal-buster-trigger");
+    const resolved = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: registry(),
+      counters: registered.counters,
+      rng: random.streams,
+    });
+    expect(resolved.sequence.accepted).toBe(true);
+    if (!resolved.sequence.accepted) return;
+    expect(findUnitLocation(
+      resolved.sequence.result.state.formation,
+      "ally-a",
+    )?.unit.np).toBe(1_000);
+    expect(
+      resolved.battleLog.entries[0]?.attack?.triggerStages
+        .find(({ timing }) => timing === "after_attack"),
+    ).toMatchObject({
+      attackKind: "normal_command",
+      cardType: "buster",
+      activations: [{
+        effectStableId: "normal-buster-np-state",
+        actions: [{
+          actionKind: "change_np",
+          results: [{ npChange: 1_000 }],
+        }],
+      }],
+    });
+    expect(random.rng.stream("effects").snapshot().drawCount).toBe(0);
   });
 
   it("uses a declared pre-attack trait grant for the same NP's conditional special attack", () => {

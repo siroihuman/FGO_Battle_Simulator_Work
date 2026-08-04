@@ -50,6 +50,24 @@ function conditionMatches(
   }
   if (condition.requiresHit && event.hit !== true) return false;
   if (condition.requiresDamage && !(event.damage && event.damage > 0)) return false;
+  if (
+    condition.attackKinds
+    && (
+      event.attackKind === undefined
+      || !condition.attackKinds.includes(event.attackKind)
+    )
+  ) {
+    return false;
+  }
+  if (
+    condition.cardTypes
+    && (
+      event.cardType === undefined
+      || !condition.cardTypes.includes(event.cardType)
+    )
+  ) {
+    return false;
+  }
   return true;
 }
 

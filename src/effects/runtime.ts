@@ -6,10 +6,134 @@ import {
 } from "./maxHp";
 import type {
   AppliedEffect,
+  EffectTrigger,
   EffectRuntimeCounters,
   EffectTemplate,
   RemovedEffect,
 } from "./types";
+
+const TRIGGER_TIMINGS = [
+  "on_apply",
+  "turn_start",
+  "turn_end",
+  "before_attack",
+  "after_attack",
+  "on_attack",
+  "on_hit",
+  "on_damage_taken",
+  "on_break",
+  "on_death",
+  "wave_start",
+] as const;
+const TRIGGER_ATTACK_KINDS = [
+  "normal_command",
+  "noble_phantasm",
+  "extra_attack",
+  "enemy_normal_attack",
+] as const;
+const TRIGGER_CARD_TYPES = [
+  "quick",
+  "arts",
+  "buster",
+  "extra",
+] as const;
+
+function assertUniqueListedValues(
+  values: readonly string[] | undefined,
+  valid: readonly string[],
+  name: string,
+): void {
+  if (values === undefined) return;
+  if (values.length === 0) {
+    throw new RangeError(`${name} must not be empty`);
+  }
+  const seen = new Set<string>();
+  values.forEach((value, index) => {
+    if (!valid.includes(value)) {
+      throw new RangeError(`${name}[${index}] is invalid`);
+    }
+    if (seen.has(value)) {
+      throw new RangeError(`${name} contains duplicate value: ${value}`);
+    }
+    seen.add(value);
+  });
+}
+
+export function assertValidEffectTrigger(
+  trigger: EffectTrigger | undefined,
+  name = "trigger",
+): void {
+  if (!trigger) return;
+  if (!TRIGGER_TIMINGS.includes(trigger.timing)) {
+    throw new RangeError(`${name}.timing is invalid`);
+  }
+  if (
+    trigger.priority !== undefined
+    && !Number.isSafeInteger(trigger.priority)
+  ) {
+    throw new RangeError(`${name}.priority must be a safe integer`);
+  }
+  if (trigger.activationRatePermille !== undefined) {
+    assertSafeInteger(
+      trigger.activationRatePermille,
+      `${name}.activationRatePermille`,
+    );
+    if (
+      trigger.activationRatePermille < 0
+      || trigger.activationRatePermille > 1_000
+    ) {
+      throw new RangeError(
+        `${name}.activationRatePermille must be from 0 to 1000`,
+      );
+    }
+  }
+  assertUniqueListedValues(
+    trigger.condition?.attackKinds,
+    TRIGGER_ATTACK_KINDS,
+    `${name}.condition.attackKinds`,
+  );
+  assertUniqueListedValues(
+    trigger.condition?.cardTypes,
+    TRIGGER_CARD_TYPES,
+    `${name}.condition.cardTypes`,
+  );
+  (trigger.actions ?? []).forEach((action, index) => {
+    const actionName = `${name}.actions[${index}]`;
+    if (action.turnEndSettlement && trigger.timing !== "turn_end") {
+      throw new RangeError(
+        `${actionName}.turnEndSettlement requires turn_end timing`,
+      );
+    }
+    if (action.action.kind !== "gain_stars") return;
+    assertSafeInteger(action.action.amount, `${actionName}.action.amount`);
+    if (action.action.amount < 0) {
+      throw new RangeError(
+        `${actionName}.action.amount must not be negative`,
+      );
+    }
+    if (
+      action.action.destination !== "command"
+      && action.action.destination !== "next_command"
+    ) {
+      throw new RangeError(
+        `${actionName}.action.destination is invalid`,
+      );
+    }
+    if (
+      action.target.relation !== "self"
+      || action.target.selection !== "single"
+    ) {
+      throw new RangeError(
+        `${actionName} gain_stars must use a self target`,
+      );
+    }
+    if (trigger.timing === "turn_end") {
+      throw new RangeError(
+        `${actionName} gain_stars is not supported for turn_end yet`,
+      );
+    }
+  });
+}
 
 function assertOptionalCount(value: number | null | undefined, name: string): void {
   if (value === null || value === undefined) return;
@@ -38,6 +162,7 @@ export function applyEffect(
   assertOptionalCount(template.remainingTurns, "remainingTurns");
   assertOptionalCount(template.remainingUses, "remainingUses");
   assertSafeInteger(template.value ?? 0, "effect value");
+  assertValidEffectTrigger(template.trigger);
   const classifications = [...new Set(template.classifications ?? [])];
   if (classifications.some((classification) => classification.length === 0)) {
     throw new RangeError("effect classifications must not contain empty strings");

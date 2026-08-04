@@ -10,10 +10,7 @@ import {
   findUnitLocation,
   orderedLocations,
 } from "./formation";
-import {
-  setBattleFormation,
-  type BattleState,
-} from "./state";
+import type { BattleState } from "./state";
 import type {
   BattleSide,
 } from "./types";
@@ -23,8 +20,15 @@ import {
 } from "../../effects/triggerExecution";
 import type {
   EffectRuntimeCounters,
+  TriggerAttackCardType,
+  TriggerAttackKind,
   TriggerEvent,
 } from "../../effects/types";
+
+export interface BattleAttackTriggerContext {
+  attackKind: TriggerAttackKind;
+  cardType: TriggerAttackCardType;
+}
 
 export type PreparedBattleAttackInput = Omit<
   ResolveBattleAttackInput,
@@ -36,6 +40,7 @@ export type PreparedBattleAttackInput = Omit<
 export interface ResolveBattleAttackSequenceInput {
   sourceInstanceId: string | null;
   targetInstanceIds: readonly string[];
+  triggerContext: BattleAttackTriggerContext;
   rng: AttackRngStreams;
   /** Runs after the common before_attack trigger and before Hit calculation. */
   beforeDamage?: BattleAttackSequenceLifecycleHook;
@@ -200,6 +205,7 @@ function eventForAttack(
   sourceSide: BattleSide | undefined,
   targetInstanceId: string,
   targetSide: BattleSide,
+  triggerContext: BattleAttackTriggerContext,
   summary?: {
     hit: boolean;
     damage: number;
@@ -215,6 +221,8 @@ function eventForAttack(
         }),
     targetInstanceId,
     targetSide,
+    attackKind: triggerContext.attackKind,
+    cardType: triggerContext.cardType,
     ...(summary ?? {}),
   };
 }
@@ -231,17 +239,14 @@ function resolveOwnerTrigger(
     ownerInstanceId,
   );
   const trigger = resolveTriggerEvent(
-    state.formation,
+    state,
     owner ? [owner] : [],
     event,
     counters,
     rng,
   );
   return {
-    state:
-      trigger.formation === state.formation
-        ? state
-        : setBattleFormation(state, trigger.formation),
+    state: trigger.state,
     counters: trigger.counters,
     trigger,
   };
@@ -307,6 +312,7 @@ function resolveNewDeaths(
   sourceInstanceId: string | null,
   targetInstanceIds: readonly string[],
   initiallyAliveInstanceIds: ReadonlySet<string>,
+  triggerContext: BattleAttackTriggerContext,
 ): {
   state: BattleState;
   counters: EffectRuntimeCounters;
@@ -351,6 +357,8 @@ function resolveNewDeaths(
         actorSide: owner.side,
         targetInstanceId: nextInstanceId,
         targetSide: owner.side,
+        attackKind: triggerContext.attackKind,
+        cardType: triggerContext.cardType,
       },
       currentCounters,
       rng,
@@ -412,6 +420,7 @@ export function resolveBattleAttackSequence(
         participants.sourceSide,
         primaryTargetInstanceId,
         participants.targetSide,
+        input.triggerContext,
       ),
       currentCounters,
       input.rng.effects,
@@ -496,6 +505,7 @@ export function resolveBattleAttackSequence(
             participants.sourceSide,
             activeTargetInstanceIds[0],
             participants.targetSide,
+            input.triggerContext,
             summary,
           ),
           currentCounters,
@@ -535,6 +545,7 @@ export function resolveBattleAttackSequence(
           participants.sourceSide,
           activeTargetInstanceIds[0],
           participants.targetSide,
+          input.triggerContext,
           summary,
         ),
         currentCounters,
@@ -560,6 +571,7 @@ export function resolveBattleAttackSequence(
           participants.sourceSide,
           target.targetInstanceId,
           participants.targetSide,
+          input.triggerContext,
           {
             hit: hits.some(
               ({ countsAsSuccessfulHit }) =>
@@ -592,6 +604,7 @@ export function resolveBattleAttackSequence(
         participants.sourceSide,
         primaryTargetInstanceId,
         participants.targetSide,
+        input.triggerContext,
       ),
       currentCounters,
       input.rng.effects,
@@ -620,6 +633,7 @@ export function resolveBattleAttackSequence(
     input.sourceInstanceId,
     targetInstanceIds,
     participants.initialAliveInstanceIds,
+    input.triggerContext,
   );
 
   return {
