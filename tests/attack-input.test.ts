@@ -25,6 +25,7 @@ import {
 import type {
   EffectTemplate,
 } from "../src/effects/types";
+import { createTraitGrantEffect } from "../src/effects/classification";
 import { combatantData } from "./helpers/attackData";
 import { unit } from "./helpers/battle";
 
@@ -257,6 +258,70 @@ describe("attack calculation input adapter", () => {
       isCritical: true,
     });
     expect(prepared.input.sourceNpLevel).toBe(2);
+  });
+
+  it("applies conditional NP special attack to base or granted target traits only", () => {
+    const source = addEffects(
+      unit("ally-a", "ally", {
+        dataId: "servant",
+        noblePhantasm: noblePhantasm(),
+      }),
+      [modifier(
+        "evil-power",
+        COMMON_EFFECT_TYPES.power,
+        250,
+        { requiredTargetTrait: "evil" },
+      )],
+    );
+    const plainTarget = unit("enemy-a", "enemy", {
+      dataId: "enemy",
+    });
+    const grantedTarget = addEffects(
+      plainTarget,
+      [createTraitGrantEffect("evil", "悪", { remainingTurns: 3 })],
+    );
+    const registry = createBattleAttackDataRegistry([
+      combatantData("ally-a", "servant"),
+      combatantData("enemy-a", "enemy"),
+    ]);
+    const action: AttackCalculationData = {
+      ...criticalBuster,
+      isNoblePhantasm: true,
+      isCritical: false,
+      npDamageMultiplierPermille: 3_000,
+      npSpecialAttackPermille: 1_500,
+      npSpecialAttackRequiredTargetTraits: ["evil"],
+    };
+
+    const plainInput = prepareBattleAttackInput(
+        battle(source, plainTarget),
+        registry,
+        "ally-a",
+        ["enemy-a"],
+        action,
+      ).input.targets[0]?.damage;
+    const grantedInput = prepareBattleAttackInput(
+        battle(source, grantedTarget),
+        registry,
+        "ally-a",
+        ["enemy-a"],
+        action,
+      ).input.targets[0]?.damage;
+    expect(plainInput?.npSpecialAttackPermille).toBeUndefined();
+    expect(plainInput?.powerModPermille).toBe(0);
+    expect(grantedInput?.npSpecialAttackPermille).toBe(1_500);
+    expect(grantedInput?.powerModPermille).toBe(250);
+
+    expect(() => prepareBattleAttackInput(
+      battle(source, plainTarget),
+      registry,
+      "ally-a",
+      ["enemy-a"],
+      {
+        ...criticalBuster,
+        npSpecialAttackRequiredTargetTraits: ["evil"],
+      },
+    )).toThrow(/requires npSpecialAttackPermille/);
   });
 
   it("builds enemy received-NP input without command-star work", () => {

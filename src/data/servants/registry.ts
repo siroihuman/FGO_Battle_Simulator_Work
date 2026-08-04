@@ -178,8 +178,6 @@ export function createServantBattleInstance(
   }
   const npAttack = noblePhantasmAttack(definition);
   const specialAttack = npAttack.specialAttack;
-  const conditionalSpecialAttack =
-    (specialAttack?.requiredTargetTraits?.length ?? 0) > 0;
   const combatantEffects = actionEffectData(
     definition,
     input.instanceId,
@@ -241,10 +239,16 @@ export function createServantBattleInstance(
           hitWeights: npAttack.hitWeights,
           damageMultiplierPermilleByLevel:
             npAttack.damageMultiplierPermilleByLevel,
-          ...(!conditionalSpecialAttack && specialAttack
+          ...(specialAttack
             ? {
                 specialAttackPermilleByOvercharge:
                   specialAttack.multiplierPermilleByOvercharge,
+                ...(specialAttack.requiredTargetTraits
+                  ? {
+                      specialAttackRequiredTargetTraits:
+                        specialAttack.requiredTargetTraits,
+                    }
+                  : {}),
               }
             : {}),
         },
@@ -254,9 +258,6 @@ export function createServantBattleInstance(
     actionEffectData: combatantEffects,
     unresolvedEffectStableIds: [
       ...unresolvedActionEffectStableIds(combatantEffects),
-      ...(conditionalSpecialAttack && specialAttack
-        ? [specialAttack.stableId]
-        : []),
     ],
   };
 }

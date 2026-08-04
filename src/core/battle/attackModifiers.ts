@@ -5,6 +5,7 @@ import type {
 } from "./types";
 import { COMMON_EFFECT_TYPES } from "../../effects/modifiers";
 import type { AppliedEffect } from "../../effects/types";
+import { hasBattleTrait } from "../../effects/traits";
 
 export type AttackModifierCardType = CommandCardType | "extra";
 
@@ -96,7 +97,7 @@ function matchesAttack(
   );
   if (
     requiredTargetTrait
-    && !context.target.traits.includes(requiredTargetTrait)
+    && !hasBattleTrait(context.target, requiredTargetTrait)
   ) {
     return false;
   }
@@ -106,7 +107,7 @@ function matchesAttack(
   );
   return !(
     excludedTargetTrait
-    && context.target.traits.includes(excludedTargetTrait)
+    && hasBattleTrait(context.target, excludedTargetTrait)
   );
 }
 

@@ -21,6 +21,7 @@ import {
   createBattleActionEffectDataRegistry,
   type CombatantActionEffectData,
 } from "../src/effects/actionData";
+import { createTraitGrantEffect } from "../src/effects/classification";
 import {
   listCommandCardChoices,
   selectCommandCards,
@@ -146,7 +147,9 @@ function selection(
   return selected.selection;
 }
 
-function registry() {
+function registry(
+  specialAttackRequiredTargetTraits?: readonly string[],
+) {
   return createBattleAttackDataRegistry([
     combatantData("ally-a", "same-servant", {
       attack: 10_000,
@@ -179,6 +182,9 @@ function registry() {
             1_300,
             1_400,
           ],
+          ...(specialAttackRequiredTargetTraits
+            ? { specialAttackRequiredTargetTraits }
+            : {}),
         },
       ],
     }),
@@ -460,6 +466,91 @@ describe("ally command data-to-attack integration", () => {
     ]);
     expect(replay.battleLog).toEqual(resolved.battleLog);
     expect(replay.sequence).toEqual(resolved.sequence);
+  });
+
+  it("uses a declared pre-attack trait grant for the same NP's conditional special attack", () => {
+    const state = withHand(battle(), [
+      ["ally-b", 0],
+      ["ally-c", 0],
+    ]);
+    const npCardId = cardId(state, "ally-a");
+    const selected = selection(state, [
+      npCardId,
+      cardId(state, "ally-b", 0),
+      cardId(state, "ally-c", 0),
+    ]);
+    const conditionalRegistry = registry(["evil"]);
+    const baselineRandom = streams("conditional-special-attack");
+    const baseline = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: conditionalRegistry,
+      rng: baselineRandom.streams,
+    });
+    const effectRegistry = npEffectData([{
+      kind: "effect",
+      stableId: "np-a-grant-evil",
+      order: 1,
+      description: "攻撃前に敵全体へ悪特性を付与する",
+      target: { relation: "enemies", selection: "all" },
+      action: {
+        kind: "apply_effects",
+        effects: [{
+          template: createTraitGrantEffect("evil", "悪", {
+            remainingTurns: 3,
+          }),
+        }],
+      },
+    }]);
+    const grantedRandom = streams("conditional-special-attack");
+    const granted = resolveAllyCommandAttacks({
+      state,
+      selection: selected,
+      registry: conditionalRegistry,
+      actionEffectRegistry: effectRegistry,
+      rng: grantedRandom.streams,
+    });
+
+    expect(baseline.sequence.accepted).toBe(true);
+    expect(granted.sequence.accepted).toBe(true);
+    if (!baseline.sequence.accepted || !granted.sequence.accepted) return;
+    const baselineDetail = baseline.sequence.result.actions[0]
+      ?.resolverDetail as AllyCommandAttackDetail;
+    const grantedDetail = granted.sequence.result.actions[0]
+      ?.resolverDetail as AllyCommandAttackDetail;
+    expect(baselineDetail.outcome).toBe("resolved");
+    expect(grantedDetail.outcome).toBe("resolved");
+    if (
+      baselineDetail.outcome !== "resolved"
+      || grantedDetail.outcome !== "resolved"
+    ) return;
+    expect(grantedDetail.calculation).toMatchObject({
+      npSpecialAttackPermille: 1_100,
+      npSpecialAttackRequiredTargetTraits: ["evil"],
+    });
+    const baselineDamage = baselineDetail.resolution.attack?.attack.targets
+      .map(({ totalDamage }) => totalDamage) ?? [];
+    const grantedDamage = grantedDetail.resolution.attack?.attack.targets
+      .map(({ totalDamage }) => totalDamage) ?? [];
+    expect(grantedDamage).toHaveLength(2);
+    expect(grantedDamage.every((damage, index) =>
+      damage > (baselineDamage[index] ?? damage)
+    )).toBe(true);
+    expect(grantedDetail.declaredEffects[0]).toMatchObject({
+      phase: "before_attack",
+      result: {
+        effects: [{
+          effectStableId: "np-a-grant-evil",
+          targetInstanceIds: ["enemy-a", "enemy-b"],
+        }],
+      },
+    });
+    expect(findUnitLocation(
+      granted.sequence.result.state.formation,
+      "enemy-a",
+    )?.unit.effects.some(
+      ({ stableId }) => stableId === "trait-grant:evil",
+    )).toBe(true);
   });
 
   it("fizzles an NP with unresolved declared effects before NP or action RNG is consumed", () => {

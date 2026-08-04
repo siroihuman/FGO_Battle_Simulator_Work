@@ -183,4 +183,49 @@ describe("battle-instance attack data", () => {
       ),
     ).toBeNull();
   });
+
+  it("validates conditional NP special-attack trait requirements", () => {
+    expect(() => createBattleAttackDataRegistry([
+      combatantData("ally-a", "servant", {
+        noblePhantasms: [{
+          stableId: "conditional-np",
+          targetScope: "all",
+          hitWeights: [1],
+          damageMultiplierPermilleByLevel: [
+            3_000,
+            4_000,
+            4_500,
+            4_750,
+            5_000,
+          ],
+          specialAttackPermilleByOvercharge: [
+            1_500,
+            1_625,
+            1_750,
+            1_875,
+            2_000,
+          ],
+          specialAttackRequiredTargetTraits: ["evil"],
+        }],
+      }),
+    ])).not.toThrow();
+
+    expect(() => createBattleAttackDataRegistry([
+      combatantData("ally-a", "servant", {
+        noblePhantasms: [{
+          stableId: "broken-conditional-np",
+          targetScope: "all",
+          hitWeights: [1],
+          damageMultiplierPermilleByLevel: [
+            3_000,
+            4_000,
+            4_500,
+            4_750,
+            5_000,
+          ],
+          specialAttackRequiredTargetTraits: ["evil"],
+        }],
+      }),
+    ])).toThrow(/requires special-attack multipliers/);
+  });
 });

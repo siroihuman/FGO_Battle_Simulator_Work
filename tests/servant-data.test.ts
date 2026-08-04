@@ -370,7 +370,7 @@ describe("declarative servant data", () => {
     expect(high.unit.noblePhantasm?.level).toBe(5);
   });
 
-  it("separates numeric NP attack data from declared effects and marks conditional special attack unresolved", () => {
+  it("separates numeric NP attack data from declared effects and preserves conditional special attack", () => {
     const instance = createServantBattleInstance(TEST_SERVANT, {
       instanceId: "test-a",
       level: 90,
@@ -388,10 +388,17 @@ describe("declarative servant data", () => {
           4_750,
           5_000,
         ],
+        specialAttackPermilleByOvercharge: [
+          1_500,
+          1_625,
+          1_750,
+          1_875,
+          2_000,
+        ],
+        specialAttackRequiredTargetTraits: ["evil"],
       },
     ]);
-    expect(instance.unresolvedEffectStableIds).toContain("test-np-special");
-    expect(instance.unresolvedEffectStableIds).toEqual(["test-np-special"]);
+    expect(instance.unresolvedEffectStableIds).toEqual([]);
     expect(instance.actionEffectData.actions.map(({ stableId }) => stableId))
       .toEqual([
         "test-skill-one",
