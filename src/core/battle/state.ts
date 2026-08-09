@@ -63,6 +63,31 @@ export interface BattleWaveState {
   continuation: WaveContinuationState;
 }
 
+export interface SelectedMysticCodeState {
+  dataId: string;
+  name: string;
+  levelPolicy: "max";
+  skillStableIds: [string, string, string];
+}
+
+export interface SelectedCraftEssenceState {
+  instanceId: string;
+  dataId: string;
+  name: string;
+  rarity: 1 | 2 | 3 | 4 | 5;
+  limitBreak: "base" | "max";
+  level: number;
+  attack: number;
+  hp: number;
+}
+
+/** JSON-safe loadout metadata retained in suspend saves and UI state. */
+export interface BattleLoadoutState {
+  initialized: boolean;
+  mysticCode: SelectedMysticCodeState | null;
+  craftEssencesByInstanceId: Record<string, SelectedCraftEssenceState>;
+}
+
 export interface CreateBattleStateInput {
   ally: SideFormation;
   waves: readonly BattleWaveInput[];
@@ -81,6 +106,8 @@ export interface BattleState {
   nextCommandStars: number;
   /** Cooldowns of the three selected Mystic Code skills. */
   mysticCodeCooldowns: number[];
+  /** Exact selections whose battle-start values have been applied. */
+  loadout: BattleLoadoutState;
   commandDeck: CommandCardDeckState;
   remainingWaves: BattleWaveState[];
   /** One-based Wave number for UI and logs. */
@@ -487,6 +514,79 @@ function normalizeMysticCodeCooldowns(
   });
 }
 
+/** Validates JSON-restored selection metadata before it is accepted as state. */
+export function assertBattleLoadoutState(state: BattleState): void {
+  const loadout = state.loadout;
+  if (!loadout || typeof loadout !== "object") {
+    throw new RangeError("battle loadout state is missing");
+  }
+  if (typeof loadout.initialized !== "boolean") {
+    throw new RangeError("battle loadout initialized flag is invalid");
+  }
+  if (loadout.mysticCode !== null) {
+    const selected = loadout.mysticCode;
+    if (
+      !selected
+      || typeof selected.dataId !== "string"
+      || selected.dataId.length === 0
+      || typeof selected.name !== "string"
+      || selected.name.length === 0
+      || selected.levelPolicy !== "max"
+      || !Array.isArray(selected.skillStableIds)
+      || selected.skillStableIds.length !== 3
+      || selected.skillStableIds.some(
+        (stableId) => typeof stableId !== "string" || stableId.length === 0,
+      )
+    ) {
+      throw new RangeError("selected Mystic Code state is invalid");
+    }
+  }
+  if (
+    !loadout.craftEssencesByInstanceId
+    || typeof loadout.craftEssencesByInstanceId !== "object"
+    || Array.isArray(loadout.craftEssencesByInstanceId)
+  ) {
+    throw new RangeError("selected Craft Essence state is invalid");
+  }
+  const allyIds = new Set(listedUnits(state.formation.ally).map(
+    ({ instanceId }) => instanceId,
+  ));
+  for (const [instanceId, selected] of Object.entries(
+    loadout.craftEssencesByInstanceId,
+  )) {
+    if (
+      !selected
+      || selected.instanceId !== instanceId
+      || !allyIds.has(instanceId)
+      || typeof selected.dataId !== "string"
+      || selected.dataId.length === 0
+      || typeof selected.name !== "string"
+      || selected.name.length === 0
+      || ![1, 2, 3, 4, 5].includes(selected.rarity)
+      || (selected.limitBreak !== "base" && selected.limitBreak !== "max")
+      || !Number.isSafeInteger(selected.level)
+      || selected.level < 1
+      || !Number.isSafeInteger(selected.attack)
+      || selected.attack < 0
+      || !Number.isSafeInteger(selected.hp)
+      || selected.hp < 0
+    ) {
+      throw new RangeError(
+        `selected Craft Essence state is invalid: ${instanceId}`,
+      );
+    }
+  }
+  if (
+    !loadout.initialized
+    && (
+      loadout.mysticCode !== null
+      || Object.keys(loadout.craftEssencesByInstanceId).length > 0
+    )
+  ) {
+    throw new RangeError("uninitialized battle loadout must be empty");
+  }
+}
+
 function normalizeInitialWave(
   wave: BattleWaveInput,
   waveIndex: number,
@@ -622,6 +722,11 @@ export function createBattleState(
     mysticCodeCooldowns: normalizeMysticCodeCooldowns(
       input.mysticCodeCooldowns,
     ),
+    loadout: {
+      initialized: false,
+      mysticCode: null,
+      craftEssencesByInstanceId: {},
+    },
     commandDeck: createCommandCardDeck(formation.ally),
     remainingWaves: remainingWaves.map(copyWave),
     waveNumber: 1,

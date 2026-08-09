@@ -160,9 +160,9 @@ describe("battle session persistence and replay", () => {
     expect(replayed.turnLogs).toEqual(session.turnLogs);
     expect(save).toMatchObject({
       kind: "battle_suspend",
-      schemaVersion: 1,
+      schemaVersion: 2,
       specVersion: "1.0.0",
-      dataSchemaVersion: "1.33.0",
+      dataSchemaVersion: "1.34.0",
       rngAlgorithmVersion: 1,
       battleLogSchemaVersion: 4,
       battleTurnLogSchemaVersion: 1,
