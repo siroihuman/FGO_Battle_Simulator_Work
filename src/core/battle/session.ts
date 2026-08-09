@@ -22,7 +22,10 @@ import type {
   BattleTurnEnemyOptions,
 } from "./battleTurn";
 import type { BattleTurnLog } from "./turnLog";
-import type { BattleState } from "./state";
+import {
+  assertBattleLoadoutState,
+  type BattleState,
+} from "./state";
 import {
   BattleRng,
   RNG_ALGORITHM_VERSION,
@@ -30,9 +33,9 @@ import {
 } from "../rng";
 
 /** Increment only with an explicit migration or replay compatibility policy. */
-export const BATTLE_SUSPEND_SCHEMA_VERSION = 1 as const;
+export const BATTLE_SUSPEND_SCHEMA_VERSION = 2 as const;
 export const BATTLE_SUSPEND_SPEC_VERSION = "1.0.0" as const;
-export const BATTLE_SUSPEND_DATA_SCHEMA_VERSION = "1.33.0" as const;
+export const BATTLE_SUSPEND_DATA_SCHEMA_VERSION = "1.34.0" as const;
 export const BATTLE_LOG_SCHEMA_VERSION = 4 as const;
 export const BATTLE_TURN_LOG_SCHEMA_VERSION = 1 as const;
 
@@ -328,6 +331,7 @@ function assertInputBoundarySnapshot(snapshot: BattleLoopSuspendSnapshot): void 
       "battle suspend state must be an ally input boundary or a finished battle",
     );
   }
+  assertBattleLoadoutState(snapshot.state);
 }
 
 /**
