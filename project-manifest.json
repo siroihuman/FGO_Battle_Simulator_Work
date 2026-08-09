@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.32.0",
-  "status": "initial-servant-data-next",
+  "dataSchemaVersion": "1.33.0",
+  "status": "mystic-code-craft-essence-next",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -151,6 +151,24 @@
       "battle_outcome"
     ],
     "battleTurnLogJsonSerializable": true,
+    "battleSuspendSchemaVersion": 1,
+    "battleSuspendBoundaries": [
+      "ally_input",
+      "battle_finished"
+    ],
+    "battleSuspendIncludes": [
+      "initial_state",
+      "current_state",
+      "effect_runtime_counters",
+      "rng_positions",
+      "instance_attack_data",
+      "action_effect_data",
+      "operation_history",
+      "accumulated_turn_logs"
+    ],
+    "battleSuspendResume": "direct_snapshot_restore",
+    "battleReplay": "initial_snapshot_and_json_operations_verified_against_saved_state_rng_and_logs",
+    "battleReplayFunctionAi": "reject_before_state_or_rng_change",
     "servantDataSchemaVersion": 1,
     "servantDataIdentity": "stable_project_id",
     "servantSourcePageNumberMayBeDataId": false,
