@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.35.0",
-  "status": "initial-craft-essence-specification-next",
+  "status": "initial-craft-essence-data-next",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -177,7 +177,23 @@
       "craft_essence_data_id_by_battle_instance"
     ],
     "craftEssenceStatsApplyBy": "battle_instance_id",
+    "craftEssenceSlotsPerAllyInstance": 1,
+    "craftEssenceUnselectedAllowed": true,
+    "craftEssenceInventoryTracking": false,
+    "craftEssenceDuplicateDataIdAcrossInstances": true,
+    "craftEssenceInitialLimitBreak": "max",
+    "craftEssenceInitialLevelPolicy": "rarity_max_fixed",
+    "craftEssenceMaxLevelByRarity": {
+      "1": 50,
+      "2": 55,
+      "3": 60,
+      "4": 80,
+      "5": 100
+    },
+    "craftEssenceInitialEffectTarget": "equipped_ally_instance",
+    "craftEssenceReserveSelectable": true,
     "craftEssenceStartEffectExecution": "declarative_passive_initialization",
+    "craftEssenceStartEffectsIncludeReserve": true,
     "craftEssenceStatusRemovalPolicy": "unremovable",
     "battleLoadoutUnsupportedStartEffect": "reject_before_state_or_rng_change",
     "mysticCodeSelectionSkillCount": 3,
@@ -309,7 +325,28 @@
       "アトラス院制服",
       "ノーマルカルデア制服"
     ],
-    "optionalCraftEssenceSource": "https://appmedia.jp/fategrandorder/97937"
+    "craftEssences": [
+      {
+        "name": "カレイドスコープ",
+        "dataId": "kaleidoscope",
+        "rarity": 5,
+        "limitBreak": "max",
+        "level": 100,
+        "effectTarget": "equipped_ally_instance",
+        "source": "https://appmedia.jp/fategrandorder/90628",
+        "implementationStatus": "specification_only"
+      },
+      {
+        "name": "黒の聖杯",
+        "dataId": "black-grail",
+        "rarity": 5,
+        "limitBreak": "max",
+        "level": 100,
+        "effectTarget": "equipped_ally_instance",
+        "source": "https://appmedia.jp/fategrandorder/103128",
+        "implementationStatus": "specification_only"
+      }
+    ]
   },
   "referenceSources": [
     "https://w.atwiki.jp/f_go/pages/304.html",
