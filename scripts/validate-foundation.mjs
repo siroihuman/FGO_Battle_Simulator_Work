@@ -238,6 +238,37 @@ if (manifest) {
     "クリティカル率0%・100%は乱数を消費してはいけません"
   );
   assert(
+    manifest.coreRules.commandCardRedistributionStatus === "specified_not_implemented"
+      && manifest.coreRules.commandCardRedistributionActionId === "redistribute_command_cards",
+    "カード再配布は未実装の宣言的共通戦場操作として仕様化されていなければなりません"
+  );
+  assert(
+    manifest.coreRules.commandCardRedistributionBoundary
+      === "ally_input_before_card_submission"
+      && manifest.coreRules.commandCardRedistributionSource
+        === "current_living_ally_frontline_all_normal_cards"
+      && manifest.coreRules.commandCardRedistributionDrawCount === 5
+      && manifest.coreRules.commandCardRedistributionResetsCycle === true
+      && manifest.coreRules.commandCardRedistributionAllowsPreviousHandCards === true,
+    "カード再配布はカード提出前に現在前衛の全通常カードから新周期5枚を配らなければなりません"
+  );
+  assert(
+    manifest.coreRules.commandCardRedistributionIncludesNoblePhantasmCards === false
+      && manifest.coreRules.commandCardRedistributionCardsRngLogicalDraws === 5
+      && manifest.coreRules.commandCardRedistributionPreservesStarBuckets === true
+      && manifest.coreRules.commandCardRedistributionReallocatesCommandStars === true,
+    "カード再配布の宝具候補・カード乱数・スター規則が一致しません"
+  );
+  assert(
+    manifest.coreRules.commandCardRedistributionRejectedMutation
+      === "none_including_history_and_logs"
+      && manifest.coreRules.commandCardStarDistributionPersistence
+        === "input_boundary_state"
+      && manifest.coreRules.commandCardStarDistributionLegacyMode
+        === "legacy_on_command_confirmation",
+    "カード再配布は原子的に拒否し、入力境界スター配分と旧方式を区別しなければなりません"
+  );
+  assert(
     manifest.coreRules.battleLogSchemaVersion === 5,
     "戦闘ログ形式バージョンは5でなければなりません"
   );
@@ -335,6 +366,13 @@ if (manifest) {
       && manifest.coreRules.battleSuspendLegacyMigration
         === "schema_3_to_4_direct_snapshot_restore",
     "中断保存形式4は直接再開し、形式3を再実行せず移行しなければなりません"
+  );
+  assert(
+    manifest.coreRules.battleSuspendCardRedistributionOuterSchemaChange === false
+      && manifest.coreRules.battleSuspendCardRedistributionDataSchemaChangeOnImplementation === true
+      && manifest.coreRules.battleSuspendLegacyStarDistributionMigration
+        === "add_legacy_mode_without_draw_or_state_change",
+    "カード再配布対応は形式4を維持し、実装時のデータ版更新と乱数非消費の旧配分移行を必要とします"
   );
   assert(
     manifest.coreRules.allySkillOperationsSavedAndReplayed === true
