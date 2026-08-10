@@ -25,6 +25,8 @@
 | `ui` | 入力と結果表示 | 独自の再計算 |
 | `core/battle/session` | 保存用セッション、読込、リプレイ照合 | 表示専用値の正本化・関数型AIの保存 |
 | `core/battle/loadout` | 魔術礼装・概念礼装選択と開始時適用 | 初回配布後の再適用・未対応効果の近似 |
+| `ui/initialBattle` | 登録済み初期データから戦闘開始入力と`BattleSession`を構築 | 能力値・効果・対象・乱数の独自計算 |
+| `ui/battlePresentation` | 保存済み状態・行動ログ・ターンログの表示用整形 | 戦闘結果・退場・チャージ進行の再実行 |
 
 ## 効果の3分類
 
@@ -96,6 +98,14 @@
 - 初期概念礼装は定義側で最大解放・レアリティ別最大Lvを固定し、選択側は戦闘個体IDから`dataId`への0～1件の対応だけを持つ。所持枚数を管理せず、同じ`dataId`の複数個体選択を許可する。
 - 形式1定義、既存の戦闘個体別選択、`SelectedCraftEssenceState`、中断保存形式3が解放状態・Lv・最終ATK・HPを保持できるため、初期2枚の仕様確定ではデータ形式を拡張しない。
 
+### 初期戦闘UI接続
+
+- `src/ui/initialBattle.ts`は画面入力を保持するUI状態と戦闘エンジン状態の境界とする。前衛3騎、控え0～3騎、個体別Lv・宝具Lv・概念礼装、魔術礼装、固定極級敵設定、固定シードの登録有無だけを検査する。
+- 成立設定は、サーヴァントと敵の既存アダプターで個体別状態・攻撃・行動効果データへ変換し、`createBattleState`、`initializeBattleLoadout`、`createBattleSession`の順に渡す。ロードアウト初期化後・初回配布前の状態をセッション初期スナップショットとする。
+- `src/ui/battlePresentation.ts`は`BattleState`、`BattleTurnLog`、内包する`BattleLogBatch`の保存済み確定値を簡潔表示へ整形する。ダメージ、対象、クリティカル、退場・登場、敵チャージ、Wave・勝敗を再解決しない。
+- React画面はカードIDとユーザー選択対象IDを`resolveBattleSessionTurn`へ渡し、不成立理由も同結果から表示する。中断保存は`serializeBattleSuspendSave`、読込は`parseBattleSuspendSave`と`restoreBattleSession`を使用し、ロードアウト・開始時効果・敵チャージを再適用しない。
+- 入力中の初期設定だけをブラウザーのローカル保存へJSON保存する。戦闘の正本は常に`BattleSession`であり、React stateやローカル保存へ計算済み戦闘値を別管理しない。
+
 ### 敵データ
 
 - `src/data/enemies`は形式1の敵定義、登録時検査、レジストリを持つ。再利用定義は安定`dataId`、正式名称、通常敵／サーヴァント等の区分、クラス、属性、特性、基礎率、通常攻撃、スキル、チャージ攻撃、個体別行動上限、出典を持つ。
@@ -141,6 +151,8 @@
 | `src/data/mysticCodes` | 魔術礼装の宣言的データ |
 | `src/data/craftEssences` | 概念礼装の宣言的データ |
 | `src/data/enemies` | 敵の形式1定義、初期戦闘設定、検査、レジストリ、戦闘個体変換 |
+| `src/ui/initialBattle.ts` | 登録済み初期データの選択検査と`BattleSession`開始アダプター |
+| `src/ui/battlePresentation.ts` | `BattleState`・確定ログの表示用整形 |
 | `tests` | 自動テスト |
 | `docs` | 仕様と手順 |
 
