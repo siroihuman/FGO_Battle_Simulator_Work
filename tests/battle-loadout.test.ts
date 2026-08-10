@@ -65,6 +65,7 @@ function mysticCode(): MysticCodeDefinition {
     name: `スキル${slot}`,
     slot,
     cooldownAtMax: 10 + slot,
+    execution: "effects" as const,
     effects: [{
       kind: "effect" as const,
       stableId: `test-mystic-code-skill-${slot}-np`,
@@ -285,6 +286,7 @@ describe("battle loadout selection and start application", () => {
       counters: initialized.result.counters,
       registry: initialized.result.attackRegistry,
       actionEffectRegistry: initialized.result.actionEffectRegistry,
+      mysticCodeRegistry: createMysticCodeDataRegistry([mysticCode()]),
     });
     const save = createBattleSuspendSave(session);
     const restored = restoreBattleSession(save);
@@ -304,6 +306,7 @@ describe("battle loadout selection and start application", () => {
       counters: initialized.result.counters,
       registry: initialized.result.attackRegistry,
       actionEffectRegistry: initialized.result.actionEffectRegistry,
+      mysticCodeRegistry: createMysticCodeDataRegistry([mysticCode()]),
     });
     const save = createBattleSuspendSave(session);
     const corrupt = {

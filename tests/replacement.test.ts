@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  resolveDirectAllyExchange,
   resolveAllyDefeatReplacement,
   resolveEnemyReplacement,
 } from "../src/core/battle/replacement";
@@ -249,6 +250,38 @@ describe("ally defeat replacement", () => {
     expect(second.state).toBe(first.state);
     expect(second.events).toEqual([]);
     expect(second.cardDeckRebuildRequired).toBe(false);
+  });
+});
+
+describe("direct ally exchange", () => {
+  it("swaps living frontline and reserve units intact without rebuilding cards", () => {
+    const state = battle();
+    const deck = state.commandDeck;
+    const result = resolveDirectAllyExchange(state, "ally-b", "ally-e");
+
+    expect(ids(result.state.formation.ally.frontline)).toEqual([
+      "ally-a",
+      "ally-e",
+      "ally-c",
+    ]);
+    expect(ids(result.state.formation.ally.reserve)).toEqual([
+      "ally-d",
+      "ally-b",
+      "ally-f",
+    ]);
+    expect(result.state.commandDeck).toBe(deck);
+    expect(result.cardDeckRebuildRequired).toBe(false);
+  });
+
+  it("rejects invalid exchange areas before changing the input state", () => {
+    const state = battle();
+    expect(() => resolveDirectAllyExchange(state, "ally-d", "ally-b"))
+      .toThrow("living frontline ally and living reserve ally");
+    expect(ids(state.formation.ally.frontline)).toEqual([
+      "ally-a",
+      "ally-b",
+      "ally-c",
+    ]);
   });
 });
 

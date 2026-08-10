@@ -1,6 +1,6 @@
 import type { DeclaredActionEffect } from "../../effects/declarations";
 
-export const MYSTIC_CODE_DATA_SCHEMA_VERSION = 1 as const;
+export const MYSTIC_CODE_DATA_SCHEMA_VERSION = 2 as const;
 
 export interface MysticCodeSourceReference {
   url: string;
@@ -14,6 +14,7 @@ export interface MysticCodeSkillDefinition {
   slot: 1 | 2 | 3;
   /** Remaining cooldown immediately after use at maximum Mystic Code level. */
   cooldownAtMax: number;
+  execution: "effects" | "order_change";
   effects: readonly DeclaredActionEffect[];
 }
 

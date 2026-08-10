@@ -64,8 +64,14 @@ export function assertValidMysticCodeDefinition(
     if (!Number.isSafeInteger(skill.cooldownAtMax) || skill.cooldownAtMax < 0) {
       throw new RangeError(`${skill.stableId}.cooldownAtMax must be non-negative`);
     }
-    if (skill.effects.length === 0) {
+    if (skill.execution !== "effects" && skill.execution !== "order_change") {
+      throw new RangeError(`${skill.stableId}.execution is invalid`);
+    }
+    if (skill.execution === "effects" && skill.effects.length === 0) {
       throw new RangeError(`${skill.stableId}.effects must not be empty`);
+    }
+    if (skill.execution === "order_change" && skill.effects.length !== 0) {
+      throw new RangeError(`${skill.stableId}.order_change must not declare effects`);
     }
     skill.effects.forEach((effect, effectIndex) => {
       if (effect.order !== effectIndex + 1) {

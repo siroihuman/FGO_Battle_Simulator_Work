@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.34.0",
-  "status": "initial-mystic-code-content-next",
+  "dataSchemaVersion": "1.35.0",
+  "status": "initial-craft-essence-specification-next",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -151,7 +151,7 @@
       "battle_outcome"
     ],
     "battleTurnLogJsonSerializable": true,
-    "battleSuspendSchemaVersion": 2,
+    "battleSuspendSchemaVersion": 3,
     "battleSuspendBoundaries": [
       "ally_input",
       "battle_finished"
@@ -163,6 +163,7 @@
       "rng_positions",
       "instance_attack_data",
       "action_effect_data",
+      "mystic_code_data",
       "loadout_selection",
       "operation_history",
       "accumulated_turn_logs"
@@ -180,11 +181,17 @@
     "craftEssenceStatusRemovalPolicy": "unremovable",
     "battleLoadoutUnsupportedStartEffect": "reject_before_state_or_rng_change",
     "mysticCodeSelectionSkillCount": 3,
+    "mysticCodeDataSchemaVersion": 2,
     "mysticCodeInitialCooldowns": [
       0,
       0,
       0
     ],
+    "mysticCodeActiveSkillExecution": "ally_side_external_declared_source",
+    "mysticCodeRejectedUseMutation": "none",
+    "mysticCodeOrderChange": "direct_living_frontline_reserve_exchange",
+    "mysticCodeOrderChangeCardDeckRebuild": false,
+    "mysticCodeOperationsSavedAndReplayed": true,
     "servantDataSchemaVersion": 1,
     "servantDataIdentity": "stable_project_id",
     "servantSourcePageNumberMayBeDataId": false,

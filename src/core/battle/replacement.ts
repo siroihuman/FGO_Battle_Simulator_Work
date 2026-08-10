@@ -2,6 +2,7 @@ import {
   setBattleFormation,
   type BattleState,
 } from "./state";
+import { findUnitLocation } from "./formation";
 import { rebuildCommandCardDeck } from "../cards/deck";
 import type {
   BattleFormation,
@@ -23,6 +24,72 @@ export interface AllyDefeatReplacementResult {
    * Ally departure rebuilds the next command-card distribution.
    */
   cardDeckRebuildRequired: boolean;
+}
+
+export interface DirectAllyExchangeEvent {
+  frontlineIndex: number;
+  reserveIndex: number;
+  frontlineInstanceId: string;
+  reserveInstanceId: string;
+}
+
+export interface DirectAllyExchangeResult {
+  state: BattleState;
+  event: DirectAllyExchangeEvent;
+  /** Direct exchange preserves the current and next card distributions. */
+  cardDeckRebuildRequired: false;
+}
+
+/**
+ * Directly swaps one living ally frontline member with one living reserve.
+ * All unit state is moved intact and the command-card deck is intentionally
+ * left unchanged.
+ */
+export function resolveDirectAllyExchange(
+  state: BattleState,
+  frontlineInstanceId: string,
+  reserveInstanceId: string,
+): DirectAllyExchangeResult {
+  const frontlineLocation = findUnitLocation(
+    state.formation,
+    frontlineInstanceId,
+  );
+  const reserveLocation = findUnitLocation(
+    state.formation,
+    reserveInstanceId,
+  );
+  if (
+    !frontlineLocation
+    || frontlineLocation.side !== "ally"
+    || frontlineLocation.area !== "frontline"
+    || !frontlineLocation.unit.alive
+    || !reserveLocation
+    || reserveLocation.side !== "ally"
+    || reserveLocation.area !== "reserve"
+    || !reserveLocation.unit.alive
+  ) {
+    throw new RangeError(
+      "direct ally exchange requires a living frontline ally and living reserve ally",
+    );
+  }
+  const frontline = [...state.formation.ally.frontline];
+  const reserve = [...state.formation.ally.reserve];
+  frontline[frontlineLocation.index] = reserveLocation.unit;
+  reserve[reserveLocation.index] = frontlineLocation.unit;
+  const nextState = setBattleFormation(state, {
+    ...state.formation,
+    ally: { frontline, reserve },
+  });
+  return {
+    state: nextState,
+    event: {
+      frontlineIndex: frontlineLocation.index,
+      reserveIndex: reserveLocation.index,
+      frontlineInstanceId,
+      reserveInstanceId,
+    },
+    cardDeckRebuildRequired: false,
+  };
 }
 
 /**

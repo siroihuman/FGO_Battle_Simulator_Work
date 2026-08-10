@@ -76,6 +76,38 @@ export function resolveTargetLocations(
   return candidates;
 }
 
+/**
+ * Resolves targets for an external battle-side source such as a Mystic Code.
+ * External sources have no unit for a `self` selector; global actions such as
+ * star gain handle that selector at their own execution layer.
+ */
+export function resolveTargetLocationsFromSide(
+  formation: BattleFormation,
+  sourceSide: BattleSide,
+  selector: TargetSelector,
+): UnitLocation[] {
+  if (selector.relation === "self") return [];
+  const side = relationSide(sourceSide, selector.relation);
+  let candidates = orderedLocations(
+    formation,
+    side,
+    selector.includeReserve ?? false,
+  ).filter(({ unit }) =>
+    matchesLife(unit, selector.life ?? "alive")
+    && matchesTraits(unit, selector.requiredTraits ?? [])
+  );
+  if (selector.selection === "single") {
+    if (!selector.selectedInstanceId) return [];
+    candidates = candidates.filter(
+      ({ unit }) => unit.instanceId === selector.selectedInstanceId,
+    );
+    return candidates.slice(0, 1);
+  }
+  if (selector.selection === "frontmost") return candidates.slice(0, 1);
+  if (selector.selection === "rearmost") return candidates.slice(-1);
+  return candidates;
+}
+
 export function resolveTargets(
   formation: BattleFormation,
   sourceInstanceId: string,
