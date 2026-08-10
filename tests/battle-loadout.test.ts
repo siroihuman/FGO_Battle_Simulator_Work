@@ -140,7 +140,7 @@ function initialize(seed = "loadout-seed") {
 }
 
 describe("battle loadout selection and start application", () => {
-  it("applies selected ATK, HP, and start effects per instance including reserve", () => {
+  it("allows the same fixed Craft Essence data on separate frontline and reserve instances", () => {
     const { result } = initialize();
 
     expect(result.attackRegistry.byInstanceId["ally-a"].attack).toBe(12_000);
@@ -175,8 +175,22 @@ describe("battle loadout selection and start application", () => {
         ],
       },
       craftEssencesByInstanceId: {
-        "ally-a": { dataId: "test-craft-essence", attack: 2_000, hp: 3_000 },
-        "ally-d": { dataId: "test-craft-essence", attack: 2_000, hp: 3_000 },
+        "ally-a": {
+          dataId: "test-craft-essence",
+          rarity: 5,
+          limitBreak: "max",
+          level: 100,
+          attack: 2_000,
+          hp: 3_000,
+        },
+        "ally-d": {
+          dataId: "test-craft-essence",
+          rarity: 5,
+          limitBreak: "max",
+          level: 100,
+          attack: 2_000,
+          hp: 3_000,
+        },
       },
     });
   });

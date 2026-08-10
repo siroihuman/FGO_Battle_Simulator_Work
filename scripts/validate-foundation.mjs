@@ -544,6 +544,76 @@ if (manifest) {
   );
   assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "宝具未設定敵のチャージは0でなければなりません");
   assert(manifest.coreRules.fixedSeedReplayRequired === true, "固定シード再現は必須です");
+  assert(
+    manifest.coreRules.craftEssenceSlotsPerAllyInstance === 1,
+    "概念礼装は味方戦闘個体ごとに0～1枚でなければなりません"
+  );
+  assert(
+    manifest.coreRules.craftEssenceUnselectedAllowed === true,
+    "概念礼装の未選択を許可しなければなりません"
+  );
+  assert(
+    manifest.coreRules.craftEssenceInventoryTracking === false,
+    "初期範囲では概念礼装の所持枚数を管理してはいけません"
+  );
+  assert(
+    manifest.coreRules.craftEssenceDuplicateDataIdAcrossInstances === true,
+    "同じ概念礼装を複数の味方戦闘個体へ装備できなければなりません"
+  );
+  assert(
+    manifest.coreRules.craftEssenceInitialLimitBreak === "max",
+    "初期概念礼装は最大解放固定でなければなりません"
+  );
+  assert(
+    manifest.coreRules.craftEssenceInitialLevelPolicy === "rarity_max_fixed",
+    "初期概念礼装はレアリティ別最大Lv固定でなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.craftEssenceMaxLevelByRarity) === JSON.stringify({
+      "1": 50,
+      "2": 55,
+      "3": 60,
+      "4": 80,
+      "5": 100
+    }),
+    "概念礼装のレアリティ別最大Lvが一致しません"
+  );
+  assert(
+    manifest.coreRules.craftEssenceInitialEffectTarget === "equipped_ally_instance",
+    "初期概念礼装の効果対象は装備した味方戦闘個体でなければなりません"
+  );
+  assert(
+    manifest.coreRules.craftEssenceReserveSelectable === true
+      && manifest.coreRules.craftEssenceStartEffectsIncludeReserve === true,
+    "控えも概念礼装の選択・開始時初期化対象でなければなりません"
+  );
+
+  const initialCraftEssences = manifest.initialContent?.craftEssences ?? [];
+  assert(
+    JSON.stringify(initialCraftEssences) === JSON.stringify([
+      {
+        name: "カレイドスコープ",
+        dataId: "kaleidoscope",
+        rarity: 5,
+        limitBreak: "max",
+        level: 100,
+        effectTarget: "equipped_ally_instance",
+        source: "https://appmedia.jp/fategrandorder/90628",
+        implementationStatus: "specification_only"
+      },
+      {
+        name: "黒の聖杯",
+        dataId: "black-grail",
+        rarity: 5,
+        limitBreak: "max",
+        level: 100,
+        effectTarget: "equipped_ally_instance",
+        source: "https://appmedia.jp/fategrandorder/103128",
+        implementationStatus: "specification_only"
+      }
+    ]),
+    "初期概念礼装2枚の正式名称・ID・最大解放・Lv・対象・参照が一致しません"
+  );
 
   const docs = manifest.canonicalDocuments ?? [];
   assert(new Set(docs).size === docs.length, "canonicalDocuments に重複があります");
@@ -595,6 +665,11 @@ assert(startHere.includes("## 必須規則"), "作業開始ページに必須規
 const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
 assert(implementationStatus.includes("## 現在地点"), "実装状況に現在地点がありません");
 assert(implementationStatus.includes("## 次の実装"), "実装状況に次の実装がありません");
+
+const initialContent = await readText("docs/specs/INITIAL_CONTENT.md");
+assert(initialContent.includes("カレイドスコープ"), "初期データ仕様にカレイドスコープがありません");
+assert(initialContent.includes("黒の聖杯"), "初期データ仕様に黒の聖杯がありません");
+assert(initialContent.includes("同じ概念礼装`dataId`を複数"), "初期データ仕様に概念礼装の重複装備規則がありません");
 
 const archiveReadme = await readText("docs/archive/README.md");
 assert(archiveReadme.includes("IMPLEMENTATION_STATUS_v1.0.0.md"), "実装状況の履歴アーカイブへの案内がありません");
