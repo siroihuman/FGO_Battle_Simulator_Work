@@ -452,9 +452,13 @@ describe("enemy data-to-attack integration", () => {
       rng: random.streams,
     });
 
-    expect(resolved.sequence.actions[0]?.resolverDetail).toEqual({
-      outcome: "skipped",
-      reason: "action_attack_data_missing",
+    expect(resolved.sequence.actions[0]).toMatchObject({
+      preflight: {
+        outcome: "skipped",
+        reason: "action_attack_data_missing",
+        chargeConsumed: 0,
+      },
+      resolverCalled: false,
     });
     expect(
       Object.values(random.rng.snapshot().streams).every(

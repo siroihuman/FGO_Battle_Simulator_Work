@@ -7,6 +7,9 @@ import type {
 } from "../../formulas/np";
 
 export type AttackTargetScope = "single" | "all";
+export type EnemyAttackTargetPolicy =
+  | "frontmost_living_ally"
+  | "random_living_ally_frontline";
 export type EnemyDamagingActionKind =
   | "normal_attack"
   | "noble_phantasm";
@@ -39,9 +42,13 @@ export interface EnemyAttackActionData {
   actionStableId: string;
   kind: EnemyDamagingActionKind;
   targetScope: AttackTargetScope;
+  /** JSON-safe single-target selection. Omitted data keeps the legacy frontmost policy. */
+  targetPolicy?: EnemyAttackTargetPolicy;
   cardType: CommandCardType;
   hitWeights: readonly number[];
   cardDamageValuePermille: number;
+  /** Enemy normal-attack critical rate. Enemy NPs must use zero. */
+  criticalChancePermille?: number;
   npDamageMultiplierPermille?: number;
   npSpecialAttackPermille?: number;
 }
@@ -260,6 +267,42 @@ function validateCombatant(data: CombatantAttackData): void {
       );
     }
     enemyActionIds.add(action.actionStableId);
+    if (
+      action.kind !== "normal_attack"
+      && action.kind !== "noble_phantasm"
+    ) {
+      throw new RangeError(
+        `${data.instanceId}.${action.actionStableId}.kind is invalid`,
+      );
+    }
+    if (action.targetScope !== "single" && action.targetScope !== "all") {
+      throw new RangeError(
+        `${data.instanceId}.${action.actionStableId}.targetScope is invalid`,
+      );
+    }
+    const targetPolicy = action.targetPolicy ?? "frontmost_living_ally";
+    if (
+      targetPolicy !== "frontmost_living_ally"
+      && targetPolicy !== "random_living_ally_frontline"
+    ) {
+      throw new RangeError(
+        `${data.instanceId}.${action.actionStableId}.targetPolicy is invalid`,
+      );
+    }
+    if (action.targetScope === "all" && action.targetPolicy !== undefined) {
+      throw new RangeError(
+        `${data.instanceId}.${action.actionStableId}.targetPolicy requires single targetScope`,
+      );
+    }
+    if (
+      action.cardType !== "buster"
+      && action.cardType !== "arts"
+      && action.cardType !== "quick"
+    ) {
+      throw new RangeError(
+        `${data.instanceId}.${action.actionStableId}.cardType is invalid`,
+      );
+    }
     validateHitWeights(
       action.hitWeights,
       `${data.instanceId}.${action.actionStableId}.hitWeights`,
@@ -268,6 +311,40 @@ function validateCombatant(data: CombatantAttackData): void {
       action.cardDamageValuePermille,
       `${data.instanceId}.${action.actionStableId}.cardDamageValuePermille`,
     );
+    const criticalChancePermille = action.criticalChancePermille ?? 0;
+    assertNonNegativeInteger(
+      criticalChancePermille,
+      `${data.instanceId}.${action.actionStableId}.criticalChancePermille`,
+    );
+    if (criticalChancePermille > 1_000) {
+      throw new RangeError(
+        `${data.instanceId}.${action.actionStableId}.criticalChancePermille must not exceed 1000`,
+      );
+    }
+    if (action.kind === "noble_phantasm" && criticalChancePermille !== 0) {
+      throw new RangeError(
+        `${data.instanceId}.${action.actionStableId} noble phantasm cannot critically hit`,
+      );
+    }
+    if (
+      action.kind === "normal_attack"
+      && (
+        action.npDamageMultiplierPermille !== undefined
+        || action.npSpecialAttackPermille !== undefined
+      )
+    ) {
+      throw new RangeError(
+        `${data.instanceId}.${action.actionStableId} normal attack cannot use NP multipliers`,
+      );
+    }
+    if (
+      action.kind === "noble_phantasm"
+      && action.npDamageMultiplierPermille === undefined
+    ) {
+      throw new RangeError(
+        `${data.instanceId}.${action.actionStableId} noble phantasm requires npDamageMultiplierPermille`,
+      );
+    }
     if (action.npDamageMultiplierPermille !== undefined) {
       assertNonNegativeInteger(
         action.npDamageMultiplierPermille,

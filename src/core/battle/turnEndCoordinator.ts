@@ -20,6 +20,10 @@ import {
   advanceEnemyCooldowns,
   type SideCooldownResult,
 } from "./cooldowns";
+import {
+  advanceEnemyTurnEndCharge,
+  type EnemyChargeProgressionResult,
+} from "./enemyCharge";
 import { findUnitLocation } from "./formation";
 import {
   completeAllyTurnEnd,
@@ -56,6 +60,7 @@ export interface EnemyTurnEndResolution {
   recurring: SideTurnEndResult;
   allyReplacement: AllyDefeatReplacementResult;
   defeatedEnemyDeparture: EnemyReplacementResult;
+  charge: EnemyChargeProgressionResult;
   durations: SideTurnEndDurationResult;
   cooldowns: SideCooldownResult;
   standardReplacement: EnemyReplacementResult;
@@ -182,8 +187,8 @@ export function resolveAllyTurnEnd(
 
 /**
  * Resolves enemy recurring effects, ally auto replacement, defeated enemy
- * departure, duration/cooldown ticks, standard replacement, then the
- * Wave/result checkpoint.
+ * departure, frontline charge progression, duration/cooldown ticks, standard
+ * replacement, then the Wave/result checkpoint.
  */
 export function resolveEnemyTurnEnd(
   state: BattleState,
@@ -220,6 +225,9 @@ export function resolveEnemyTurnEnd(
   );
   currentState = defeatedEnemyDeparture.state;
 
+  const charge = advanceEnemyTurnEndCharge(currentState);
+  currentState = charge.state;
+
   const durations = advanceSideTurnEndDurations(
     currentState.formation,
     "enemy",
@@ -242,6 +250,7 @@ export function resolveEnemyTurnEnd(
     recurring,
     allyReplacement,
     defeatedEnemyDeparture,
+    charge,
     durations,
     cooldowns,
     standardReplacement,

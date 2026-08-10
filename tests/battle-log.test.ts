@@ -332,7 +332,7 @@ describe("versioned battle action log", () => {
       outcome: {
         status: "skipped",
         reasons: ["source_attack_data_missing"],
-        resolverCalled: true,
+        resolverCalled: false,
       },
       attack: null,
       rngEvents: [

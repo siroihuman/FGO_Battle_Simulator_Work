@@ -160,7 +160,7 @@ describe("battle-turn timeline log", () => {
     const log = first.result.battleLog;
 
     expect(log).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       turnId: "wave-1:battle-turn-1:wave-turn-1",
       seed: "battle-turn-timeline",
       rngAlgorithmVersion: 1,

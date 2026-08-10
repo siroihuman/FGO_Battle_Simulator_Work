@@ -82,6 +82,8 @@ export type EnemyActionSkipReason =
   | "skill_not_configured"
   | "noble_phantasm_not_configured"
   | "noble_phantasm_charge_not_full"
+  | "source_attack_data_missing"
+  | "action_attack_data_missing"
   | "action_effects_unresolved"
   | "action_effect_target_required"
   | "action_effect_target_invalid";

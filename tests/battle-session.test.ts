@@ -103,7 +103,7 @@ describe("battle session persistence and replay", () => {
     expect(session.operationHistory).toHaveLength(2);
     expect(session.turnLogs).toHaveLength(1);
     expect(session.turnLogs[0]).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       seed: "battle-session",
       before: { battleTurn: 1 },
       after: { battleTurn: 2 },
@@ -162,10 +162,10 @@ describe("battle session persistence and replay", () => {
       kind: "battle_suspend",
       schemaVersion: 3,
       specVersion: "1.0.0",
-      dataSchemaVersion: "1.35.0",
+      dataSchemaVersion: "1.36.0",
       rngAlgorithmVersion: 1,
       battleLogSchemaVersion: 4,
-      battleTurnLogSchemaVersion: 1,
+      battleTurnLogSchemaVersion: 2,
     });
   });
 

@@ -3,6 +3,8 @@ import {
   enemyAttackActionData,
   type AttackTargetScope,
   type BattleAttackDataRegistry,
+  type EnemyAttackActionData,
+  type EnemyAttackTargetPolicy,
 } from "../core/battle/actionData";
 import type {
   AttackRngStreams,
@@ -116,8 +118,10 @@ export interface ResolveEnemyAttacksInput {
   counters?: EffectRuntimeCounters;
   normalSelector?: EnemyNormalActionSelector;
   singleTargetSelector?: EnemySingleTargetSelector;
-  /** Supply the same stream used by a random normal selector for log audit. */
+  /** AI stream used by declarative random targets and optional normal selectors. */
   aiRng?: DeterministicRng;
+  /** Critical stream used only after a valid single target is fixed. */
+  criticalRng?: DeterministicRng;
 }
 
 export interface EnemyAttacksResult {
@@ -212,20 +216,44 @@ function declaredEffectTargetInstanceIds(
   ))];
 }
 
-function firstLivingAlly(state: BattleState): string | null {
+function livingAllyFrontlineInstanceIds(state: BattleState): string[] {
   return orderedLocations(state.formation, "ally")
-    .find(({ unit }) => unit.alive)?.unit.instanceId
-    ?? null;
+    .filter(({ area, unit }) => area === "frontline" && unit.alive)
+    .map(({ unit }) => unit.instanceId);
+}
+
+function declarativeSingleTarget(
+  state: BattleState,
+  policy: EnemyAttackTargetPolicy,
+  aiRng: DeterministicRng | undefined,
+): string | null {
+  const candidates = livingAllyFrontlineInstanceIds(state);
+  if (candidates.length === 0) return null;
+  if (
+    policy === "frontmost_living_ally"
+    || candidates.length === 1
+  ) {
+    return candidates[0] ?? null;
+  }
+  if (!aiRng) {
+    throw new RangeError(
+      "random enemy single-target policy requires the ai RNG stream",
+    );
+  }
+  return candidates[
+    aiRng.nextIntInclusive(0, candidates.length - 1)
+  ] ?? null;
 }
 
 function targetIds(
   input: EnemyActionResolverInput,
-  scope: AttackTargetScope,
+  action: EnemyAttackActionData,
   selector: EnemySingleTargetSelector | undefined,
+  aiRng: DeterministicRng | undefined,
 ): string[] {
-  if (scope === "all") {
+  if (action.targetScope === "all") {
     return orderedLocations(input.state.formation, "ally")
-      .filter(({ unit }) => unit.alive)
+      .filter(({ area, unit }) => area === "frontline" && unit.alive)
       .map(({ unit }) => unit.instanceId);
   }
   if (
@@ -241,7 +269,11 @@ function targetIds(
         request: input.request,
         actionStableId: input.preflight.action.stableId,
       })
-    : firstLivingAlly(input.state);
+    : declarativeSingleTarget(
+        input.state,
+        action.targetPolicy ?? "frontmost_living_ally",
+        aiRng,
+      );
   if (selected === null) return [];
   const location = findUnitLocation(
     input.state.formation,
@@ -258,6 +290,54 @@ function targetIds(
     );
   }
   return [selected];
+}
+
+function resolveEnemyCritical(
+  action: EnemyAttackActionData,
+  criticalRng: DeterministicRng | undefined,
+): boolean {
+  if (action.kind !== "normal_attack") return false;
+  const rate = action.criticalChancePermille ?? 0;
+  if (rate === 0) return false;
+  if (rate === 1_000) return true;
+  if (!criticalRng) {
+    throw new RangeError(
+      "enemy critical chance requires the critical RNG stream",
+    );
+  }
+  return criticalRng.chance(rate);
+}
+
+function enemyAttackDataGuard(
+  input: EnemyActionGuardInput,
+  registry: BattleAttackDataRegistry,
+  effectRegistry: BattleActionEffectDataRegistry | undefined,
+) {
+  const effectIssue = enemyActionEffectGuard(input, effectRegistry);
+  if (effectIssue) return effectIssue;
+  if (input.request.kind === "skill") return null;
+  const source = findUnitLocation(
+    input.state.formation,
+    input.actorInstanceId,
+  )?.unit;
+  const combatant = source
+    ? combatantAttackData(registry, source)
+    : null;
+  if (!source || !combatant) return "source_attack_data_missing" as const;
+  const actionStableId = input.request.kind === "normal_attack"
+    ? source.enemyAction?.normalAttack?.stableId
+    : source.enemyAction?.noblePhantasm?.stableId;
+  if (
+    !actionStableId
+    || !enemyAttackActionData(
+      combatant,
+      actionStableId,
+      input.request.kind,
+    )
+  ) {
+    return "action_attack_data_missing" as const;
+  }
+  return null;
 }
 
 function enemyActionDetail(
@@ -456,7 +536,11 @@ export function resolveEnemyAttacks(
     (resolverInput) => {
       const captured = captureBattleLogRng(
         {
+          ...(input.aiRng ? { ai: input.aiRng } : {}),
           effects: input.rng.effects,
+          ...(input.criticalRng
+            ? { critical: input.criticalRng }
+            : {}),
           damage: input.rng.damage,
           stars: input.rng.stars,
         },
@@ -536,8 +620,9 @@ export function resolveEnemyAttacks(
           }
           const targets = targetIds(
             resolverInput,
-            action.targetScope,
+            action,
             input.singleTargetSelector,
+            input.aiRng,
           );
           if (targets.length === 0) {
             return {
@@ -552,7 +637,10 @@ export function resolveEnemyAttacks(
             cardType: action.cardType,
             isNoblePhantasm:
               request.kind === "noble_phantasm",
-            isCritical: false,
+            isCritical: resolveEnemyCritical(
+              action,
+              input.criticalRng,
+            ),
             cardDamageValuePermille:
               action.cardDamageValuePermille,
             cardNpValuePermille: 0,
@@ -686,8 +774,9 @@ export function resolveEnemyAttacks(
       return captured.result;
     },
     auditedNormalSelector,
-    (guardInput) => enemyActionEffectGuard(
+    (guardInput) => enemyAttackDataGuard(
       guardInput,
+      input.registry,
       input.actionEffectRegistry,
     ),
   );

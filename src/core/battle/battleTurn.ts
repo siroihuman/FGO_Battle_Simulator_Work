@@ -244,6 +244,7 @@ export function resolveBattleTurn(
     singleTargetSelector:
       input.enemy?.singleTargetSelector,
     aiRng: input.rng.stream("ai"),
+    criticalRng: input.rng.stream("critical"),
   });
   actionLogBatches.push(enemyAttacks.battleLog);
   logRecords.push(

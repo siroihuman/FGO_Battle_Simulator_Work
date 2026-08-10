@@ -296,8 +296,8 @@ if (manifest) {
     "1戦闘ターンは単一のBattleRngから用途別乱数列を受け取らなければなりません"
   );
   assert(
-    manifest.coreRules.battleTurnLogSchemaVersion === 1,
-    "1戦闘ターンログ形式バージョンは1でなければなりません"
+    manifest.coreRules.battleTurnLogSchemaVersion === 2,
+    "1戦闘ターンログ形式バージョンは2でなければなりません"
   );
   assert(
     JSON.stringify(manifest.coreRules.battleTurnLogRecordOrder) === JSON.stringify([
@@ -315,6 +315,7 @@ if (manifest) {
       "turn_end_activations",
       "breaks",
       "hp_settlements",
+      "enemy_charge_changes",
       "durations",
       "cooldowns",
       "replacements",
@@ -714,8 +715,8 @@ if (manifest) {
   );
   assert(
     radiantArm.sourceCheckedAt === "2026-08-10"
-      && radiantArm.implementationStatus === "specification_only",
-    "初期敵は参照確認日を持つ未実装仕様でなければなりません"
+      && radiantArm.implementationStatus === "implemented",
+    "初期敵は参照確認日を持つ実装済みデータでなければなりません"
   );
 
   const initialEnemyEncounter = manifest.initialContent?.initialEnemyEncounter ?? {};
@@ -761,8 +762,8 @@ if (manifest) {
       enemy.enemyDataId === "radiant-arm-of-dawn-saber" && enemy.charge === 0
     )
       && initialEnemyEncounter.sourceCheckedAt === "2026-08-10"
-      && initialEnemyEncounter.implementationStatus === "specification_only",
-    "極級7個体は同じ敵dataId・開始チャージ0の未実装仕様でなければなりません"
+      && initialEnemyEncounter.implementationStatus === "implemented",
+    "極級7個体は同じ敵dataId・開始チャージ0の実装済みデータでなければなりません"
   );
 
   const docs = manifest.canonicalDocuments ?? [];
@@ -795,7 +796,12 @@ const mandatoryFiles = [
   "docs/templates/CRAFT_ESSENCE_ADDITION.md",
   "docs/templates/MYSTIC_CODE_ADDITION.md",
   "docs/templates/ENEMY_ADDITION.md",
-  "docs/templates/BUG_REPORT.md"
+  "docs/templates/BUG_REPORT.md",
+  "src/data/enemies/schema.ts",
+  "src/data/enemies/validation.ts",
+  "src/data/enemies/registry.ts",
+  "src/data/enemies/initialEnemies.ts",
+  "src/data/enemies/index.ts"
 ];
 
 for (const path of mandatoryFiles) {
