@@ -38,6 +38,7 @@
 ## 引継ぎと履歴
 
 - 作業途中の引継ぎ: [`HANDOFF_TEMPLATE.md`](HANDOFF_TEMPLATE.md)
+- v1.0初期範囲の統合受入結果: [`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)
 - 詳細な完了履歴・決定理由・旧規則: [`archive/README.md`](archive/README.md)
 
 詳細仕様は現在も有効な正本です。履歴を確認する必要がある場合だけアーカイブを開いてください。
