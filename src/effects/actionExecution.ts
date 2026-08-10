@@ -15,6 +15,7 @@ import {
 } from "../core/battle/starState";
 import type {
   BattleFormation,
+  BattleSide,
   BattleUnitState,
 } from "../core/battle/types";
 import type { DeterministicRng } from "../core/rng";
@@ -37,6 +38,7 @@ import type {
 } from "./declarations";
 import {
   resolveTargetLocations,
+  resolveTargetLocationsFromSide,
   type TargetSelector,
 } from "./targeting";
 import type { EffectRuntimeCounters } from "./types";
@@ -137,6 +139,33 @@ export function declaredActionTargetSelectionIssue(
     resolveTargetLocations(
       state.formation,
       sourceInstanceId,
+      {
+        ...effect.target,
+        selectedInstanceId: selectedTargetInstanceId,
+      },
+    ).length === 1
+  );
+  return everyTargetIsValid ? null : "selected_target_invalid";
+}
+
+/** Validates a selected target for an external source on one battle side. */
+export function externalDeclaredActionTargetSelectionIssue(
+  state: BattleState,
+  sourceSide: BattleSide,
+  effects: readonly DeclaredActionEffect[],
+  selectedTargetInstanceId?: string,
+): DeclaredActionTargetSelectionIssue | null {
+  const selectedEffects = effects.filter(
+    ({ target }) =>
+      target.relation !== "self"
+      && target.selection === "single",
+  );
+  if (selectedEffects.length === 0) return null;
+  if (!selectedTargetInstanceId) return "selected_target_required";
+  const everyTargetIsValid = selectedEffects.every((effect) =>
+    resolveTargetLocationsFromSide(
+      state.formation,
+      sourceSide,
       {
         ...effect.target,
         selectedInstanceId: selectedTargetInstanceId,
@@ -347,6 +376,106 @@ export function executeDeclaredActionEffects(
     state: currentState,
     counters: currentCounters,
     sourceInstanceId,
+    effects: results,
+    unresolvedEffectStableIds,
+  };
+}
+
+/**
+ * Executes source-ordered declarative effects from a non-unit source. Mystic
+ * Codes use the ally side for target relations and do not inherit a Servant's
+ * outgoing recovery or application modifiers.
+ */
+export function executeExternalDeclaredActionEffects(
+  state: BattleState,
+  sourceSide: BattleSide,
+  sourceStableId: string,
+  effects: readonly DeclaredActionEffect[],
+  context: DeclaredActionExecutionContext,
+  counters: EffectRuntimeCounters,
+  rng: DeterministicRng,
+): DeclaredActionEffectsResult {
+  let currentState = state;
+  let currentCounters = counters;
+  const results: DeclaredActionEffectResult[] = [];
+  const unresolvedEffectStableIds: string[] = [];
+
+  for (const effect of [...effects].sort((left, right) => left.order - right.order)) {
+    const prepared = preparedAction(effect, context);
+    if (!prepared) {
+      unresolvedEffectStableIds.push(effect.stableId);
+      results.push({
+        effectStableId: effect.stableId,
+        order: effect.order,
+        outcome: "unsupported",
+        targetInstanceIds: [],
+        unsupportedMechanicId:
+          effect.action.kind === "unsupported"
+            ? effect.action.mechanicId
+            : undefined,
+      });
+      continue;
+    }
+    const selector = runtimeSelector(effect, context);
+    const targetLocations = resolveTargetLocationsFromSide(
+      currentState.formation,
+      sourceSide,
+      selector,
+    );
+    if (prepared.kind === "gain_stars") {
+      const targetExists = effect.target.relation === "self"
+        || targetLocations.length > 0;
+      if (!targetExists) {
+        results.push({
+          effectStableId: effect.stableId,
+          order: effect.order,
+          outcome: "no_target",
+          targetInstanceIds: [],
+          resolvedAmount: prepared.resolvedAmount,
+        });
+        continue;
+      }
+      const addition = prepared.destination === "command"
+        ? addCommandStars(currentState, prepared.amount)
+        : addNextCommandStars(currentState, prepared.amount);
+      currentState = addition.state;
+      results.push({
+        effectStableId: effect.stableId,
+        order: effect.order,
+        outcome: "resolved",
+        targetInstanceIds: targetLocations.map(({ unit }) => unit.instanceId),
+        resolvedAmount: prepared.resolvedAmount,
+        starAddition: addition,
+      });
+      continue;
+    }
+    const targets = targetLocations.length > 0
+      ? targetLocations.map(({ unit }) => unit)
+      : [null];
+    const batch = executeCommonActionForTargets(
+      null,
+      targets,
+      prepared.action,
+      currentCounters,
+      rng,
+    );
+    currentCounters = batch.counters;
+    currentState = applyBatch(currentState, batch);
+    results.push({
+      effectStableId: effect.stableId,
+      order: effect.order,
+      outcome: targetLocations.length === 0 ? "no_target" : "resolved",
+      targetInstanceIds: targetLocations.map(({ unit }) => unit.instanceId),
+      ...(prepared.resolvedAmount === undefined
+        ? {}
+        : { resolvedAmount: prepared.resolvedAmount }),
+      batch,
+    });
+  }
+  return {
+    state: currentState,
+    counters: currentCounters,
+    sourceInstanceId: sourceStableId,
     effects: results,
     unresolvedEffectStableIds,
   };
