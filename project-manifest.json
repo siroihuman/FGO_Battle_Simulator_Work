@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.35.0",
-  "status": "initial-craft-essence-data-next",
+  "status": "initial-enemy-specification-next",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -195,6 +195,14 @@
     "craftEssenceStartEffectExecution": "declarative_passive_initialization",
     "craftEssenceStartEffectsIncludeReserve": true,
     "craftEssenceStatusRemovalPolicy": "unremovable",
+    "initialCraftEssenceDataRegistry": "src/data/craftEssences/initialCraftEssences.ts",
+    "kaleidoscopeStartNpUnits": 10000,
+    "blackGrailNoblePhantasmDamagePermille": 800,
+    "blackGrailRecurringHpReduction": {
+      "amount": 500,
+      "canDefeat": true,
+      "turnEndSettlement": null
+    },
     "battleLoadoutUnsupportedStartEffect": "reject_before_state_or_rng_change",
     "mysticCodeSelectionSkillCount": 3,
     "mysticCodeDataSchemaVersion": 2,
@@ -334,7 +342,7 @@
         "level": 100,
         "effectTarget": "equipped_ally_instance",
         "source": "https://appmedia.jp/fategrandorder/90628",
-        "implementationStatus": "specification_only"
+        "implementationStatus": "implemented"
       },
       {
         "name": "黒の聖杯",
@@ -344,7 +352,7 @@
         "level": 100,
         "effectTarget": "equipped_ally_instance",
         "source": "https://appmedia.jp/fategrandorder/103128",
-        "implementationStatus": "specification_only"
+        "implementationStatus": "implemented"
       }
     ]
   },
