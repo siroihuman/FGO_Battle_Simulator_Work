@@ -587,6 +587,18 @@ if (manifest) {
       && manifest.coreRules.craftEssenceStartEffectsIncludeReserve === true,
     "控えも概念礼装の選択・開始時初期化対象でなければなりません"
   );
+  assert(
+    manifest.coreRules.initialCraftEssenceDataRegistry
+      === "src/data/craftEssences/initialCraftEssences.ts"
+      && manifest.coreRules.kaleidoscopeStartNpUnits === 10000
+      && manifest.coreRules.blackGrailNoblePhantasmDamagePermille === 800,
+    "初期概念礼装の登録先・開始NP・宝具威力が一致しません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.blackGrailRecurringHpReduction)
+      === JSON.stringify({ amount: 500, canDefeat: true, turnEndSettlement: null }),
+    "黒の聖杯の毎ターンHP減少はHP0可能な共通HP減少でなければなりません"
+  );
 
   const initialCraftEssences = manifest.initialContent?.craftEssences ?? [];
   assert(
@@ -599,7 +611,7 @@ if (manifest) {
         level: 100,
         effectTarget: "equipped_ally_instance",
         source: "https://appmedia.jp/fategrandorder/90628",
-        implementationStatus: "specification_only"
+        implementationStatus: "implemented"
       },
       {
         name: "黒の聖杯",
@@ -609,7 +621,7 @@ if (manifest) {
         level: 100,
         effectTarget: "equipped_ally_instance",
         source: "https://appmedia.jp/fategrandorder/103128",
-        implementationStatus: "specification_only"
+        implementationStatus: "implemented"
       }
     ]),
     "初期概念礼装2枚の正式名称・ID・最大解放・Lv・対象・参照が一致しません"
