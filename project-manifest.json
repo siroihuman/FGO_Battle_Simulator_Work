@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.35.0",
-  "status": "initial-enemy-data-next",
+  "dataSchemaVersion": "1.36.0",
+  "status": "initial-battle-ui-next",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -141,7 +141,7 @@
       "wave_advanced"
     ],
     "battleTurnRngSource": "single_battle_rng",
-    "battleTurnLogSchemaVersion": 1,
+    "battleTurnLogSchemaVersion": 2,
     "battleTurnLogRecordOrder": [
       "ally_action_batch",
       "ally_turn_end",
@@ -154,6 +154,7 @@
       "turn_end_activations",
       "breaks",
       "hp_settlements",
+      "enemy_charge_changes",
       "durations",
       "cooldowns",
       "replacements",
@@ -431,7 +432,7 @@
           "https://api.atlasacademy.io/nice/JP/ai/svt/1000000"
         ],
         "sourceCheckedAt": "2026-08-10",
-        "implementationStatus": "specification_only"
+        "implementationStatus": "implemented"
       }
     ],
     "initialEnemyEncounter": {
@@ -521,7 +522,7 @@
           }
         ]
       ],
-      "implementationStatus": "specification_only"
+      "implementationStatus": "implemented"
     }
   },
   "referenceSources": [

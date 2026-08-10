@@ -46,9 +46,9 @@ import {
 /** Increment only with an explicit migration or replay compatibility policy. */
 export const BATTLE_SUSPEND_SCHEMA_VERSION = 3 as const;
 export const BATTLE_SUSPEND_SPEC_VERSION = "1.0.0" as const;
-export const BATTLE_SUSPEND_DATA_SCHEMA_VERSION = "1.35.0" as const;
+export const BATTLE_SUSPEND_DATA_SCHEMA_VERSION = "1.36.0" as const;
 export const BATTLE_LOG_SCHEMA_VERSION = 4 as const;
-export const BATTLE_TURN_LOG_SCHEMA_VERSION = 1 as const;
+export const BATTLE_TURN_LOG_SCHEMA_VERSION = 2 as const;
 
 export interface BattleReplayTurnInput {
   cardIds: string[];

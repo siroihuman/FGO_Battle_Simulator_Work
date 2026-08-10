@@ -107,8 +107,8 @@ export function beginEnemyTurnEnd(state: BattleState): BattleState {
 }
 
 /**
- * Call after enemy recurring effects, survival, duration/cooldown updates, and
- * standard enemy replacement are complete.
+ * Call after enemy recurring effects, survival, normal charge progression,
+ * duration/cooldown updates, and standard enemy replacement are complete.
  */
 export function completeEnemyTurnEnd(state: BattleState): BattleState {
   assertPhase(state, "enemy_turn_end");

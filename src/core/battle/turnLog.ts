@@ -35,7 +35,7 @@ import type {
   EnemyTurnEndResolution,
 } from "./turnEndCoordinator";
 
-export const BATTLE_TURN_LOG_SCHEMA_VERSION = 1 as const;
+export const BATTLE_TURN_LOG_SCHEMA_VERSION = 2 as const;
 
 export interface BattleLogStatePoint {
   waveNumber: number;
@@ -179,6 +179,12 @@ export interface BattleLogCooldowns {
   mysticCodeAfter: number[] | null;
 }
 
+export interface BattleLogEnemyChargeChange {
+  enemy: BattleLogUnitRef;
+  before: number;
+  after: number;
+}
+
 export type BattleLogCheckpointKind =
   | "enemy_action_started"
   | "next_ally_turn_started"
@@ -221,6 +227,7 @@ export interface BattleLogTurnEndRecord {
   hpSettlements: BattleLogTurnEndHpSettlement[];
   allyReplacement: BattleLogAllyReplacement;
   enemyReplacements: BattleLogEnemyReplacement[];
+  enemyChargeChanges: BattleLogEnemyChargeChange[];
   durations: BattleLogDurationTick[];
   cooldowns: BattleLogCooldowns;
   checkpoint: BattleLogTurnEndCheckpoint;
@@ -608,6 +615,7 @@ export function createAllyTurnEndLogRecord(
         "after_ally_recurring",
       ),
     ],
+    enemyChargeChanges: [],
     durations: durationLogs(
       input.resolution.durations,
       unitIndex,
@@ -670,6 +678,11 @@ export function createEnemyTurnEndLogRecord(
         "enemy_turn_end",
       ),
     ],
+    enemyChargeChanges: input.resolution.charge.changes.map((change) => ({
+      enemy: battleLogUnitRef(unitIndex, change.instanceId),
+      before: change.before,
+      after: change.after,
+    })),
     durations: durationLogs(
       input.resolution.durations,
       unitIndex,

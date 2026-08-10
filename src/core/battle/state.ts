@@ -333,6 +333,9 @@ function assertCommandCards(
   unit: BattleUnitState,
   label: string,
 ): void {
+  if (unit.side === "enemy" && unit.commandCards.length === 0) {
+    return;
+  }
   if (unit.commandCards.length !== 5) {
     throw new RangeError(`${label} must have exactly 5 command cards`);
   }
