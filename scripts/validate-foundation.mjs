@@ -94,6 +94,25 @@ if (manifest) {
     "敵の最小既定行動はフルチャージ宝具、それ以外は通常攻撃でなければなりません"
   );
   assert(
+    manifest.coreRules.enemyDataSchemaVersion === 1
+      && manifest.coreRules.enemyDataIdentity === "stable_project_id"
+      && manifest.coreRules.enemyEncounterIdentity === "battle_instance_id"
+      && manifest.coreRules.enemyDefinitionAndEncounterSeparated === true,
+    "敵形式1は安定データIDと戦闘個体IDを分離しなければなりません"
+  );
+  assert(
+    manifest.coreRules.enemyRandomSingleTargetPolicy === "random_living_ally_frontline"
+      && manifest.coreRules.enemyRandomSingleTargetRng === "ai"
+      && manifest.coreRules.enemyCriticalRng === "critical",
+    "初期敵のランダム単体対象とクリティカルは用途別乱数列を使わなければなりません"
+  );
+  assert(
+    manifest.coreRules.enemyChargeIncreaseTiming === "enemy_turn_end"
+      && manifest.coreRules.enemyChargeIncreasePerTurn === 1
+      && manifest.coreRules.enemyReserveProgressionPaused === true,
+    "敵通常チャージは敵ターン終了時に前衛だけ1増加しなければなりません"
+  );
+  assert(
     manifest.coreRules.enemyReplacementInheritsPlannedSlots === false,
     "途中登場した敵は退場者の予定済み行動枠を引き継いではいけません"
   );
@@ -627,6 +646,125 @@ if (manifest) {
     "初期概念礼装2枚の正式名称・ID・最大解放・Lv・対象・参照が一致しません"
   );
 
+  const initialEnemies = manifest.initialContent?.enemies ?? [];
+  assert(initialEnemies.length === 1, "初期敵は黎明の炎腕（剣）1種でなければなりません");
+  const radiantArm = initialEnemies[0] ?? {};
+  assert(
+    radiantArm.name === "黎明の炎腕"
+      && radiantArm.dataId === "radiant-arm-of-dawn-saber"
+      && radiantArm.externalIds?.atlasAcademyServantId === 9933710
+      && radiantArm.externalIds?.atlasAcademyAiId === 1000000
+      && radiantArm.category === "normal_enemy"
+      && radiantArm.classKey === "saber"
+      && radiantArm.attributeKey === "sky"
+      && radiantArm.classAttackCoefficientPermille === 1000,
+    "黎明の炎腕（剣）の正式名称・ID・区分・クラス・属性が一致しません"
+  );
+  assert(
+    JSON.stringify(radiantArm.traits) === JSON.stringify([
+      "demon_unused",
+      "bonus_enemy",
+      "hand_or_door",
+      "hand",
+      "divine"
+    ])
+      && radiantArm.deathRatePermille === 200
+      && radiantArm.criticalChancePermille === 100
+      && radiantArm.attackNpRatePermille === 1000
+      && radiantArm.targetNpRatePermille === 1000
+      && radiantArm.targetStarRatePermille === 0
+      && JSON.stringify(radiantArm.nonServantUnusedAttackFields) === JSON.stringify({
+        attackNpUnits: 0,
+        receivedNpUnits: 0,
+        starRatePermille: 0,
+        starWeight: 0,
+        commandCardHitWeights: null,
+        extraAttackHitWeights: null,
+        noblePhantasms: []
+      }),
+    "黎明の炎腕（剣）の特性・基礎率が一致しません"
+  );
+  assert(
+    radiantArm.maxActions === 1
+      && JSON.stringify(radiantArm.skills) === JSON.stringify([])
+      && JSON.stringify(radiantArm.normalAttack) === JSON.stringify({
+        stableId: "radiant-arm-of-dawn-saber-normal-attack",
+        targetScope: "single",
+        targetPolicy: "random_living_ally_frontline",
+        cardType: "quick",
+        hitWeights: [100],
+        cardDamageValuePermille: 1000
+      }),
+    "黎明の炎腕（剣）の行動上限・通常攻撃・スキルが一致しません"
+  );
+  assert(
+    JSON.stringify(radiantArm.chargeAttack) === JSON.stringify({
+      name: "業火",
+      stableId: "radiant-arm-of-dawn-saber-charge-attack",
+      targetScope: "single",
+      targetPolicy: "random_living_ally_frontline",
+      cardType: "arts",
+      hitWeights: [100],
+      damageMultiplierPermille: 6000,
+      chargeMax: 4,
+      levelScaling: "fixed",
+      overchargeScaling: "none"
+    }),
+    "業火はArts・単体・1Hit・固定600%・チャージ最大4でなければなりません"
+  );
+  assert(
+    radiantArm.sourceCheckedAt === "2026-08-10"
+      && radiantArm.implementationStatus === "specification_only",
+    "初期敵は参照確認日を持つ未実装仕様でなければなりません"
+  );
+
+  const initialEnemyEncounter = manifest.initialContent?.initialEnemyEncounter ?? {};
+  assert(
+    initialEnemyEncounter.dataId === "ember-gathering-saber-extreme"
+      && initialEnemyEncounter.activeMode === 3
+      && initialEnemyEncounter.replacementMode === "standard"
+      && initialEnemyEncounter.reserveCount === 0
+      && initialEnemyEncounter.breakGaugeCount === 0,
+    "極級初期戦闘は3体モード・控えなし・ブレイクなしでなければなりません"
+  );
+  const expectedEnemyPlacements = [
+    [
+      ["enemy-w1-1", "A", 1, 23, 27849, 4561],
+      ["enemy-w1-2", "B", 2, 22, 26649, 4401],
+      ["enemy-w1-3", "C", 3, 24, 29049, 4721]
+    ],
+    [
+      ["enemy-w2-1", "A", 1, 25, 37811, 4881],
+      ["enemy-w2-2", "B", 2, 26, 39311, 5041],
+      ["enemy-w2-3", "C", 3, 27, 40811, 5201]
+    ],
+    [
+      ["enemy-w3-1", "A", 1, 45, 136216, 8113]
+    ]
+  ];
+  const actualEnemyPlacements = (initialEnemyEncounter.waves ?? []).map((wave) =>
+    wave.map((enemy) => [
+      enemy.instanceId,
+      enemy.encounterLabel,
+      enemy.frontlineSlot,
+      enemy.level,
+      enemy.hp,
+      enemy.attack
+    ])
+  );
+  assert(
+    JSON.stringify(actualEnemyPlacements) === JSON.stringify(expectedEnemyPlacements),
+    "極級3 Wave・7個体の配置・Lv・HP・ATKが一致しません"
+  );
+  assert(
+    (initialEnemyEncounter.waves ?? []).flat().every((enemy) =>
+      enemy.enemyDataId === "radiant-arm-of-dawn-saber" && enemy.charge === 0
+    )
+      && initialEnemyEncounter.sourceCheckedAt === "2026-08-10"
+      && initialEnemyEncounter.implementationStatus === "specification_only",
+    "極級7個体は同じ敵dataId・開始チャージ0の未実装仕様でなければなりません"
+  );
+
   const docs = manifest.canonicalDocuments ?? [];
   assert(new Set(docs).size === docs.length, "canonicalDocuments に重複があります");
   for (const path of docs) {
@@ -682,6 +820,9 @@ const initialContent = await readText("docs/specs/INITIAL_CONTENT.md");
 assert(initialContent.includes("カレイドスコープ"), "初期データ仕様にカレイドスコープがありません");
 assert(initialContent.includes("黒の聖杯"), "初期データ仕様に黒の聖杯がありません");
 assert(initialContent.includes("同じ概念礼装`dataId`を複数"), "初期データ仕様に概念礼装の重複装備規則がありません");
+assert(initialContent.includes("radiant-arm-of-dawn-saber"), "初期データ仕様に黎明の炎腕（剣）の安定IDがありません");
+assert(initialContent.includes("136,216"), "初期データ仕様に極級Wave 3のHPがありません");
+assert(initialContent.includes("敵ターン終了時"), "初期データ仕様に敵通常チャージの時期がありません");
 
 const archiveReadme = await readText("docs/archive/README.md");
 assert(archiveReadme.includes("IMPLEMENTATION_STATUS_v1.0.0.md"), "実装状況の履歴アーカイブへの案内がありません");
