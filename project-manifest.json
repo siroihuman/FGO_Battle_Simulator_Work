@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.35.0",
-  "status": "initial-enemy-specification-next",
+  "status": "initial-enemy-data-next",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -53,6 +53,16 @@
     "stopCommandSequenceWithoutEnemyTarget": true,
     "enemyPriorityBeforeNormalPlan": true,
     "enemyDefaultActionPolicy": "full_np_else_normal_attack",
+    "enemyDataSchemaVersion": 1,
+    "enemyDataIdentity": "stable_project_id",
+    "enemyEncounterIdentity": "battle_instance_id",
+    "enemyDefinitionAndEncounterSeparated": true,
+    "enemyRandomSingleTargetPolicy": "random_living_ally_frontline",
+    "enemyRandomSingleTargetRng": "ai",
+    "enemyCriticalRng": "critical",
+    "enemyChargeIncreaseTiming": "enemy_turn_end",
+    "enemyChargeIncreasePerTurn": 1,
+    "enemyReserveProgressionPaused": true,
     "enemyReplacementInheritsPlannedSlots": false,
     "stopEnemySequenceOnAllyAnnihilation": true,
     "damageRandomDrawsPerAllowedTarget": 1,
@@ -354,13 +364,176 @@
         "source": "https://appmedia.jp/fategrandorder/103128",
         "implementationStatus": "implemented"
       }
-    ]
+    ],
+    "enemies": [
+      {
+        "name": "黎明の炎腕",
+        "dataId": "radiant-arm-of-dawn-saber",
+        "externalIds": {
+          "atlasAcademyServantId": 9933710,
+          "atlasAcademyAiId": 1000000
+        },
+        "category": "normal_enemy",
+        "classKey": "saber",
+        "attributeKey": "sky",
+        "classAttackCoefficientPermille": 1000,
+        "traits": [
+          "demon_unused",
+          "bonus_enemy",
+          "hand_or_door",
+          "hand",
+          "divine"
+        ],
+        "deathRatePermille": 200,
+        "criticalChancePermille": 100,
+        "attackNpRatePermille": 1000,
+        "targetNpRatePermille": 1000,
+        "targetStarRatePermille": 0,
+        "nonServantUnusedAttackFields": {
+          "attackNpUnits": 0,
+          "receivedNpUnits": 0,
+          "starRatePermille": 0,
+          "starWeight": 0,
+          "commandCardHitWeights": null,
+          "extraAttackHitWeights": null,
+          "noblePhantasms": []
+        },
+        "maxActions": 1,
+        "normalAttack": {
+          "stableId": "radiant-arm-of-dawn-saber-normal-attack",
+          "targetScope": "single",
+          "targetPolicy": "random_living_ally_frontline",
+          "cardType": "quick",
+          "hitWeights": [
+            100
+          ],
+          "cardDamageValuePermille": 1000
+        },
+        "skills": [],
+        "chargeAttack": {
+          "name": "業火",
+          "stableId": "radiant-arm-of-dawn-saber-charge-attack",
+          "targetScope": "single",
+          "targetPolicy": "random_living_ally_frontline",
+          "cardType": "arts",
+          "hitWeights": [
+            100
+          ],
+          "damageMultiplierPermille": 6000,
+          "chargeMax": 4,
+          "levelScaling": "fixed",
+          "overchargeScaling": "none"
+        },
+        "sources": [
+          "https://w.atwiki.jp/f_go/pages/145.html",
+          "https://w.atwiki.jp/f_go/pages/304.html",
+          "https://api.atlasacademy.io/nice/JP/servant/9933710",
+          "https://api.atlasacademy.io/nice/JP/ai/svt/1000000"
+        ],
+        "sourceCheckedAt": "2026-08-10",
+        "implementationStatus": "specification_only"
+      }
+    ],
+    "initialEnemyEncounter": {
+      "name": "種火集め（剣基準）極級",
+      "dataId": "ember-gathering-saber-extreme",
+      "activeMode": 3,
+      "replacementMode": "standard",
+      "reserveCount": 0,
+      "breakGaugeCount": 0,
+      "source": "https://w.atwiki.jp/f_go/pages/185.html",
+      "sourceCheckedAt": "2026-08-10",
+      "waves": [
+        [
+          {
+            "instanceId": "enemy-w1-1",
+            "enemyDataId": "radiant-arm-of-dawn-saber",
+            "encounterLabel": "A",
+            "frontlineSlot": 1,
+            "level": 23,
+            "hp": 27849,
+            "attack": 4561,
+            "charge": 0
+          },
+          {
+            "instanceId": "enemy-w1-2",
+            "enemyDataId": "radiant-arm-of-dawn-saber",
+            "encounterLabel": "B",
+            "frontlineSlot": 2,
+            "level": 22,
+            "hp": 26649,
+            "attack": 4401,
+            "charge": 0
+          },
+          {
+            "instanceId": "enemy-w1-3",
+            "enemyDataId": "radiant-arm-of-dawn-saber",
+            "encounterLabel": "C",
+            "frontlineSlot": 3,
+            "level": 24,
+            "hp": 29049,
+            "attack": 4721,
+            "charge": 0
+          }
+        ],
+        [
+          {
+            "instanceId": "enemy-w2-1",
+            "enemyDataId": "radiant-arm-of-dawn-saber",
+            "encounterLabel": "A",
+            "frontlineSlot": 1,
+            "level": 25,
+            "hp": 37811,
+            "attack": 4881,
+            "charge": 0
+          },
+          {
+            "instanceId": "enemy-w2-2",
+            "enemyDataId": "radiant-arm-of-dawn-saber",
+            "encounterLabel": "B",
+            "frontlineSlot": 2,
+            "level": 26,
+            "hp": 39311,
+            "attack": 5041,
+            "charge": 0
+          },
+          {
+            "instanceId": "enemy-w2-3",
+            "enemyDataId": "radiant-arm-of-dawn-saber",
+            "encounterLabel": "C",
+            "frontlineSlot": 3,
+            "level": 27,
+            "hp": 40811,
+            "attack": 5201,
+            "charge": 0
+          }
+        ],
+        [
+          {
+            "instanceId": "enemy-w3-1",
+            "enemyDataId": "radiant-arm-of-dawn-saber",
+            "encounterLabel": "A",
+            "frontlineSlot": 1,
+            "level": 45,
+            "hp": 136216,
+            "attack": 8113,
+            "charge": 0
+          }
+        ]
+      ],
+      "implementationStatus": "specification_only"
+    }
   },
   "referenceSources": [
     "https://w.atwiki.jp/f_go/pages/304.html",
     "https://w.atwiki.jp/f_go/pages/2030.html",
     "https://w.atwiki.jp/f_go/pages/145.html",
     "https://w.atwiki.jp/f_go/pages/955.html",
-    "https://w.atwiki.jp/f_go/pages/4673.html"
+    "https://w.atwiki.jp/f_go/pages/4673.html",
+    "https://w.atwiki.jp/f_go/pages/185.html",
+    "https://api.atlasacademy.io/nice/JP/servant/9933710",
+    "https://api.atlasacademy.io/nice/JP/ai/svt/1000000",
+    "https://appget.com/c/fgo/296867/fate-346/",
+    "https://faq.fate-go.jp/faq/show/1319"
   ]
 }
