@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.36.0",
-  "status": "initial-battle-ui-implemented",
+  "dataSchemaVersion": "1.37.0",
+  "status": "active-skill-ui-session-implemented",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -113,8 +113,8 @@
     "criticalRatePermillePerStar": 100,
     "commandStarDistributionRng": "critical",
     "fixedCriticalRatesConsumeRng": false,
-    "battleLogSchemaVersion": 4,
-    "battleLogGranularity": "completed_action",
+    "battleLogSchemaVersion": 5,
+    "battleLogGranularity": "completed_action_or_ally_input_action",
     "battleLogIncludes": [
       "outcome",
       "calculation",
@@ -124,6 +124,7 @@
       "departures",
       "arrivals",
       "retargeting",
+      "direct_ally_exchange",
       "rng_audit"
     ],
     "battleLogJsonSerializable": true,
@@ -162,7 +163,7 @@
       "battle_outcome"
     ],
     "battleTurnLogJsonSerializable": true,
-    "battleSuspendSchemaVersion": 3,
+    "battleSuspendSchemaVersion": 4,
     "battleSuspendBoundaries": [
       "ally_input",
       "battle_finished"
@@ -177,17 +178,27 @@
       "mystic_code_data",
       "loadout_selection",
       "operation_history",
+      "input_action_logs",
       "accumulated_turn_logs"
     ],
     "battleSuspendResume": "direct_snapshot_restore",
+    "battleSuspendLegacyMigration": "schema_3_to_4_direct_snapshot_restore",
+    "legacyInputActionLogs": "unavailable_and_marked_incomplete",
     "battleReplay": "initial_snapshot_and_json_operations_verified_against_saved_state_rng_and_logs",
     "battleReplayFunctionAi": "reject_before_state_or_rng_change",
     "initialBattleUiDataSource": "registered_initial_data_only",
     "initialBattleUiSessionAdapter": "src/ui/initialBattle.ts",
-    "initialBattleUiBattleExecution": "battle_session_card_operations",
-    "initialBattleUiLogSource": "saved_battle_turn_log_and_battle_log_batch",
+    "initialBattleUiBattleExecution": "battle_session_card_and_active_skill_operations",
+    "initialBattleUiLogSource": "saved_input_action_logs_and_battle_turn_logs",
     "initialBattleUiSuspendFlow": "serialize_parse_and_direct_restore",
     "initialBattleUiRecalculatesBattleValues": false,
+    "activeSkillUiRecalculatesEffectsTargetsOrCooldowns": false,
+    "allySkillOperationsSavedAndReplayed": true,
+    "inputActionLogBatchKind": "ally_input",
+    "inputActionLogKinds": [
+      "ally_skill",
+      "mystic_code_skill"
+    ],
     "battleLoadoutInitialization": "before_first_command_draw",
     "battleLoadoutSelectionIncludes": [
       "mystic_code_data_id",

@@ -19,6 +19,9 @@ import type {
   EnemyTargetAnchor,
 } from "./actionBoundary";
 import type {
+  DirectAllyExchangeEvent,
+} from "./replacement";
+import type {
   BattleAttackSequenceResolution,
 } from "./attackSequence";
 import type {
@@ -35,16 +38,19 @@ import {
   type RngStreamName,
 } from "../rng";
 
-export const BATTLE_LOG_SCHEMA_VERSION = 4 as const;
+export const BATTLE_LOG_SCHEMA_VERSION = 5 as const;
 
 export type BattleLogBatchKind =
   | "ally_command"
+  | "ally_input"
   | "enemy_turn";
 
 export type BattleLogActionKind =
   | "normal_command"
   | "noble_phantasm"
   | "extra_attack"
+  | "ally_skill"
+  | "mystic_code_skill"
   | "enemy_normal_attack"
   | "enemy_skill"
   | "enemy_noble_phantasm";
@@ -81,7 +87,7 @@ export interface BattleLogRngCapture<T> {
 
 export interface BattleLogActionDescriptor {
   kind: BattleLogActionKind;
-  stage: "selected" | "extra" | "priority" | "normal";
+  stage: "input" | "selected" | "extra" | "priority" | "normal";
   sequence: number;
   stableId: string | null;
   name: string | null;
@@ -341,6 +347,13 @@ export interface BattleLogBoundary {
     unit: BattleLogUnitRef;
   }>;
   enemyReplacementDeferred: boolean;
+  directAllyExchange: {
+    frontlineIndex: number;
+    reserveIndex: number;
+    frontline: BattleLogUnitRef;
+    reserve: BattleLogUnitRef;
+    cardDeckRebuilt: false;
+  } | null;
   targetTransition: BattleLogTargetTransition;
 }
 
@@ -390,6 +403,7 @@ export interface CreateBattleActionLogEntryInput {
   declaredEffectGroups?: readonly DeclaredActionEffectGroupResult[];
   attackSequence: BattleAttackSequenceResolution | null;
   boundary: ActionBoundaryResult;
+  directAllyExchange?: DirectAllyExchangeEvent | null;
   rngEvents?: readonly BattleLogRngEvent[];
 }
 
@@ -834,6 +848,7 @@ function targetTransition(
 function boundaryLog(
   boundary: ActionBoundaryResult,
   unitIndex: BattleLogUnitIndex,
+  directAllyExchange: DirectAllyExchangeEvent | null = null,
 ): BattleLogBoundary {
   return {
     allyReplacements: boundary.allyReplacement.events.map((event) => ({
@@ -870,6 +885,21 @@ function boundaryLog(
     ),
     enemyReplacementDeferred:
       boundary.enemyReplacement.replacementDeferred,
+    directAllyExchange: directAllyExchange
+      ? {
+          frontlineIndex: directAllyExchange.frontlineIndex,
+          reserveIndex: directAllyExchange.reserveIndex,
+          frontline: battleLogUnitRef(
+            unitIndex,
+            directAllyExchange.frontlineInstanceId,
+          ),
+          reserve: battleLogUnitRef(
+            unitIndex,
+            directAllyExchange.reserveInstanceId,
+          ),
+          cardDeckRebuilt: false,
+        }
+      : null,
     targetTransition: targetTransition(
       boundary.previousEnemyTarget,
       boundary.nextEnemyTarget,
@@ -908,7 +938,11 @@ export function createBattleActionLogEntry(
           input.unitIndex,
         )
       : null,
-    boundary: boundaryLog(input.boundary, input.unitIndex),
+    boundary: boundaryLog(
+      input.boundary,
+      input.unitIndex,
+      input.directAllyExchange ?? null,
+    ),
     rngEvents: [...(input.rngEvents ?? [])],
   };
 }

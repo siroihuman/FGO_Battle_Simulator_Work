@@ -186,7 +186,7 @@ describe("versioned battle action log", () => {
     const first = log.entries[0];
 
     expect(log).toMatchObject({
-      schemaVersion: 4,
+      schemaVersion: 5,
       kind: "ally_command",
       status: "completed",
       context: {

@@ -238,12 +238,12 @@ if (manifest) {
     "クリティカル率0%・100%は乱数を消費してはいけません"
   );
   assert(
-    manifest.coreRules.battleLogSchemaVersion === 4,
-    "戦闘ログ形式バージョンは4でなければなりません"
+    manifest.coreRules.battleLogSchemaVersion === 5,
+    "戦闘ログ形式バージョンは5でなければなりません"
   );
   assert(
-    manifest.coreRules.battleLogGranularity === "completed_action",
-    "戦闘ログは完了済み1行動単位で記録しなければなりません"
+    manifest.coreRules.battleLogGranularity === "completed_action_or_ally_input_action",
+    "戦闘ログは完了済み1行動または味方入力操作単位で記録しなければなりません"
   );
   assert(
     JSON.stringify(manifest.coreRules.battleLogIncludes) === JSON.stringify([
@@ -255,6 +255,7 @@ if (manifest) {
       "departures",
       "arrivals",
       "retargeting",
+      "direct_ally_exchange",
       "rng_audit"
     ]),
     "戦闘ログの必須詳細が一致しません"
@@ -327,6 +328,21 @@ if (manifest) {
   assert(
     manifest.coreRules.battleTurnLogJsonSerializable === true,
     "1戦闘ターンログはJSONへ保存可能でなければなりません"
+  );
+  assert(
+    manifest.coreRules.battleSuspendSchemaVersion === 4
+      && manifest.coreRules.battleSuspendResume === "direct_snapshot_restore"
+      && manifest.coreRules.battleSuspendLegacyMigration
+        === "schema_3_to_4_direct_snapshot_restore",
+    "中断保存形式4は直接再開し、形式3を再実行せず移行しなければなりません"
+  );
+  assert(
+    manifest.coreRules.allySkillOperationsSavedAndReplayed === true
+      && manifest.coreRules.mysticCodeOperationsSavedAndReplayed === true
+      && manifest.coreRules.inputActionLogBatchKind === "ally_input"
+      && JSON.stringify(manifest.coreRules.inputActionLogKinds)
+        === JSON.stringify(["ally_skill", "mystic_code_skill"]),
+    "味方能動スキル操作は入力境界ログ・保存・リプレイへ統合しなければなりません"
   );
   assert(
     manifest.coreRules.servantDataSchemaVersion === 1,

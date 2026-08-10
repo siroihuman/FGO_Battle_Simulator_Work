@@ -93,6 +93,17 @@ function actionChanges(entry: BattleActionLogEntry): string[] {
   if (entry.boundary.targetTransition.outcome === "retargeted") {
     changes.push("対象変更");
   }
+  if (entry.boundary.directAllyExchange) {
+    changes.push(
+      `${unitName(
+        entry.boundary.directAllyExchange.frontline.name,
+        entry.boundary.directAllyExchange.frontline.instanceId,
+      )} ↔ ${unitName(
+        entry.boundary.directAllyExchange.reserve.name,
+        entry.boundary.directAllyExchange.reserve.instanceId,
+      )}`,
+    );
+  }
   return changes;
 }
 
@@ -182,4 +193,11 @@ export function summarizeBattleTurnLogs(
         : [summarizeTurnEnd(record)]
     )
   );
+}
+
+/** Presents input-boundary skill batches in their saved operation order. */
+export function summarizeBattleInputLogs(
+  inputLogs: readonly BattleLogBatch[],
+): BattleLogSummary[] {
+  return inputLogs.flatMap(summarizeBattleLogBatch);
 }

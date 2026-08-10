@@ -1,5 +1,7 @@
 import type { EnemyPrioritySkillRequest } from "../../ai/enemyTurn";
 import {
+  battleActionEffectSequence,
+  combatantActionEffectData,
   createBattleActionEffectDataRegistry,
   type BattleActionEffectDataRegistry,
   type CombatantActionEffectData,
@@ -10,6 +12,10 @@ import {
   type MysticCodeOrderChangeSelection,
   type MysticCodeSkillUseResult,
 } from "../../effects/mysticCodeExecution";
+import {
+  resolveAllySkillUse,
+  type AllySkillUseResult,
+} from "../../effects/skillExecution";
 import {
   createMysticCodeDataRegistry,
   mysticCodeDefinition,
@@ -34,6 +40,19 @@ import type {
 } from "./battleTurn";
 import type { BattleTurnLog } from "./turnLog";
 import {
+  BATTLE_LOG_SCHEMA_VERSION,
+  battleLogBatchId,
+  captureBattleLogRng,
+  createBattleActionLogEntry,
+  createBattleLogContext,
+  createBattleLogUnitIndex,
+  type BattleLogBatch,
+  type BattleLogUnitRef,
+} from "./log";
+import type { ActionBoundaryResult } from "./actionBoundary";
+import { findUnitLocation } from "./formation";
+import type { DirectAllyExchangeEvent } from "./replacement";
+import {
   assertBattleLoadoutState,
   type BattleState,
 } from "./state";
@@ -44,11 +63,14 @@ import {
 } from "../rng";
 
 /** Increment only with an explicit migration or replay compatibility policy. */
-export const BATTLE_SUSPEND_SCHEMA_VERSION = 3 as const;
+export const BATTLE_SUSPEND_SCHEMA_VERSION = 4 as const;
 export const BATTLE_SUSPEND_SPEC_VERSION = "1.0.0" as const;
-export const BATTLE_SUSPEND_DATA_SCHEMA_VERSION = "1.36.0" as const;
-export const BATTLE_LOG_SCHEMA_VERSION = 4 as const;
+export const BATTLE_SUSPEND_DATA_SCHEMA_VERSION = "1.37.0" as const;
 export const BATTLE_TURN_LOG_SCHEMA_VERSION = 2 as const;
+
+const LEGACY_BATTLE_SUSPEND_SCHEMA_VERSION = 3 as const;
+const LEGACY_BATTLE_SUSPEND_DATA_SCHEMA_VERSION = "1.36.0" as const;
+const LEGACY_BATTLE_LOG_SCHEMA_VERSION = 4 as const;
 
 export interface BattleReplayTurnInput {
   cardIds: string[];
@@ -65,8 +87,16 @@ export interface BattleReplayMysticCodeSkillInput {
   orderChange?: MysticCodeOrderChangeSelection;
 }
 
+export interface BattleReplayAllySkillInput {
+  kind: "ally_skill";
+  sourceInstanceId: string;
+  skillStableId: string;
+  selectedTargetInstanceId?: string;
+}
+
 export type BattleReplayOperation =
   | BattleReplayTurnInput
+  | BattleReplayAllySkillInput
   | BattleReplayMysticCodeSkillInput;
 
 export interface BattleSessionInitialSnapshot {
@@ -82,6 +112,8 @@ export interface BattleSession {
   mysticCodeRegistry?: MysticCodeDataRegistry;
   initial: BattleSessionInitialSnapshot;
   operationHistory: BattleReplayOperation[];
+  inputLogs: BattleLogBatch[];
+  inputLogsComplete: boolean;
   turnLogs: BattleTurnLog[];
 }
 
@@ -102,6 +134,11 @@ export interface BattleSessionTurnResult {
 export interface BattleSessionMysticCodeSkillResult {
   session: BattleSession;
   result: MysticCodeSkillUseResult;
+}
+
+export interface BattleSessionAllySkillResult {
+  session: BattleSession;
+  result: AllySkillUseResult;
 }
 
 interface BattleRegistrySaveData {
@@ -138,6 +175,8 @@ export interface BattleSuspendSave {
   actionEffectData?: BattleActionEffectRegistrySaveData;
   mysticCodeData?: BattleMysticCodeRegistrySaveData;
   operationHistory: BattleReplayOperation[];
+  inputLogs: BattleLogBatch[];
+  inputLogsComplete: boolean;
   turnLogs: BattleTurnLog[];
 }
 
@@ -268,18 +307,49 @@ function normalizeReplayMysticCodeSkillInput(
   return cloneJson(input);
 }
 
+function normalizeReplayAllySkillInput(
+  input: BattleReplayAllySkillInput,
+): BattleReplayAllySkillInput {
+  if (
+    input.kind !== "ally_skill"
+    || typeof input.sourceInstanceId !== "string"
+    || input.sourceInstanceId.length === 0
+    || typeof input.skillStableId !== "string"
+    || input.skillStableId.length === 0
+  ) {
+    throw new RangeError("battle replay ally skill input is invalid");
+  }
+  if (
+    input.selectedTargetInstanceId !== undefined
+    && typeof input.selectedTargetInstanceId !== "string"
+  ) {
+    throw new RangeError("battle replay ally skill target is invalid");
+  }
+  return cloneJson(input);
+}
+
 function isMysticCodeOperation(
   operation: BattleReplayOperation,
 ): operation is BattleReplayMysticCodeSkillInput {
   return "kind" in operation && operation.kind === "mystic_code_skill";
 }
 
+function isAllySkillOperation(
+  operation: BattleReplayOperation,
+): operation is BattleReplayAllySkillInput {
+  return "kind" in operation && operation.kind === "ally_skill";
+}
+
 function normalizeReplayOperation(
   operation: BattleReplayOperation,
 ): BattleReplayOperation {
-  return isMysticCodeOperation(operation)
-    ? normalizeReplayMysticCodeSkillInput(operation)
-    : normalizeReplayTurnInput(operation);
+  if (isMysticCodeOperation(operation)) {
+    return normalizeReplayMysticCodeSkillInput(operation);
+  }
+  if (isAllySkillOperation(operation)) {
+    return normalizeReplayAllySkillInput(operation);
+  }
+  return normalizeReplayTurnInput(operation);
 }
 
 function assertReplayableEnemyOptions(
@@ -313,6 +383,8 @@ function createSessionFromInitial(
     ...(mysticCodeRegistry ? { mysticCodeRegistry } : {}),
     initial: initialCopy,
     operationHistory: [],
+    inputLogs: [],
+    inputLogsComplete: true,
     turnLogs: [],
   };
 }
@@ -372,32 +444,195 @@ export function resolveBattleSessionTurn(
   return { session: nextSession, result };
 }
 
-/** Resolves and records one Mystic Code skill operation for save/replay. */
-export function resolveBattleSessionMysticCodeSkill(
+function unchangedInputBoundary(state: BattleState): ActionBoundaryResult {
+  if (state.phase !== "ally_action") {
+    throw new RangeError("ally input log requires the ally action phase");
+  }
+  return {
+    state,
+    phase: "ally_action",
+    allyReplacement: {
+      state,
+      events: [],
+      cardDeckRebuildRequired: false,
+    },
+    enemyReplacement: {
+      state,
+      departures: [],
+      arrivals: [],
+      replacementDeferred: false,
+    },
+    previousEnemyTarget: null,
+    nextEnemyTarget: null,
+  };
+}
+
+function uniqueInstanceIds(values: readonly string[]): string[] {
+  return [...new Set(values)];
+}
+
+interface CreateInputActionLogInput {
+  session: BattleSession;
+  afterState: BattleState;
+  actor: {
+    instanceId: string;
+    dataId: string | null;
+    name: string | null;
+    side: "ally";
+  };
+  actionKind: "ally_skill" | "mystic_code_skill";
+  stableId: string;
+  name: string | null;
+  accepted: boolean;
+  rejectionReason?: string;
+  targetInstanceIds: readonly string[];
+  declaredEffects?: Parameters<typeof createBattleActionLogEntry>[0]["declaredEffectGroups"];
+  boundary?: ActionBoundaryResult;
+  directAllyExchange?: DirectAllyExchangeEvent | null;
+  rngEvents: Parameters<typeof createBattleActionLogEntry>[0]["rngEvents"];
+}
+
+function createInputActionLog(
+  input: CreateInputActionLogInput,
+): BattleLogBatch {
+  const context = createBattleLogContext(input.session.loop.state);
+  const operationNumber = input.session.operationHistory.length + 1;
+  const batchId = `${battleLogBatchId(context, "ally_input")}:operation-${operationNumber}`;
+  const unitIndex = new Map<string, BattleLogUnitRef>(
+    createBattleLogUnitIndex(input.session.loop.state, input.afterState),
+  );
+  unitIndex.set(input.actor.instanceId, input.actor);
+  const entry = createBattleActionLogEntry({
+    batchId,
+    context,
+    unitIndex,
+    side: "ally",
+    actionNumber: operationNumber,
+    actorInstanceId: input.actor.instanceId,
+    action: {
+      kind: input.actionKind,
+      stage: "input",
+      sequence: operationNumber,
+      stableId: input.stableId,
+      name: input.name,
+      cardId: null,
+      cardType: null,
+    },
+    outcome: input.accepted
+      ? { status: "resolved", reasons: [], resolverCalled: true }
+      : {
+          status: "fizzled",
+          reasons: input.rejectionReason ? [input.rejectionReason] : [],
+          resolverCalled: false,
+        },
+    targetInstanceIds: uniqueInstanceIds(input.targetInstanceIds),
+    calculation: null,
+    overchargeStage: null,
+    critical: null,
+    declaredEffectGroups: input.declaredEffects ?? [],
+    attackSequence: null,
+    boundary: input.boundary ?? unchangedInputBoundary(input.session.loop.state),
+    directAllyExchange: input.directAllyExchange ?? null,
+    rngEvents: input.rngEvents,
+  });
+  return {
+    schemaVersion: BATTLE_LOG_SCHEMA_VERSION,
+    batchId,
+    kind: "ally_input",
+    context,
+    status: input.accepted ? "completed" : "rejected",
+    stopReason: input.accepted
+      ? "input_action_resolved"
+      : (input.rejectionReason ?? "input_action_rejected"),
+    setupRngEvents: [],
+    entries: [entry],
+  };
+}
+
+function allySkillName(
   session: BattleSession,
-  input: BattleReplayMysticCodeSkillInput,
-): BattleSessionMysticCodeSkillResult {
-  const operation = normalizeReplayMysticCodeSkillInput(input);
-  const result = session.mysticCodeRegistry
-    ? resolveMysticCodeSkillUse({
-        state: session.loop.state,
-        registry: session.mysticCodeRegistry,
-        skillStableId: operation.skillStableId,
-        ...(operation.selectedTargetInstanceId === undefined
-          ? {}
-          : { selectedTargetInstanceId: operation.selectedTargetInstanceId }),
-        ...(operation.orderChange
-          ? { orderChange: operation.orderChange }
-          : {}),
-        counters: session.loop.counters,
-        rng: session.loop.rng.stream("effects"),
-      })
-    : {
-        accepted: false as const,
-        reason: "action_data_missing" as const,
-        state: session.loop.state,
-        counters: session.loop.counters,
-      };
+  input: BattleReplayAllySkillInput,
+): string | null {
+  const source = findUnitLocation(
+    session.loop.state.formation,
+    input.sourceInstanceId,
+  )?.unit;
+  if (!source || !session.actionEffectRegistry) return null;
+  const combatant = combatantActionEffectData(
+    session.actionEffectRegistry,
+    source,
+  );
+  return combatant
+    ? battleActionEffectSequence(combatant, input.skillStableId)?.name ?? null
+    : null;
+}
+
+/** Resolves, logs, and records one active Servant skill operation. */
+export function resolveBattleSessionAllySkill(
+  session: BattleSession,
+  input: BattleReplayAllySkillInput,
+): BattleSessionAllySkillResult {
+  const operation = normalizeReplayAllySkillInput(input);
+  const actionName = allySkillName(session, operation);
+  const captured = captureBattleLogRng(
+    { effects: session.loop.rng.stream("effects") },
+    () => session.actionEffectRegistry
+      ? resolveAllySkillUse({
+          state: session.loop.state,
+          registry: session.actionEffectRegistry,
+          sourceInstanceId: operation.sourceInstanceId,
+          skillStableId: operation.skillStableId,
+          ...(operation.selectedTargetInstanceId === undefined
+            ? {}
+            : { selectedTargetInstanceId: operation.selectedTargetInstanceId }),
+          counters: session.loop.counters,
+          rng: session.loop.rng.stream("effects"),
+        })
+      : {
+          accepted: false as const,
+          reason: "action_data_missing" as const,
+          state: session.loop.state,
+          counters: session.loop.counters,
+        },
+  );
+  const result = captured.result;
+  const targetInstanceIds = result.accepted
+    ? result.effects.effects.flatMap(({ targetInstanceIds: targets }) => targets)
+    : operation.selectedTargetInstanceId
+      ? [operation.selectedTargetInstanceId]
+      : [];
+  const inputLog = createInputActionLog({
+    session,
+    afterState: result.state,
+    actor: {
+      instanceId: operation.sourceInstanceId,
+      dataId: findUnitLocation(
+        session.loop.state.formation,
+        operation.sourceInstanceId,
+      )?.unit.dataId ?? null,
+      name: findUnitLocation(
+        session.loop.state.formation,
+        operation.sourceInstanceId,
+      )?.unit.name ?? null,
+      side: "ally",
+    },
+    actionKind: "ally_skill",
+    stableId: operation.skillStableId,
+    name: result.accepted ? result.skill.name : actionName,
+    accepted: result.accepted,
+    ...(!result.accepted ? { rejectionReason: result.reason } : {}),
+    targetInstanceIds,
+    ...(result.accepted
+      ? {
+          declaredEffects: [{
+            phase: "non_damaging" as const,
+            result: result.effects,
+          }],
+          boundary: result.boundary,
+        }
+      : {}),
+    rngEvents: captured.events,
+  });
   return {
     session: {
       ...session,
@@ -407,6 +642,106 @@ export function resolveBattleSessionMysticCodeSkill(
         counters: result.counters,
       },
       operationHistory: [...session.operationHistory, operation],
+      inputLogs: [...session.inputLogs, inputLog],
+    },
+    result,
+  };
+}
+
+/** Resolves and records one Mystic Code skill operation for save/replay. */
+export function resolveBattleSessionMysticCodeSkill(
+  session: BattleSession,
+  input: BattleReplayMysticCodeSkillInput,
+): BattleSessionMysticCodeSkillResult {
+  const operation = normalizeReplayMysticCodeSkillInput(input);
+  const selectedMysticCode = session.loop.state.loadout.mysticCode;
+  const definition = selectedMysticCode && session.mysticCodeRegistry
+    ? mysticCodeDefinition(
+        session.mysticCodeRegistry,
+        selectedMysticCode.dataId,
+      )
+    : null;
+  const actionName = definition?.skills.find(
+    ({ stableId }) => stableId === operation.skillStableId,
+  )?.name ?? null;
+  const captured = captureBattleLogRng(
+    { effects: session.loop.rng.stream("effects") },
+    () => session.mysticCodeRegistry
+      ? resolveMysticCodeSkillUse({
+          state: session.loop.state,
+          registry: session.mysticCodeRegistry,
+          skillStableId: operation.skillStableId,
+          ...(operation.selectedTargetInstanceId === undefined
+            ? {}
+            : { selectedTargetInstanceId: operation.selectedTargetInstanceId }),
+          ...(operation.orderChange
+            ? { orderChange: operation.orderChange }
+            : {}),
+          counters: session.loop.counters,
+          rng: session.loop.rng.stream("effects"),
+        })
+      : {
+          accepted: false as const,
+          reason: "action_data_missing" as const,
+          state: session.loop.state,
+          counters: session.loop.counters,
+        },
+  );
+  const result = captured.result;
+  const targetInstanceIds = result.accepted
+    ? result.execution === "effects"
+      ? result.effects.effects.flatMap(({ targetInstanceIds: targets }) => targets)
+      : [
+          result.exchange.event.frontlineInstanceId,
+          result.exchange.event.reserveInstanceId,
+        ]
+    : operation.orderChange
+      ? [
+          operation.orderChange.frontlineInstanceId,
+          operation.orderChange.reserveInstanceId,
+        ]
+      : operation.selectedTargetInstanceId
+        ? [operation.selectedTargetInstanceId]
+        : [];
+  const actorInstanceId = `mystic-code:${selectedMysticCode?.dataId ?? "unselected"}`;
+  const inputLog = createInputActionLog({
+    session,
+    afterState: result.state,
+    actor: {
+      instanceId: actorInstanceId,
+      dataId: selectedMysticCode?.dataId ?? null,
+      name: selectedMysticCode?.name ?? null,
+      side: "ally",
+    },
+    actionKind: "mystic_code_skill",
+    stableId: operation.skillStableId,
+    name: result.accepted ? result.skill.name : actionName,
+    accepted: result.accepted,
+    ...(!result.accepted ? { rejectionReason: result.reason } : {}),
+    targetInstanceIds,
+    ...(result.accepted
+      ? {
+          declaredEffects: result.execution === "effects"
+            ? [{ phase: "non_damaging" as const, result: result.effects }]
+            : [],
+          boundary: result.boundary,
+          directAllyExchange: result.execution === "order_change"
+            ? result.exchange.event
+            : null,
+        }
+      : {}),
+    rngEvents: captured.events,
+  });
+  return {
+    session: {
+      ...session,
+      loop: {
+        ...session.loop,
+        state: result.state,
+        counters: result.counters,
+      },
+      operationHistory: [...session.operationHistory, operation],
+      inputLogs: [...session.inputLogs, inputLog],
     },
     result,
   };
@@ -434,12 +769,91 @@ export function createBattleSuspendSave(
       ? { mysticCodeData: saveMysticCodeData(session.mysticCodeRegistry) }
       : {}),
     operationHistory: session.operationHistory.map(normalizeReplayOperation),
+    inputLogs: session.inputLogs,
+    inputLogsComplete: session.inputLogsComplete,
     turnLogs: session.turnLogs,
   });
 }
 
 export function serializeBattleSuspendSave(session: BattleSession): string {
   return JSON.stringify(createBattleSuspendSave(session));
+}
+
+interface LegacyBattleSuspendSave extends Omit<
+  BattleSuspendSave,
+  | "schemaVersion"
+  | "dataSchemaVersion"
+  | "battleLogSchemaVersion"
+  | "inputLogs"
+  | "inputLogsComplete"
+> {
+  schemaVersion: typeof LEGACY_BATTLE_SUSPEND_SCHEMA_VERSION;
+  dataSchemaVersion: typeof LEGACY_BATTLE_SUSPEND_DATA_SCHEMA_VERSION;
+  battleLogSchemaVersion: typeof LEGACY_BATTLE_LOG_SCHEMA_VERSION;
+}
+
+function assertLegacySaveHeader(save: LegacyBattleSuspendSave): void {
+  if (
+    save.kind !== "battle_suspend"
+    || save.schemaVersion !== LEGACY_BATTLE_SUSPEND_SCHEMA_VERSION
+    || save.specVersion !== BATTLE_SUSPEND_SPEC_VERSION
+    || save.dataSchemaVersion !== LEGACY_BATTLE_SUSPEND_DATA_SCHEMA_VERSION
+    || save.rngAlgorithmVersion !== RNG_ALGORITHM_VERSION
+    || save.battleLogSchemaVersion !== LEGACY_BATTLE_LOG_SCHEMA_VERSION
+    || save.battleTurnLogSchemaVersion !== BATTLE_TURN_LOG_SCHEMA_VERSION
+  ) {
+    throw new RangeError("unsupported legacy battle suspend format");
+  }
+}
+
+function upgradeLegacyBattleLogBatch(batch: BattleLogBatch): BattleLogBatch {
+  const legacy = cloneJson(batch) as unknown as {
+    schemaVersion: number;
+    entries: Array<{
+      schemaVersion: number;
+      boundary: Record<string, unknown>;
+    }>;
+  };
+  legacy.schemaVersion = BATTLE_LOG_SCHEMA_VERSION;
+  legacy.entries = legacy.entries.map((entry) => ({
+    ...entry,
+    schemaVersion: BATTLE_LOG_SCHEMA_VERSION,
+    boundary: {
+      ...entry.boundary,
+      directAllyExchange: null,
+    },
+  }));
+  return legacy as unknown as BattleLogBatch;
+}
+
+/**
+ * Migrates format 3 without re-running effects or transitions. Historical
+ * input-action logs did not exist in that format and remain explicitly
+ * incomplete after migration.
+ */
+function migrateLegacyBattleSuspendSave(
+  legacy: LegacyBattleSuspendSave,
+): BattleSuspendSave {
+  assertLegacySaveHeader(legacy);
+  return cloneJson({
+    ...legacy,
+    schemaVersion: BATTLE_SUSPEND_SCHEMA_VERSION,
+    dataSchemaVersion: BATTLE_SUSPEND_DATA_SCHEMA_VERSION,
+    battleLogSchemaVersion: BATTLE_LOG_SCHEMA_VERSION,
+    inputLogs: [],
+    inputLogsComplete: false,
+    turnLogs: legacy.turnLogs.map((turnLog) => ({
+      ...turnLog,
+      records: turnLog.records.map((record) =>
+        record.recordType === "action_batch"
+          ? {
+              ...record,
+              batch: upgradeLegacyBattleLogBatch(record.batch),
+            }
+          : record
+      ),
+    })),
+  });
 }
 
 function assertSaveHeader(save: BattleSuspendSave): void {
@@ -466,6 +880,30 @@ function assertSaveHeader(save: BattleSuspendSave): void {
   }
 }
 
+function assertInputActionLogs(save: BattleSuspendSave): void {
+  if (!Array.isArray(save.inputLogs) || typeof save.inputLogsComplete !== "boolean") {
+    throw new RangeError("battle input-action logs are invalid");
+  }
+  for (const batch of save.inputLogs) {
+    const entry = batch.entries?.[0];
+    if (
+      batch.schemaVersion !== BATTLE_LOG_SCHEMA_VERSION
+      || batch.kind !== "ally_input"
+      || !Array.isArray(batch.entries)
+      || batch.entries.length !== 1
+      || entry?.schemaVersion !== BATTLE_LOG_SCHEMA_VERSION
+      || entry.side !== "ally"
+      || entry.action.stage !== "input"
+      || (
+        entry.action.kind !== "ally_skill"
+        && entry.action.kind !== "mystic_code_skill"
+      )
+    ) {
+      throw new RangeError("battle input-action log batch is invalid");
+    }
+  }
+}
+
 function assertInputBoundarySnapshot(snapshot: BattleLoopSuspendSnapshot): void {
   assertCounters(snapshot.counters);
   BattleRng.restore(snapshot.rng);
@@ -489,6 +927,7 @@ function assertInputBoundarySnapshot(snapshot: BattleLoopSuspendSnapshot): void 
  */
 export function restoreBattleSession(save: BattleSuspendSave): BattleSession {
   assertSaveHeader(save);
+  assertInputActionLogs(save);
   assertInputBoundarySnapshot(save.initial);
   assertInputBoundarySnapshot(save.current);
   const registry = createBattleAttackDataRegistry(
@@ -520,6 +959,8 @@ export function restoreBattleSession(save: BattleSuspendSave): BattleSession {
     ...(mysticCodeRegistry ? { mysticCodeRegistry } : {}),
     initial: cloneJson(save.initial),
     operationHistory: history,
+    inputLogs: cloneJson(save.inputLogs),
+    inputLogsComplete: save.inputLogsComplete,
     turnLogs: logs,
   };
 }
@@ -535,13 +976,35 @@ export function parseBattleSuspendSave(serialized: string): BattleSuspendSave {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new RangeError("battle suspend save must be an object");
   }
+  if (
+    (parsed as { schemaVersion?: unknown }).schemaVersion
+      === LEGACY_BATTLE_SUSPEND_SCHEMA_VERSION
+  ) {
+    return migrateLegacyBattleSuspendSave(
+      parsed as LegacyBattleSuspendSave,
+    );
+  }
   const save = parsed as BattleSuspendSave;
   assertSaveHeader(save);
+  assertInputActionLogs(save);
   return cloneJson(save);
 }
 
+function canonicalJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+        .map(([key, nested]) => [key, canonicalJson(nested)]),
+    );
+  }
+  return value;
+}
+
 function sameJson(left: unknown, right: unknown): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return JSON.stringify(canonicalJson(left))
+    === JSON.stringify(canonicalJson(right));
 }
 
 /**
@@ -559,18 +1022,35 @@ export function replayBattleSession(save: BattleSuspendSave): BattleSession {
     restored.mysticCodeRegistry,
   );
   for (const operation of restored.operationHistory) {
-    replayed = isMysticCodeOperation(operation)
-      ? resolveBattleSessionMysticCodeSkill(replayed, operation).session
-      : resolveBattleSessionTurn(replayed, operation).session;
+    if (isMysticCodeOperation(operation)) {
+      replayed = resolveBattleSessionMysticCodeSkill(
+        replayed,
+        operation,
+      ).session;
+    } else if (isAllySkillOperation(operation)) {
+      replayed = resolveBattleSessionAllySkill(replayed, operation).session;
+    } else {
+      replayed = resolveBattleSessionTurn(replayed, operation).session;
+    }
   }
   const expected = cloneLoopSnapshot(restored.loop);
   const actual = cloneLoopSnapshot(replayed.loop);
+  if (!sameJson(actual, expected)) {
+    throw new RangeError(
+      "battle replay diverged from the saved state or RNG snapshot",
+    );
+  }
+  if (!sameJson(replayed.turnLogs, restored.turnLogs)) {
+    throw new RangeError(
+      "battle replay diverged from the saved completed-turn logs",
+    );
+  }
   if (
-    !sameJson(actual, expected)
-    || !sameJson(replayed.turnLogs, restored.turnLogs)
+    restored.inputLogsComplete
+    && !sameJson(replayed.inputLogs, restored.inputLogs)
   ) {
     throw new RangeError(
-      "battle replay diverged from the saved state or accumulated logs",
+      "battle replay diverged from the saved input-action logs",
     );
   }
   return replayed;

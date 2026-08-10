@@ -7,6 +7,8 @@ import {
 import { listCommandCardChoices } from "./core/cards/selection";
 import {
   parseBattleSuspendSave,
+  resolveBattleSessionAllySkill,
+  resolveBattleSessionMysticCodeSkill,
   resolveBattleSessionTurn,
   restoreBattleSession,
   serializeBattleSuspendSave,
@@ -30,6 +32,7 @@ import {
 import type { NoblePhantasmLevel } from "./formulas/np";
 import {
   presentBattleStatus,
+  summarizeBattleInputLogs,
   summarizeBattleTurnLogs,
 } from "./ui/battlePresentation";
 import {
@@ -56,6 +59,29 @@ const SELECTION_REASON_LABELS = {
   duplicate_card: "同じカードが重複しています。",
   card_not_available: "現在使用できないカードが含まれています。",
   noble_phantasm_unavailable: "その宝具は現在使用できません。",
+} as const;
+
+const ALLY_SKILL_REASON_LABELS = {
+  invalid_phase: "現在はサーヴァントスキルを使用できません。",
+  source_unavailable: "使用者が生存する前衛ではありません。",
+  action_data_missing: "スキルの実行データが見つかりません。",
+  not_a_skill: "選択した行動はサーヴァントスキルではありません。",
+  skill_on_cooldown: "スキルのCTが残っています。",
+  selected_target_required: "対象を選択してください。",
+  selected_target_invalid: "選択した対象には使用できません。",
+  unresolved_effects: "未対応効果を含むため、何も変更せず不発になりました。",
+} as const;
+
+const MYSTIC_CODE_REASON_LABELS = {
+  invalid_phase: "現在は魔術礼装スキルを使用できません。",
+  mystic_code_unselected: "魔術礼装が選択されていません。",
+  action_data_missing: "魔術礼装スキルの実行データが見つかりません。",
+  skill_on_cooldown: "魔術礼装スキルのCTが残っています。",
+  selected_target_required: "対象を選択してください。",
+  selected_target_invalid: "選択した対象には使用できません。",
+  order_change_targets_required: "交換する前衛と控えを選択してください。",
+  order_change_targets_invalid: "選択した前衛と控えは交換できません。",
+  unresolved_effects: "未対応効果を含むため、何も変更せず不発になりました。",
 } as const;
 
 function isInitialBattleSetup(value: unknown): value is InitialBattleSetup {
@@ -455,6 +481,231 @@ function UnitPanel({
   );
 }
 
+export function SkillControls({
+  session,
+  onSessionChange,
+  onMessage,
+}: {
+  session: BattleSession;
+  onSessionChange: (session: BattleSession) => void;
+  onMessage: (message: string) => void;
+}) {
+  const ally = session.loop.state.formation.ally;
+  const livingFrontline = ally.frontline.flatMap((unit) =>
+    unit?.alive ? [unit] : []
+  );
+  const livingReserve = ally.reserve.filter((unit) => unit.alive);
+  const [selectedTargetInstanceId, setSelectedTargetInstanceId] = useState(
+    () => livingFrontline[0]?.instanceId ?? "",
+  );
+  const [orderChangeFrontlineId, setOrderChangeFrontlineId] = useState(
+    () => livingFrontline[0]?.instanceId ?? "",
+  );
+  const [orderChangeReserveId, setOrderChangeReserveId] = useState(
+    () => livingReserve[0]?.instanceId ?? "",
+  );
+
+  useEffect(() => {
+    const frontlineIds = livingFrontline.map(({ instanceId }) => instanceId);
+    const reserveIds = livingReserve.map(({ instanceId }) => instanceId);
+    if (!frontlineIds.includes(selectedTargetInstanceId)) {
+      setSelectedTargetInstanceId(frontlineIds[0] ?? "");
+    }
+    if (!frontlineIds.includes(orderChangeFrontlineId)) {
+      setOrderChangeFrontlineId(frontlineIds[0] ?? "");
+    }
+    if (!reserveIds.includes(orderChangeReserveId)) {
+      setOrderChangeReserveId(reserveIds[0] ?? "");
+    }
+  }, [
+    livingFrontline,
+    livingReserve,
+    selectedTargetInstanceId,
+    orderChangeFrontlineId,
+    orderChangeReserveId,
+  ]);
+
+  function useAllySkill(
+    sourceInstanceId: string,
+    skillStableId: string,
+    skillName: string,
+  ) {
+    const resolved = resolveBattleSessionAllySkill(session, {
+      kind: "ally_skill",
+      sourceInstanceId,
+      skillStableId,
+      ...(selectedTargetInstanceId
+        ? { selectedTargetInstanceId }
+        : {}),
+    });
+    onSessionChange(resolved.session);
+    onMessage(resolved.result.accepted
+      ? `${skillName}が成立しました。`
+      : ALLY_SKILL_REASON_LABELS[resolved.result.reason]);
+  }
+
+  function useMysticCodeSkill(
+    skillStableId: string,
+    skillName: string,
+    execution: "effects" | "order_change",
+  ) {
+    const resolved = resolveBattleSessionMysticCodeSkill(session, {
+      kind: "mystic_code_skill",
+      skillStableId,
+      ...(execution === "effects" && selectedTargetInstanceId
+        ? { selectedTargetInstanceId }
+        : {}),
+      ...(execution === "order_change"
+        && orderChangeFrontlineId
+        && orderChangeReserveId
+        ? {
+            orderChange: {
+              frontlineInstanceId: orderChangeFrontlineId,
+              reserveInstanceId: orderChangeReserveId,
+            },
+          }
+        : {}),
+    });
+    onSessionChange(resolved.session);
+    onMessage(resolved.result.accepted
+      ? `${skillName}が成立しました。`
+      : MYSTIC_CODE_REASON_LABELS[resolved.result.reason]);
+  }
+
+  const mysticCode = session.loop.state.loadout.mysticCode;
+  const mysticCodeDefinition = mysticCode
+    ? session.mysticCodeRegistry?.byDataId[mysticCode.dataId] ?? null
+    : null;
+
+  return (
+    <section className="panel skill-panel" aria-labelledby="skill-heading">
+      <div className="section-heading">
+        <div>
+          <p className="section-kicker">SKILL</p>
+          <h2 id="skill-heading">スキル操作</h2>
+        </div>
+        <span className="badge">カード行動を消費しません</span>
+      </div>
+      <p className="muted">
+        使用可否、対象、CT、効果はBattleSessionが判定します。
+        一度成立したスキルは取り消せません。
+      </p>
+      <label className="skill-target-field">
+        味方単体の選択対象
+        <select
+          aria-label="スキル対象"
+          value={selectedTargetInstanceId}
+          onChange={(event) => setSelectedTargetInstanceId(event.target.value)}
+        >
+          <option value="">対象未選択</option>
+          {livingFrontline.map((unit, index) => (
+            <option key={unit.instanceId} value={unit.instanceId}>
+              前衛{index + 1}：{unit.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="skill-groups">
+        {livingFrontline.map((unit, frontlineIndex) => {
+          const actionData = session.actionEffectRegistry
+            ?.byInstanceId[unit.instanceId];
+          const skills = actionData?.actions
+            .filter((action) => action.kind === "skill")
+            .sort((left, right) =>
+              (left.skillSlot ?? 0) - (right.skillSlot ?? 0)
+            ) ?? [];
+          return (
+            <article className="skill-group" key={unit.instanceId}>
+              <h3>前衛{frontlineIndex + 1}：{unit.name}</h3>
+              <div className="skill-button-list">
+                {skills.map((skill) => {
+                  const slot = skill.skillSlot ?? 1;
+                  const currentCooldown = unit.skillCooldowns[slot - 1] ?? 0;
+                  return (
+                    <button
+                      type="button"
+                      key={skill.stableId}
+                      onClick={() => useAllySkill(
+                        unit.instanceId,
+                        skill.stableId,
+                        skill.name,
+                      )}
+                    >
+                      <strong>スキル{slot}：{skill.name}</strong>
+                      <span>現在CT {currentCooldown}／使用時CT {skill.cooldownAtMax ?? 0}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </article>
+          );
+        })}
+
+        {mysticCodeDefinition && (
+          <article className="skill-group mystic-skill-group">
+            <h3>魔術礼装：{mysticCodeDefinition.name}</h3>
+            {mysticCodeDefinition.skills.some(
+              ({ execution }) => execution === "order_change",
+            ) && (
+              <div className="order-change-fields">
+                <label>
+                  交換する前衛
+                  <select
+                    value={orderChangeFrontlineId}
+                    onChange={(event) => setOrderChangeFrontlineId(event.target.value)}
+                  >
+                    <option value="">前衛未選択</option>
+                    {livingFrontline.map((unit, index) => (
+                      <option key={unit.instanceId} value={unit.instanceId}>
+                        前衛{index + 1}：{unit.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  交換する控え
+                  <select
+                    value={orderChangeReserveId}
+                    onChange={(event) => setOrderChangeReserveId(event.target.value)}
+                  >
+                    <option value="">控え未選択</option>
+                    {livingReserve.map((unit, index) => (
+                      <option key={unit.instanceId} value={unit.instanceId}>
+                        控え{index + 1}：{unit.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
+            <div className="skill-button-list">
+              {mysticCodeDefinition.skills.map((skill) => {
+                const currentCooldown = session.loop.state
+                  .mysticCodeCooldowns[skill.slot - 1] ?? 0;
+                return (
+                  <button
+                    type="button"
+                    key={skill.stableId}
+                    onClick={() => useMysticCodeSkill(
+                      skill.stableId,
+                      skill.name,
+                      skill.execution,
+                    )}
+                  >
+                    <strong>スキル{skill.slot}：{skill.name}</strong>
+                    <span>現在CT {currentCooldown}／使用時CT {skill.cooldownAtMax}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </article>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function firstLivingEnemyId(session: BattleSession): string {
   return session.loop.state.formation.enemy.frontline.find(
     (unit) => unit?.alive,
@@ -463,11 +714,61 @@ function firstLivingEnemyId(session: BattleSession): string {
 
 function BattleLogs({ session }: { session: BattleSession }) {
   const [newestFirst, setNewestFirst] = useState(true);
-  const summaries = useMemo(
+  const turnSummaries = useMemo(
     () => summarizeBattleTurnLogs(session.turnLogs),
     [session.turnLogs],
   );
-  const displayed = newestFirst ? [...summaries].reverse() : summaries;
+  const inputSummaries = useMemo(
+    () => summarizeBattleInputLogs(session.inputLogs),
+    [session.inputLogs],
+  );
+  const displayedTurns = newestFirst
+    ? [...turnSummaries].reverse()
+    : turnSummaries;
+  const displayedInputs = newestFirst
+    ? [...inputSummaries].reverse()
+    : inputSummaries;
+
+  function logEntries(
+    summaries: ReturnType<typeof summarizeBattleTurnLogs>,
+    emptyMessage: string,
+  ) {
+    if (summaries.length === 0) {
+      return <p className="muted">{emptyMessage}</p>;
+    }
+    return (
+      <div className="log-list">
+        {summaries.map((summary) => (
+          <details key={summary.id} className="log-entry">
+            <summary>
+              <span>
+                <strong>{summary.title}</strong>
+                <small>{summary.status}</small>
+              </span>
+              <span className="log-facts">
+                {summary.targetNames.length > 0
+                  ? `対象: ${summary.targetNames.join("、")}`
+                  : "対象なし"}
+                {summary.actualHpLoss !== null
+                  ? ` · 実HP減少 ${summary.actualHpLoss.toLocaleString()}`
+                  : ""}
+                {summary.critical !== null
+                  ? ` · ${summary.critical ? "クリティカル" : "非クリティカル"}`
+                  : ""}
+              </span>
+              {summary.changes.length > 0 && (
+                <span className="log-changes">{summary.changes.join(" / ")}</span>
+              )}
+            </summary>
+            <div className="log-detail">
+              <p>保存済み確定結果（詳細）</p>
+              <pre>{JSON.stringify(summary.detail, null, 2)}</pre>
+            </div>
+          </details>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <section className="panel" aria-labelledby="battle-log-heading">
@@ -485,40 +786,19 @@ function BattleLogs({ session }: { session: BattleSession }) {
           新しい順
         </label>
       </div>
-      {displayed.length === 0 ? (
-        <p className="muted">成立したターンのログはまだありません。</p>
-      ) : (
-        <div className="log-list">
-          {displayed.map((summary) => (
-            <details key={summary.id} className="log-entry">
-              <summary>
-                <span>
-                  <strong>{summary.title}</strong>
-                  <small>{summary.status}</small>
-                </span>
-                <span className="log-facts">
-                  {summary.targetNames.length > 0
-                    ? `対象: ${summary.targetNames.join("、")}`
-                    : "対象なし"}
-                  {summary.actualHpLoss !== null
-                    ? ` · 実HP減少 ${summary.actualHpLoss.toLocaleString()}`
-                    : ""}
-                  {summary.critical !== null
-                    ? ` · ${summary.critical ? "クリティカル" : "非クリティカル"}`
-                    : ""}
-                </span>
-                {summary.changes.length > 0 && (
-                  <span className="log-changes">{summary.changes.join(" / ")}</span>
-                )}
-              </summary>
-              <div className="log-detail">
-                <p>保存済み確定結果（詳細）</p>
-                <pre>{JSON.stringify(summary.detail, null, 2)}</pre>
-              </div>
-            </details>
-          ))}
-        </div>
-      )}
+      <div className="log-section">
+        <h3>スキル操作ログ</h3>
+        {!session.inputLogsComplete && (
+          <p className="legacy-log-note">
+            旧形式3から移行した保存には、移行前のスキル確定ログがありません。
+          </p>
+        )}
+        {logEntries(displayedInputs, "スキル操作ログはまだありません。")}
+      </div>
+      <div className="log-section">
+        <h3>戦闘ターンログ</h3>
+        {logEntries(displayedTurns, "成立したターンのログはまだありません。")}
+      </div>
     </section>
   );
 }
@@ -749,6 +1029,14 @@ function BattleScreen({
             : ""}
         </p>
       </section>
+
+      {state.outcome === "ongoing" && (
+        <SkillControls
+          session={session}
+          onSessionChange={onSessionChange}
+          onMessage={setOperationMessage}
+        />
+      )}
 
       {state.outcome === "ongoing" ? (
         <section className="panel command-panel" aria-labelledby="command-heading">

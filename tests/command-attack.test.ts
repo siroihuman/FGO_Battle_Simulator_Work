@@ -696,7 +696,7 @@ describe("ally command data-to-attack integration", () => {
         ],
       }],
     });
-    expect(resolved.battleLog.schemaVersion).toBe(4);
+    expect(resolved.battleLog.schemaVersion).toBe(5);
     expect(replay.battleLog).toEqual(resolved.battleLog);
     expect(replay.sequence).toEqual(resolved.sequence);
   });
