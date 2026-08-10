@@ -1,0 +1,316 @@
+import {
+  createBattleAttackDataRegistry,
+} from "../core/battle/actionData";
+import {
+  initializeBattleLoadout,
+  type BattleLoadoutSelection,
+} from "../core/battle/loadout";
+import {
+  createBattleSession,
+  type BattleSession,
+} from "../core/battle/session";
+import { createBattleState } from "../core/battle/state";
+import { BattleRng } from "../core/rng";
+import {
+  INITIAL_CRAFT_ESSENCE_REGISTRY,
+} from "../data/craftEssences";
+import {
+  EMBER_GATHERING_SABER_EXTREME,
+  INITIAL_ENEMY_ENCOUNTER_REGISTRY,
+  INITIAL_ENEMY_REGISTRY,
+  createEnemyEncounterBattleData,
+  enemyEncounterDefinition,
+} from "../data/enemies";
+import {
+  INITIAL_MYSTIC_CODE_REGISTRY,
+} from "../data/mysticCodes";
+import {
+  INITIAL_SERVANT_DEFINITIONS,
+  createServantBattleInstance,
+  createServantDataRegistry,
+  servantDefinition,
+  type ServantLevel,
+} from "../data/servants";
+import {
+  createBattleActionEffectDataRegistry,
+} from "../effects/actionData";
+import { createEffectRuntimeCounters } from "../effects/runtime";
+import type { NoblePhantasmLevel } from "../formulas/np";
+
+export const INITIAL_ENEMY_ENCOUNTER_DATA_ID =
+  EMBER_GATHERING_SABER_EXTREME.dataId;
+
+export const INITIAL_SERVANT_REGISTRY = createServantDataRegistry(
+  INITIAL_SERVANT_DEFINITIONS,
+);
+
+export interface InitialAllySlotSelection {
+  servantDataId: string | null;
+  level: ServantLevel | null;
+  noblePhantasmLevel: NoblePhantasmLevel | null;
+  craftEssenceDataId: string | null;
+}
+
+export interface InitialBattleSetup {
+  frontline: InitialAllySlotSelection[];
+  reserve: InitialAllySlotSelection[];
+  mysticCodeDataId: string | null;
+  enemyEncounterDataId: string;
+  seed: string;
+}
+
+export interface InitialBattleSetupValidation {
+  valid: boolean;
+  errors: string[];
+}
+
+interface CompleteAllySelection {
+  instanceId: string;
+  servantDataId: string;
+  level: ServantLevel;
+  noblePhantasmLevel: NoblePhantasmLevel;
+  craftEssenceDataId: string | null;
+}
+
+export function emptyInitialAllySlot(): InitialAllySlotSelection {
+  return {
+    servantDataId: null,
+    level: null,
+    noblePhantasmLevel: null,
+    craftEssenceDataId: null,
+  };
+}
+
+export function createEmptyInitialBattleSetup(): InitialBattleSetup {
+  return {
+    frontline: Array.from({ length: 3 }, emptyInitialAllySlot),
+    reserve: Array.from({ length: 3 }, emptyInitialAllySlot),
+    mysticCodeDataId: null,
+    enemyEncounterDataId: INITIAL_ENEMY_ENCOUNTER_DATA_ID,
+    seed: "",
+  };
+}
+
+function validateAllySlot(
+  slot: InitialAllySlotSelection,
+  label: string,
+  required: boolean,
+): string[] {
+  if (!slot.servantDataId) {
+    const errors = required ? [`${label}のサーヴァントは必須です。`] : [];
+    if (
+      slot.level !== null
+      || slot.noblePhantasmLevel !== null
+      || slot.craftEssenceDataId !== null
+    ) {
+      errors.push(`${label}はサーヴァント未選択のため、個体設定を保持できません。`);
+    }
+    return errors;
+  }
+
+  const definition = servantDefinition(
+    INITIAL_SERVANT_REGISTRY,
+    slot.servantDataId,
+  );
+  if (!definition) {
+    return [`${label}のサーヴァントが登録されていません。`];
+  }
+
+  const errors: string[] = [];
+  if (
+    slot.level === null
+    || !definition.levelStats.some(({ level }) => level === slot.level)
+  ) {
+    errors.push(`${label}のLvを登録済み候補から選択してください。`);
+  }
+  if (
+    slot.noblePhantasmLevel === null
+    || !([1, 2, 3, 4, 5] as const).includes(slot.noblePhantasmLevel)
+  ) {
+    errors.push(`${label}の宝具Lvを1～5から選択してください。`);
+  }
+  if (
+    slot.craftEssenceDataId !== null
+    && !INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId[slot.craftEssenceDataId]
+  ) {
+    errors.push(`${label}の概念礼装が登録されていません。`);
+  }
+  return errors;
+}
+
+/**
+ * Validates only setup structure and registry membership. Battle values and
+ * effects remain owned by the data adapters and the battle engine.
+ */
+export function validateInitialBattleSetup(
+  setup: InitialBattleSetup,
+): InitialBattleSetupValidation {
+  const errors: string[] = [];
+  if (setup.frontline.length !== 3) {
+    errors.push("前衛は3枠で指定してください。");
+  }
+  if (setup.reserve.length > 3) {
+    errors.push("控えは3枠以下で指定してください。");
+  }
+  setup.frontline.forEach((slot, index) => {
+    errors.push(...validateAllySlot(slot, `前衛${index + 1}`, true));
+  });
+  setup.reserve.forEach((slot, index) => {
+    errors.push(...validateAllySlot(slot, `控え${index + 1}`, false));
+  });
+
+  if (
+    !setup.mysticCodeDataId
+    || !INITIAL_MYSTIC_CODE_REGISTRY.byDataId[setup.mysticCodeDataId]
+  ) {
+    errors.push("登録済み魔術礼装を1着選択してください。");
+  }
+  if (
+    setup.enemyEncounterDataId !== INITIAL_ENEMY_ENCOUNTER_DATA_ID
+    || !enemyEncounterDefinition(
+      INITIAL_ENEMY_ENCOUNTER_REGISTRY,
+      setup.enemyEncounterDataId,
+    )
+  ) {
+    errors.push("初期敵設定が登録済みの極級データと一致しません。");
+  }
+  if (setup.seed.trim().length === 0) {
+    errors.push("固定シードを入力してください。");
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+function completeAllySelections(
+  setup: InitialBattleSetup,
+): CompleteAllySelection[] {
+  const selections: CompleteAllySelection[] = [];
+  setup.frontline.forEach((slot, index) => {
+    if (
+      !slot.servantDataId
+      || slot.level === null
+      || slot.noblePhantasmLevel === null
+    ) {
+      throw new RangeError(`frontline ${index + 1} is incomplete`);
+    }
+    selections.push({
+      instanceId: `ally-frontline-${index + 1}`,
+      servantDataId: slot.servantDataId,
+      level: slot.level,
+      noblePhantasmLevel: slot.noblePhantasmLevel,
+      craftEssenceDataId: slot.craftEssenceDataId,
+    });
+  });
+  setup.reserve.forEach((slot, index) => {
+    if (!slot.servantDataId) return;
+    if (slot.level === null || slot.noblePhantasmLevel === null) {
+      throw new RangeError(`reserve ${index + 1} is incomplete`);
+    }
+    selections.push({
+      instanceId: `ally-reserve-${index + 1}`,
+      servantDataId: slot.servantDataId,
+      level: slot.level,
+      noblePhantasmLevel: slot.noblePhantasmLevel,
+      craftEssenceDataId: slot.craftEssenceDataId,
+    });
+  });
+  return selections;
+}
+
+/**
+ * Converts registered initial content into one BattleSession. Loadout
+ * initialization is completed exactly once before createBattleSession draws
+ * the initial five-card hand.
+ */
+export function createInitialBattleSession(
+  setup: InitialBattleSetup,
+): BattleSession {
+  const validation = validateInitialBattleSetup(setup);
+  if (!validation.valid) {
+    throw new RangeError(validation.errors.join("\n"));
+  }
+
+  const selections = completeAllySelections(setup);
+  const allyInstances = selections.map((selection) => {
+    const definition = servantDefinition(
+      INITIAL_SERVANT_REGISTRY,
+      selection.servantDataId,
+    );
+    if (!definition) {
+      throw new RangeError(
+        `selected servant is not registered: ${selection.servantDataId}`,
+      );
+    }
+    const instance = createServantBattleInstance(definition, {
+      instanceId: selection.instanceId,
+      level: selection.level,
+      noblePhantasmLevel: selection.noblePhantasmLevel,
+    });
+    if (instance.unresolvedEffectStableIds.length > 0) {
+      throw new RangeError(
+        `selected servant has unresolved effects: ${instance.unresolvedEffectStableIds.join(", ")}`,
+      );
+    }
+    return instance;
+  });
+
+  const encounter = enemyEncounterDefinition(
+    INITIAL_ENEMY_ENCOUNTER_REGISTRY,
+    setup.enemyEncounterDataId,
+  );
+  if (!encounter) {
+    throw new RangeError(
+      `selected enemy encounter is not registered: ${setup.enemyEncounterDataId}`,
+    );
+  }
+  const enemyBattleData = createEnemyEncounterBattleData(
+    INITIAL_ENEMY_REGISTRY,
+    encounter,
+  );
+  const state = createBattleState({
+    ally: {
+      frontline: allyInstances.slice(0, 3).map(({ unit }) => unit),
+      reserve: allyInstances.slice(3).map(({ unit }) => unit),
+    },
+    waves: enemyBattleData.waves,
+    enemyFrontlineLimit: encounter.activeMode,
+    enemyReplacementMode: encounter.replacementMode,
+  });
+  const attackRegistry = createBattleAttackDataRegistry([
+    ...allyInstances.map(({ attackData }) => attackData),
+    ...enemyBattleData.attackData,
+  ]);
+  const actionEffectRegistry = createBattleActionEffectDataRegistry([
+    ...allyInstances.map(({ actionEffectData }) => actionEffectData),
+    ...enemyBattleData.actionEffectData,
+  ]);
+  const selection: BattleLoadoutSelection = {
+    mysticCodeDataId: setup.mysticCodeDataId,
+    craftEssenceDataIdByInstanceId: Object.fromEntries(
+      selections.flatMap(({ instanceId, craftEssenceDataId }) =>
+        craftEssenceDataId === null
+          ? []
+          : [[instanceId, craftEssenceDataId]],
+      ),
+    ),
+  };
+  const rng = new BattleRng(setup.seed);
+  const initialized = initializeBattleLoadout({
+    state,
+    rng,
+    counters: createEffectRuntimeCounters(),
+    attackRegistry,
+    actionEffectRegistry,
+    mysticCodeRegistry: INITIAL_MYSTIC_CODE_REGISTRY,
+    craftEssenceRegistry: INITIAL_CRAFT_ESSENCE_REGISTRY,
+    selection,
+  });
+
+  return createBattleSession({
+    state: initialized.state,
+    rng,
+    counters: initialized.counters,
+    registry: initialized.attackRegistry,
+    actionEffectRegistry: initialized.actionEffectRegistry,
+    mysticCodeRegistry: INITIAL_MYSTIC_CODE_REGISTRY,
+  });
+}
