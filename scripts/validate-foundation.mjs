@@ -390,6 +390,47 @@ if (manifest) {
     "味方能動スキル操作は入力境界ログ・保存・リプレイへ統合しなければなりません"
   );
   assert(
+    manifest.status === "mage-association-uniform-specified"
+      && manifest.dataSchemaVersion === "1.38.0"
+      && manifest.coreRules.battleSuspendSchemaVersion === 4,
+    "魔術協会制服の仕様確定では保存形式4・データ1.38.0を変更してはいけません"
+  );
+  assert(
+    JSON.stringify(manifest.specifiedContent?.mysticCodes)
+      === JSON.stringify([{
+        name: "魔術協会制服",
+        dataId: "mage-association-uniform",
+        schemaVersion: 2,
+        levelPolicy: "max",
+        implementationStatus: "specified_not_registered",
+        source: "https://w.atwiki.jp/f_go/pages/41.html",
+        sourceCheckedAt: "2026-08-11",
+        skills: [{
+          slot: 1,
+          stableId: "mage-association-full-recovery",
+          name: "全体回復",
+          cooldownAtMax: 12,
+          target: "living_ally_frontline_all",
+          effects: [{ order: 1, action: "heal_hp", amount: 2800 }],
+        }, {
+          slot: 2,
+          stableId: "mage-association-spiritron-transfer",
+          name: "霊子譲渡",
+          cooldownAtMax: 15,
+          target: "selected_living_ally_frontline_single",
+          effects: [{ order: 1, action: "change_np", amount: 2000 }],
+        }, {
+          slot: 3,
+          stableId: "mage-association-command-shuffle",
+          name: "コマンドシャッフル",
+          cooldownAtMax: 15,
+          target: "ally_battlefield_self_no_unit_selection",
+          effects: [{ order: 1, action: "redistribute_command_cards" }],
+        }],
+      }]),
+    "魔術協会制服の形式2後続登録仕様が正本と一致しません"
+  );
+  assert(
     manifest.coreRules.servantDataSchemaVersion === 1,
     "サーヴァントデータ形式バージョンは1でなければなりません"
   );
