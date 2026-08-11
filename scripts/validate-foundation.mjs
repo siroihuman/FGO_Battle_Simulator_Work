@@ -559,9 +559,44 @@ if (manifest) {
     manifest.coreRules.triggerStarGainDestinationRequired === true,
     "トリガーのスター獲得は加算先を必須指定しなければなりません"
   );
+  const turnEndStarGain = manifest.coreRules.turnEndTriggerStarGain;
   assert(
-    manifest.coreRules.turnEndTriggerStarGain === "not_yet_supported",
-    "ターン終了トリガーのスター獲得対応状態が一致しません"
+    manifest.status === "turn-end-trigger-star-gain-specified"
+      && turnEndStarGain.status === "specified_implementation_pending"
+      && JSON.stringify(turnEndStarGain.endingSides) === JSON.stringify([
+        "ally",
+        "enemy"
+      ])
+      && turnEndStarGain.destination === "next_command"
+      && turnEndStarGain.commandDestinationAllowed === false
+      && turnEndStarGain.starCap === 99
+      && turnEndStarGain.candidateSnapshot === "living_frontline_at_turn_end_start"
+      && JSON.stringify(turnEndStarGain.resolutionOrder) === JSON.stringify([
+        "frontline_slot",
+        "owner_trigger_priority",
+        "registration_order",
+        "child_action_order"
+      ])
+      && turnEndStarGain.additionTiming === "immediate_per_child_action_before_hp_settlement_and_later_turn_end_stages"
+      && turnEndStarGain.multipleAdditionPolicy === "sequential_cap_per_action"
+      && turnEndStarGain.reserveActivation === false
+      && turnEndStarGain.newlyFrontlinedDuringPhaseActivation === false
+      && turnEndStarGain.additionConsumesRng === false
+      && turnEndStarGain.parentProbabilityRng === "effects"
+      && JSON.stringify(turnEndStarGain.confirmedLogFields) === JSON.stringify([
+        "bucket",
+        "requested",
+        "before",
+        "added",
+        "after"
+      ])
+      && turnEndStarGain.battleSuspendSchemaChange === false
+      && turnEndStarGain.dataSchemaChange === false
+      && turnEndStarGain.battleLogSchemaChange === false
+      && turnEndStarGain.battleTurnLogSchemaChange === false
+      && turnEndStarGain.uiRecalculates === false
+      && turnEndStarGain.implementationStatus === "specified_not_implemented",
+    "ターン終了トリガーのスター獲得仕様が一致しません"
   );
   assert(
     manifest.coreRules.noblePhantasmCardTypeChangeCategory === "buff",
@@ -649,8 +684,7 @@ if (manifest) {
     "宣言効果ログは実行済み結果から作らなければなりません"
   );
   assert(
-    manifest.status === "enemy-noble-phantasm-context-accepted"
-      && manifest.coreRules.enemyNoblePhantasmScaledDeclaredValues === "accepted",
+    manifest.coreRules.enemyNoblePhantasmScaledDeclaredValues === "accepted",
     "敵宝具の段階文脈は統合受入済みでなければなりません"
   );
   const enemyNpContext = manifest.coreRules.enemyNoblePhantasmContext;
@@ -1024,18 +1058,18 @@ assert(startHere.includes("## 現在地点"), "作業開始ページに現在地
 assert(startHere.includes("## 次の作業"), "作業開始ページに次の作業がありません");
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
-  startHere.includes("敵宝具Lv・OC文脈と段階別宣言値（統合受入合格）")
-    && startHere.includes("ターン終了トリガーによるスター獲得を仕様策定する"),
-  "作業開始ページに敵宝具段階文脈の受入完了と次の仕様作業がありません"
+  startHere.includes("ターン終了トリガーによるスター獲得（仕様確定）")
+    && startHere.includes("ターン終了トリガーによるスター獲得の共通処理を実装する"),
+  "作業開始ページにターン終了スターの仕様確定と次の実装作業がありません"
 );
 
 const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
 assert(implementationStatus.includes("## 現在地点"), "実装状況に現在地点がありません");
 assert(implementationStatus.includes("## 次の実装"), "実装状況に次の実装がありません");
 assert(
-  implementationStatus.includes("D-069")
-    && implementationStatus.includes("形式4・データ1.38.0・敵データ形式1を維持"),
-  "実装状況に敵宝具段階文脈の決定と版判定がありません"
+  implementationStatus.includes("D-073")
+    && implementationStatus.includes("形式4・データ1.38.0・行動ログ形式5を維持"),
+  "実装状況にターン終了スターの決定と版判定がありません"
 );
 
 const decisionLog = await readText("docs/DECISION_LOG.md");
@@ -1043,8 +1077,10 @@ assert(
   decisionLog.includes("## D-069 敵宝具の段階文脈を戦闘個体・行動ごとに明示する")
     && decisionLog.includes("## D-070 次の実装対象を敵宝具段階文脈の共通処理とする")
     && decisionLog.includes("## D-071 次の作業を敵宝具段階文脈の統合受入検査とする")
-    && decisionLog.includes("## D-072 次の仕様化対象をターン終了トリガーによるスター獲得とする"),
-  "決定記録に敵宝具段階文脈の受入と次の仕様作業の決定がありません"
+    && decisionLog.includes("## D-072 次の仕様化対象をターン終了トリガーによるスター獲得とする")
+    && decisionLog.includes("## D-073 ターン終了スター獲得を次回味方コマンド用へ順次加算する")
+    && decisionLog.includes("## D-074 次の実装対象をターン終了スター獲得の共通処理とする"),
+  "決定記録にターン終了スターの仕様と次の実装作業がありません"
 );
 
 const enemyNpAcceptance = await readText(
@@ -1069,12 +1105,40 @@ assert(
     && effectsAndTiming.includes("values[overchargeStage - 1]"),
   "効果仕様に敵宝具段階文脈の宣言・選択規則がありません"
 );
+assert(
+  effectsAndTiming.includes("### ターン終了トリガーのスター獲得")
+    && effectsAndTiming.includes("`destination: next_command`だけを有効な登録")
+    && effectsAndTiming.includes("実加算量0の成立結果"),
+  "効果仕様にターン終了スターの登録・上限・ログ規則がありません"
+);
+
+const battleSystem = await readText("docs/specs/BATTLE_SYSTEM.md");
+assert(
+  battleSystem.includes("### ターン終了トリガーによるスター獲得")
+    && battleSystem.includes("戦闘終了時は繰り上げず"),
+  "戦闘仕様にターン終了スターの順序と繰上げ境界がありません"
+);
+
+const calculationsAndRng = await readText(
+  "docs/specs/CALCULATIONS_AND_RNG.md"
+);
+assert(
+  calculationsAndRng.includes("ターン終了トリガーによるスター獲得も")
+    && calculationsAndRng.includes("他の5乱数列は変更しない"),
+  "計算・乱数仕様にターン終了スターの上限と乱数境界がありません"
+);
 
 const uiAndStorage = await readText("docs/specs/UI_AND_STORAGE.md");
 assert(
   uiAndStorage.includes("敵宝具の任意の宝具Lv・OC文脈")
     && uiAndStorage.includes("UIは段階選択、配列参照、文脈補完"),
   "UI・保存仕様に敵宝具段階文脈の保存と非再計算規則がありません"
+);
+assert(
+  uiAndStorage.includes("ターン終了スター獲得は、ターンログ形式2")
+    && uiAndStorage.includes("中断保存形式4・データ1.38.0・行動ログ形式5・ターンログ形式2を維持")
+    && uiAndStorage.includes("終了時効果、99個上限、次回用繰上げを再実行しない"),
+  "UI・保存仕様にターン終了スターの確定ログと版維持規則がありません"
 );
 const battlePresentation = await readText("src/ui/battlePresentation.ts");
 assert(

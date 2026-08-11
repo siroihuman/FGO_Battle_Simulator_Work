@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "enemy-noble-phantasm-context-accepted",
+  "status": "turn-end-trigger-star-gain-specified",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -338,7 +338,51 @@
     "conditionalAttackTriggerMismatchConsumesUse": false,
     "conditionalAttackTriggerMismatchConsumesRng": false,
     "triggerStarGainDestinationRequired": true,
-    "turnEndTriggerStarGain": "not_yet_supported",
+    "turnEndTriggerStarGain": {
+      "status": "specified_implementation_pending",
+      "endingSides": [
+        "ally",
+        "enemy"
+      ],
+      "destination": "next_command",
+      "commandDestinationAllowed": false,
+      "starCap": 99,
+      "candidateSnapshot": "living_frontline_at_turn_end_start",
+      "resolutionOrder": [
+        "frontline_slot",
+        "owner_trigger_priority",
+        "registration_order",
+        "child_action_order"
+      ],
+      "additionTiming": "immediate_per_child_action_before_hp_settlement_and_later_turn_end_stages",
+      "multipleAdditionPolicy": "sequential_cap_per_action",
+      "reserveActivation": false,
+      "newlyFrontlinedDuringPhaseActivation": false,
+      "unavailableOwnerMutation": "none",
+      "additionConsumesRng": false,
+      "parentProbabilityRng": "effects",
+      "confirmedLog": "battle_turn_log_action_optional_star_addition",
+      "confirmedLogFields": [
+        "bucket",
+        "requested",
+        "before",
+        "added",
+        "after"
+      ],
+      "battleSuspendSchemaChange": false,
+      "dataSchemaChange": false,
+      "battleLogSchemaChange": false,
+      "battleTurnLogSchemaChange": false,
+      "directResume": "restore_saved_state_and_logs_without_turn_end_reexecution",
+      "replayEquality": [
+        "state",
+        "effect_runtime_counters",
+        "six_rng_streams",
+        "turn_logs"
+      ],
+      "uiRecalculates": false,
+      "implementationStatus": "specified_not_implemented"
+    },
     "noblePhantasmCardTypeChangeCategory": "buff",
     "noblePhantasmCardTypeChangeMutatesIntrinsicType": false,
     "noblePhantasmCardTypeChangeOverlapPriority": "latest_registration",
