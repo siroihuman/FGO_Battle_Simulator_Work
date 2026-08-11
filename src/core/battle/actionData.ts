@@ -5,6 +5,14 @@ import type {
 import type {
   NoblePhantasmLevel,
 } from "../../formulas/np";
+import type {
+  DeclaredActionInteger,
+  EnemyNoblePhantasmContext,
+} from "../../effects/declarations";
+import {
+  assertValidDeclaredActionInteger,
+  assertValidEnemyNoblePhantasmContext,
+} from "../../effects/declarations";
 
 export type AttackTargetScope = "single" | "all";
 export type EnemyAttackTargetPolicy =
@@ -49,8 +57,10 @@ export interface EnemyAttackActionData {
   cardDamageValuePermille: number;
   /** Enemy normal-attack critical rate. Enemy NPs must use zero. */
   criticalChancePermille?: number;
-  npDamageMultiplierPermille?: number;
+  npDamageMultiplierPermille?: DeclaredActionInteger;
   npSpecialAttackPermille?: number;
+  /** Enemy-only explicit stages for this NP action. */
+  noblePhantasmContext?: EnemyNoblePhantasmContext;
 }
 
 /**
@@ -331,6 +341,7 @@ function validateCombatant(data: CombatantAttackData): void {
       && (
         action.npDamageMultiplierPermille !== undefined
         || action.npSpecialAttackPermille !== undefined
+        || action.noblePhantasmContext !== undefined
       )
     ) {
       throw new RangeError(
@@ -346,9 +357,18 @@ function validateCombatant(data: CombatantAttackData): void {
       );
     }
     if (action.npDamageMultiplierPermille !== undefined) {
-      assertNonNegativeInteger(
+      assertValidDeclaredActionInteger(
         action.npDamageMultiplierPermille,
         `${data.instanceId}.${action.actionStableId}.npDamageMultiplierPermille`,
+      );
+      const values = typeof action.npDamageMultiplierPermille === "number"
+        ? [action.npDamageMultiplierPermille]
+        : action.npDamageMultiplierPermille.values;
+      values.forEach((value, index) =>
+        assertNonNegativeInteger(
+          value,
+          `${data.instanceId}.${action.actionStableId}.npDamageMultiplierPermille.values[${index}]`,
+        )
       );
     }
     if (action.npSpecialAttackPermille !== undefined) {
@@ -356,6 +376,20 @@ function validateCombatant(data: CombatantAttackData): void {
         action.npSpecialAttackPermille,
         `${data.instanceId}.${action.actionStableId}.npSpecialAttackPermille`,
       );
+    }
+    if (action.noblePhantasmContext) {
+      assertValidEnemyNoblePhantasmContext(
+        action.noblePhantasmContext,
+        `${data.instanceId}.${action.actionStableId}.noblePhantasmContext`,
+      );
+      if (
+        action.kind !== "noble_phantasm"
+        || action.noblePhantasmContext.actionStableId !== action.actionStableId
+      ) {
+        throw new RangeError(
+          `${data.instanceId}.${action.actionStableId} enemy noble phantasm context action ID is inconsistent`,
+        );
+      }
     }
   }
 }

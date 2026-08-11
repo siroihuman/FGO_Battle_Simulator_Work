@@ -12,6 +12,7 @@ import {
   assertValidEnemyDefinition,
   assertValidEnemyEncounterDefinition,
   assertValidEnemyEncounterPlacement,
+  assertValidEnemyNoblePhantasmPlacementContext,
 } from "./validation";
 
 export interface EnemyDataRegistry {
@@ -95,6 +96,11 @@ export function createEnemyBattleInstance(
       `enemy placement dataId mismatch: ${placement.enemyDataId} != ${definition.dataId}`,
     );
   }
+  assertValidEnemyNoblePhantasmPlacementContext(
+    definition,
+    placement,
+    `${definition.dataId}.placement`,
+  );
   const chargeAttack = definition.chargeAttack;
   if (placement.charge > (chargeAttack?.chargeMax ?? 0)) {
     throw new RangeError(
@@ -116,6 +122,9 @@ export function createEnemyBattleInstance(
           name: chargeAttack.name,
           kind: "noble_phantasm",
           attackOrder: 1,
+          ...(placement.noblePhantasmContext
+            ? { noblePhantasmContext: placement.noblePhantasmContext }
+            : {}),
           effects: [],
         }]
       : [],
@@ -203,6 +212,9 @@ export function createEnemyBattleInstance(
               criticalChancePermille: 0,
               npDamageMultiplierPermille:
                 chargeAttack.damageMultiplierPermille,
+              ...(placement.noblePhantasmContext
+                ? { noblePhantasmContext: placement.noblePhantasmContext }
+                : {}),
             }]
           : []),
       ],

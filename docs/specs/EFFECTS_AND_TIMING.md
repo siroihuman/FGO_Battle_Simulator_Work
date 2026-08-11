@@ -108,7 +108,7 @@
 - 敵スキルの指定単体対象はAI要求に含め、実行直前に宣言対象規則と照合する。未指定・範囲外では効果の一部も実行しない。
 - 宣言効果が登録された敵スキルは資料順に全効果を解決してから共通行動境界へ進む。宣言効果未登録のスキルは従来どおり安全な不発とする。
 - 未対応宣言効果を含む味方宝具・敵スキル・敵宝具は、宝具NP、敵チャージ、状態、効果採番、乱数を変更する前に行動全体を不発とする。
-- 敵宝具の固定値宣言効果は攻撃前後へ接続する。段階別宣言値は次節の敵固有文脈を必要とし、共通処理が実装されるまでは従来どおり未対応として行動前に不発とする。
+- 敵宝具の固定値・段階別宣言効果は攻撃前後へ接続する。段階別宣言値は次節の敵固有文脈を必要とし、欠落・不正時は事前確認で型付き不発とする。
 
 ### 敵宝具Lv・OCと段階別宣言値
 
@@ -116,7 +116,7 @@
 
 - 宝具Lv文脈`noblePhantasmLevel`とOC文脈`overchargeStage`は、それぞれ1、2、3、4、5だけを取る独立した最終段階とする。敵Lv、現在／最大チャージ、ターン、Wave、対象、味方側のNP・OCから推定しない。
 - 再利用敵定義は、固定整数、`noble_phantasm_level`の5要素整数配列、`overcharge`の5要素整数配列を既存の宣言値型で区別する。攻撃倍率も同じ3分類を使えるが、登録する効果・倍率の意味にOCまたは宝具Lvがない場合は固定値とする。未対応の段階軸を別軸や固定値へ近似しない。
-- 形式1の任意追加項目は次の論理形を正本とする。`EnemyChargeAttackDefinition.damageMultiplierPermille`は既存の固定整数または既存`DeclaredActionInteger`の5段階形を取り、`EnemyEncounterPlacement.noblePhantasmContext`は`actionStableId`と、必要な場合だけ`noblePhantasmLevel`／`overchargeStage`を持つ。変換後の敵宝具攻撃データと行動効果列にも、同じ`actionStableId`へ結び付く文脈を任意項目として保持する。具体的な型名の分割は後続実装で既存モジュール境界に合わせるが、キーの意味と値域は変えない。
+- 形式1の任意追加項目は、`EnemyChargeAttackDefinition.damageMultiplierPermille`が既存の固定整数または既存`DeclaredActionInteger`の5段階形を取り、`EnemyEncounterPlacement.noblePhantasmContext`が`actionStableId`と必要な`noblePhantasmLevel`／`overchargeStage`だけを持つ形で実装する。変換後の`EnemyAttackActionData`と`BattleActionEffectSequence`にも、同じ`actionStableId`へ結び付く任意文脈を保持する。
 - 5要素配列は段階1～5の順で、長さを厳密に5とし、各値をその宣言が要求する整数範囲で検査する。攻撃倍率は非負の安全な整数、NP等の宣言値は既存アクション固有の検査を維持する。
 - 戦闘設定は戦闘個体・宝具行動ごとの任意文脈を明示する。同じ敵`dataId`を複数配置しても文脈を共有しない。宝具Lv別値をどこか1件でも使う行動は宝具Lvを、OC別値をどこか1件でも使う行動はOCを必須とする。固定値だけの行動は両方を省略できる。
 - 敵定義、戦闘設定、個体別攻撃データ、個体別行動効果データの宝具安定IDを一致させる。文脈の余剰項目は実行結果へ影響させず、登録時に未使用として拒否してデータ誤記を表面化する。

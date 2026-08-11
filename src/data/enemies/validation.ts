@@ -12,6 +12,11 @@ import {
   type EnemyEncounterPlacement,
   type EnemySourceReference,
 } from "./schema";
+import {
+  assertValidDeclaredActionInteger,
+  assertValidEnemyNoblePhantasmContext,
+  declaredActionIntegerScaling,
+} from "../../effects/declarations";
 
 function assertNonEmpty(value: string, name: string): void {
   if (value.trim().length === 0) {
@@ -198,14 +203,35 @@ export function assertValidEnemyDefinition(
   if (definition.chargeAttack) {
     const charge = definition.chargeAttack;
     assertAttackShape(charge, `${definition.dataId}.chargeAttack`);
-    assertInteger(
+    assertValidDeclaredActionInteger(
       charge.damageMultiplierPermille,
       `${definition.dataId}.chargeAttack.damageMultiplierPermille`,
     );
+    const damageValues = typeof charge.damageMultiplierPermille === "number"
+      ? [charge.damageMultiplierPermille]
+      : charge.damageMultiplierPermille.values;
+    damageValues.forEach((value, index) =>
+      assertInteger(
+        value,
+        `${definition.dataId}.chargeAttack.damageMultiplierPermille.values[${index}]`,
+      )
+    );
     assertInteger(charge.chargeMax, `${definition.dataId}.chargeAttack.chargeMax`, 1);
-    if (charge.levelScaling !== "fixed" || charge.overchargeScaling !== "none") {
+    const scaling = declaredActionIntegerScaling(
+      charge.damageMultiplierPermille,
+    );
+    if (
+      charge.levelScaling !== (
+        scaling === "noble_phantasm_level"
+          ? "noble_phantasm_level"
+          : "fixed"
+      )
+      || charge.overchargeScaling !== (
+        scaling === "overcharge" ? "overcharge" : "none"
+      )
+    ) {
       throw new RangeError(
-        `${definition.dataId}.chargeAttack scaling is unsupported`,
+        `${definition.dataId}.chargeAttack scaling metadata is inconsistent`,
       );
     }
     if (actionIds.has(charge.stableId)) {
@@ -237,6 +263,69 @@ export function assertValidEnemyEncounterPlacement(
   placement.breakGaugeHp.forEach((hp, index) =>
     assertInteger(hp, `${name}.breakGaugeHp[${index}]`, 1)
   );
+  if (placement.noblePhantasmContext) {
+    assertValidEnemyNoblePhantasmContext(
+      placement.noblePhantasmContext,
+      `${name}.noblePhantasmContext`,
+    );
+  }
+}
+
+/** Validates the format-1 definition/context split before battle materialization. */
+export function assertValidEnemyNoblePhantasmPlacementContext(
+  definition: EnemyDefinition,
+  placement: EnemyEncounterPlacement,
+  name: string,
+): void {
+  const chargeAttack = definition.chargeAttack;
+  const context = placement.noblePhantasmContext;
+  if (!chargeAttack) {
+    if (context) {
+      throw new RangeError(`${name}.noblePhantasmContext requires a charge attack`);
+    }
+    return;
+  }
+  const scaling = declaredActionIntegerScaling(
+    chargeAttack.damageMultiplierPermille,
+  );
+  if (scaling === null) {
+    if (context) {
+      throw new RangeError(
+        `${name}.noblePhantasmContext is unused by the fixed charge attack`,
+      );
+    }
+    return;
+  }
+  if (!context) {
+    throw new RangeError(
+      `${name}.noblePhantasmContext is required by the staged charge attack`,
+    );
+  }
+  if (context.actionStableId !== chargeAttack.stableId) {
+    throw new RangeError(
+      `${name}.noblePhantasmContext action ID is inconsistent`,
+    );
+  }
+  if (
+    scaling === "noble_phantasm_level"
+    && context.noblePhantasmLevel === undefined
+  ) {
+    throw new RangeError(`${name}.noblePhantasmLevel is required`);
+  }
+  if (
+    scaling === "overcharge"
+    && context.overchargeStage === undefined
+  ) {
+    throw new RangeError(`${name}.overchargeStage is required`);
+  }
+  if (
+    (scaling !== "noble_phantasm_level"
+      && context.noblePhantasmLevel !== undefined)
+    || (scaling !== "overcharge"
+      && context.overchargeStage !== undefined)
+  ) {
+    throw new RangeError(`${name}.noblePhantasmContext contains an unused stage`);
+  }
 }
 
 export function assertValidEnemyEncounterDefinition(

@@ -24,6 +24,10 @@ import {
 import {
   createBattleActionEffectDataRegistry,
 } from "../src/effects/actionData";
+import type {
+  EnemyNoblePhantasmContext,
+} from "../src/effects/declarations";
+import { summarizeBattleLogBatch } from "../src/ui/battlePresentation";
 import { combatantData } from "./helpers/attackData";
 import { unit } from "./helpers/battle";
 
@@ -203,6 +207,107 @@ function actionEffectRegistry() {
   }]);
 }
 
+const stagedContext = {
+  actionStableId: "enemy-np",
+  noblePhantasmLevel: 4 as const,
+  overchargeStage: 2 as const,
+};
+
+function stagedRegistry(
+  context: EnemyNoblePhantasmContext | null = stagedContext,
+) {
+  return createBattleAttackDataRegistry([
+    combatantData("enemy-a", "enemy", {
+      attack: 10_000,
+      attackNpRatePermille: 800,
+      commandCardHitWeights: null,
+      extraAttackHitWeights: null,
+      enemyAttacks: [{
+        actionStableId: "enemy-np",
+        kind: "noble_phantasm",
+        targetScope: "single",
+        cardType: "buster",
+        hitWeights: [1],
+        cardDamageValuePermille: 1_000,
+        npDamageMultiplierPermille: {
+          scaling: "noble_phantasm_level",
+          values: [1_000, 2_000, 3_000, 4_000, 5_000],
+        },
+        ...(context ? { noblePhantasmContext: context } : {}),
+      }],
+    }),
+    ...["a", "b", "c"].map((suffix) =>
+      combatantData(`ally-${suffix}`, `servant-${suffix}`, {
+        receivedNpUnits: 300,
+      })
+    ),
+  ]);
+}
+
+function stagedEffectRegistry(
+  context: EnemyNoblePhantasmContext | null = stagedContext,
+) {
+  return createBattleActionEffectDataRegistry([{
+    instanceId: "enemy-a",
+    dataId: "enemy",
+    passives: [],
+    actions: [{
+      stableId: "enemy-np",
+      name: "Enemy NP",
+      kind: "noble_phantasm",
+      attackOrder: 2,
+      ...(context ? { noblePhantasmContext: context } : {}),
+      effects: [
+        {
+          kind: "effect",
+          stableId: "enemy-np-level-before",
+          order: 1,
+          description: "宝具Lv別に味方全体のNPを増やす",
+          target: { relation: "enemies", selection: "all" },
+          action: {
+            kind: "change_np",
+            amount: {
+              scaling: "noble_phantasm_level",
+              values: [100, 200, 300, 400, 500],
+            },
+          },
+        },
+        {
+          kind: "effect",
+          stableId: "enemy-np-oc-after",
+          order: 3,
+          description: "OC別に次回用スターを増やす",
+          target: { relation: "self", selection: "single" },
+          action: {
+            kind: "gain_stars",
+            amount: {
+              scaling: "overcharge",
+              values: [10, 20, 30, 40, 50],
+            },
+            destination: "next_command",
+          },
+        },
+      ],
+    }],
+  }]);
+}
+
+function mismatchedActionEffectRegistry() {
+  const current = stagedEffectRegistry().byInstanceId["enemy-a"]!;
+  const sequence = current.actions[0]!;
+  return createBattleActionEffectDataRegistry([{
+    ...current,
+    actions: [{
+      ...sequence,
+      stableId: "another-enemy-np",
+      noblePhantasmContext: {
+        ...stagedContext,
+        actionStableId: "another-enemy-np",
+      },
+    }],
+  }]);
+}
+
 function streams(seed: string) {
   const rng = new BattleRng(seed);
   return {
@@ -311,6 +416,72 @@ describe("enemy data-to-attack integration", () => {
         effects: [{ effectStableId: "enemy-np-after" }],
       },
     ]);
+    expect(resolved.battleLog.entries[0]).not.toHaveProperty(
+      "noblePhantasmLevel",
+    );
+    expect(resolved.battleLog.entries[0]?.overchargeStage).toBeNull();
+  });
+
+  it("uses one preflight snapshot for staged damage, before/after effects, logs, and UI detail", () => {
+    const random = streams("enemy-staged-np-context");
+    const resolved = resolveEnemyAttacks({
+      state: enemyTurn(true),
+      priorityRequests: [],
+      registry: stagedRegistry(),
+      actionEffectRegistry: stagedEffectRegistry(),
+      rng: random.streams,
+      aiRng: random.rng.stream("ai"),
+      criticalRng: random.rng.stream("critical"),
+    });
+    const action = resolved.sequence.actions[0];
+    const detail = action?.resolverDetail as EnemyAttackDetail;
+    expect(action).toMatchObject({
+      preflight: {
+        outcome: "ready",
+        chargeBefore: 3,
+        chargeConsumed: 3,
+        guardSnapshot: {
+          context: stagedContext,
+          npDamageMultiplierPermille: 4_000,
+        },
+      },
+    });
+    expect(detail).toMatchObject({
+      outcome: "resolved",
+      calculation: { npDamageMultiplierPermille: 4_000 },
+      noblePhantasmContext: stagedContext,
+      declaredEffects: [
+        {
+          phase: "before_attack",
+          result: { effects: [{ resolvedAmount: 400 }] },
+        },
+        {
+          phase: "after_attack",
+          result: { effects: [{ resolvedAmount: 20 }] },
+        },
+      ],
+    });
+    expect(resolved.sequence.state.nextCommandStars).toBe(20);
+    expect(["ally-a", "ally-b", "ally-c"].map((instanceId) =>
+      findUnitLocation(
+        resolved.sequence.state.formation,
+        instanceId,
+      )?.unit.np
+    )).toEqual([640, 400, 400]);
+    const log = resolved.battleLog.entries[0]!;
+    expect(log).toMatchObject({
+      noblePhantasmLevel: 4,
+      overchargeStage: 2,
+      calculation: { npDamageMultiplierPermille: 4_000 },
+      declaredEffects: [
+        { effects: [{ resolvedAmount: 400 }] },
+        { effects: [{ resolvedAmount: 20 }] },
+      ],
+    });
+    const summary = summarizeBattleLogBatch(resolved.battleLog)[0];
+    expect(summary?.detail).toBe(log);
+    expect((summary?.detail as typeof log).calculation)
+      .toEqual(log.calculation);
   });
 
   it("resolves a configured enemy skill against its AI-selected target and logs the effect", () => {
@@ -436,6 +607,167 @@ describe("enemy data-to-attack integration", () => {
         ({ drawCount }) => drawCount === 0,
       ),
     ).toBe(true);
+  });
+
+  it.each([
+    {
+      label: "missing context",
+      reason: "enemy_noble_phantasm_context_missing",
+      attackRegistry: () => stagedRegistry(null),
+      effectRegistry: () => stagedEffectRegistry(null),
+    },
+    {
+      label: "mismatched attack/effect context",
+      reason: "enemy_noble_phantasm_data_invalid",
+      attackRegistry: () => stagedRegistry(),
+      effectRegistry: () => stagedEffectRegistry({
+        ...stagedContext,
+        noblePhantasmLevel: 3,
+      }),
+    },
+    {
+      label: "mismatched attack/effect action ID",
+      reason: "enemy_noble_phantasm_data_invalid",
+      attackRegistry: () => stagedRegistry(),
+      effectRegistry: () => mismatchedActionEffectRegistry(),
+    },
+  ])("atomically skips $label with a typed reason", ({
+    reason,
+    attackRegistry,
+    effectRegistry,
+  }) => {
+    const random = streams(`enemy-staged-skip-${reason}`);
+    let targetCalls = 0;
+    const counters = {
+      nextInstanceNumber: 7,
+      nextRegistrationOrder: 9,
+    };
+    const resolved = resolveEnemyAttacks({
+      state: enemyTurn(true),
+      priorityRequests: [],
+      registry: attackRegistry(),
+      actionEffectRegistry: effectRegistry(),
+      counters,
+      rng: random.streams,
+      aiRng: random.rng.stream("ai"),
+      criticalRng: random.rng.stream("critical"),
+      singleTargetSelector: () => {
+        targetCalls += 1;
+        return "ally-a";
+      },
+    });
+    expect(resolved.sequence.actions[0]).toMatchObject({
+      preflight: {
+        outcome: "skipped",
+        reason,
+        chargeBefore: 3,
+        chargeConsumed: 0,
+      },
+      resolverCalled: false,
+    });
+    expect(resolved.counters).toEqual(counters);
+    expect(targetCalls).toBe(0);
+    expect(findUnitLocation(
+      resolved.sequence.state.formation,
+      "enemy-a",
+    )?.unit.enemyAction?.charge).toBe(3);
+    expect(findUnitLocation(
+      resolved.sequence.state.formation,
+      "ally-a",
+    )?.unit.hp).toBe(100_000);
+    expect(Object.values(random.rng.snapshot().streams).every(
+      ({ drawCount }) => drawCount === 0,
+    )).toBe(true);
+    expect(resolved.battleLog.entries[0]?.outcome.reasons).toEqual([reason]);
+  });
+
+  it("atomically rejects invalid context and malformed five-stage data", () => {
+    const readyAttack = stagedRegistry();
+    const readyEffects = stagedEffectRegistry();
+    const baseCombatant = readyAttack.byInstanceId["enemy-a"]!;
+    const baseAction = baseCombatant.enemyAttacks[0]!;
+    const baseEffectData = readyEffects.byInstanceId["enemy-a"]!;
+    const baseSequence = baseEffectData.actions[0]!;
+
+    const cases = [
+      {
+        reason: "enemy_noble_phantasm_context_invalid",
+        registry: {
+          ...readyAttack,
+          byInstanceId: {
+            ...readyAttack.byInstanceId,
+            "enemy-a": {
+              ...baseCombatant,
+              enemyAttacks: [{
+                ...baseAction,
+                noblePhantasmContext: {
+                  ...stagedContext,
+                  noblePhantasmLevel: 6,
+                },
+              }],
+            },
+          },
+        },
+        effects: {
+          byInstanceId: {
+            "enemy-a": {
+              ...baseEffectData,
+              actions: [{
+                ...baseSequence,
+                noblePhantasmContext: {
+                  ...stagedContext,
+                  noblePhantasmLevel: 6,
+                },
+              }],
+            },
+          },
+        },
+      },
+      {
+        reason: "enemy_noble_phantasm_data_invalid",
+        registry: {
+          ...readyAttack,
+          byInstanceId: {
+            ...readyAttack.byInstanceId,
+            "enemy-a": {
+              ...baseCombatant,
+              enemyAttacks: [{
+                ...baseAction,
+                npDamageMultiplierPermille: {
+                  scaling: "noble_phantasm_level",
+                  values: [1_000, 2_000, 3_000, 4_000],
+                },
+              }],
+            },
+          },
+        },
+        effects: readyEffects,
+      },
+    ] as const;
+
+    for (const [index, current] of cases.entries()) {
+      const random = streams(`enemy-invalid-context-${index}`);
+      const resolved = resolveEnemyAttacks({
+        state: enemyTurn(true),
+        priorityRequests: [],
+        registry: current.registry as never,
+        actionEffectRegistry: current.effects as never,
+        rng: random.streams,
+        aiRng: random.rng.stream("ai"),
+        criticalRng: random.rng.stream("critical"),
+      });
+      expect(resolved.sequence.actions[0]).toMatchObject({
+        preflight: {
+          outcome: "skipped",
+          reason: current.reason,
+          chargeConsumed: 0,
+        },
+        resolverCalled: false,
+      });
+      expect(Object.values(random.rng.snapshot().streams).every(
+        ({ drawCount }) => drawCount === 0,
+      )).toBe(true);
+    }
   });
 
   it("treats missing numeric action data as a safe no-op", () => {

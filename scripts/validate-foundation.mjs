@@ -649,9 +649,9 @@ if (manifest) {
     "宣言効果ログは実行済み結果から作らなければなりません"
   );
   assert(
-    manifest.status === "enemy-noble-phantasm-context-specified"
-      && manifest.coreRules.enemyNoblePhantasmScaledDeclaredValues === "specified_implementation_pending",
-    "敵宝具の段階文脈は仕様確定・実装待ちでなければなりません"
+    manifest.status === "enemy-noble-phantasm-context-implemented"
+      && manifest.coreRules.enemyNoblePhantasmScaledDeclaredValues === "implemented_acceptance_pending",
+    "敵宝具の段階文脈は共通処理実装済み・統合受入待ちでなければなりません"
   );
   const enemyNpContext = manifest.coreRules.enemyNoblePhantasmContext;
   assert(
@@ -705,6 +705,20 @@ if (manifest) {
       && enemyNpContext.battleTurnLogSchemaVersion === 2
       && enemyNpContext.fixedOnlyLogShapeUnchanged === true,
     "敵宝具Lv・OCの保持、段階選択、不発、保存、リプレイ、UI規則が不正です"
+  );
+  assert(
+    enemyNpContext.implementationStatus === "implemented_acceptance_pending"
+      && JSON.stringify(enemyNpContext.implementationSources) === JSON.stringify([
+        "src/effects/declarations.ts",
+        "src/data/enemies/schema.ts",
+        "src/data/enemies/validation.ts",
+        "src/data/enemies/registry.ts",
+        "src/core/battle/actionData.ts",
+        "src/core/battle/enemyNoblePhantasmContext.ts",
+        "src/ai/enemyAttack.ts",
+        "src/core/battle/log.ts",
+      ]),
+    "敵宝具Lv・OC共通処理の実装元または受入状態が不正です"
   );
   assert(
     manifest.coreRules.servantPassiveInitializationOrder === "formation_order_including_reserve",
@@ -992,7 +1006,8 @@ const mandatoryFiles = [
   "src/data/enemies/validation.ts",
   "src/data/enemies/registry.ts",
   "src/data/enemies/initialEnemies.ts",
-  "src/data/enemies/index.ts"
+  "src/data/enemies/index.ts",
+  "src/core/battle/enemyNoblePhantasmContext.ts"
 ];
 
 for (const path of mandatoryFiles) {
@@ -1009,9 +1024,9 @@ assert(startHere.includes("## 現在地点"), "作業開始ページに現在地
 assert(startHere.includes("## 次の作業"), "作業開始ページに次の作業がありません");
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
-  startHere.includes("敵宝具Lv・OC文脈と段階別宣言値（仕様確定）")
-    && startHere.includes("共通処理を実装する"),
-  "作業開始ページに敵宝具段階文脈の現在地点と次作業がありません"
+  startHere.includes("敵宝具Lv・OC文脈と段階別宣言値（共通処理実装完了、統合受入待ち）")
+    && startHere.includes("統合受入検査を実施する"),
+  "作業開始ページに敵宝具段階文脈の実装完了と次の受入作業がありません"
 );
 
 const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
@@ -1026,8 +1041,9 @@ assert(
 const decisionLog = await readText("docs/DECISION_LOG.md");
 assert(
   decisionLog.includes("## D-069 敵宝具の段階文脈を戦闘個体・行動ごとに明示する")
-    && decisionLog.includes("## D-070 次の実装対象を敵宝具段階文脈の共通処理とする"),
-  "決定記録に敵宝具段階文脈と次作業の決定がありません"
+    && decisionLog.includes("## D-070 次の実装対象を敵宝具段階文脈の共通処理とする")
+    && decisionLog.includes("## D-071 次の作業を敵宝具段階文脈の統合受入検査とする"),
+  "決定記録に敵宝具段階文脈、実装、次の受入作業の決定がありません"
 );
 
 const effectsAndTiming = await readText("docs/specs/EFFECTS_AND_TIMING.md");
@@ -1043,6 +1059,13 @@ assert(
   uiAndStorage.includes("敵宝具の任意の宝具Lv・OC文脈")
     && uiAndStorage.includes("UIは段階選択、配列参照、文脈補完"),
   "UI・保存仕様に敵宝具段階文脈の保存と非再計算規則がありません"
+);
+const battlePresentation = await readText("src/ui/battlePresentation.ts");
+assert(
+  !battlePresentation.includes("prepareEnemyNoblePhantasmContext")
+    && !battlePresentation.includes("resolveDeclaredActionInteger")
+    && !battlePresentation.includes("npDamageMultiplierPermilleByLevel"),
+  "UIは敵宝具の段階選択や倍率解決を再実装してはいけません"
 );
 
 const initialContent = await readText("docs/specs/INITIAL_CONTENT.md");

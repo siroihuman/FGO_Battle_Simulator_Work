@@ -1,6 +1,12 @@
 import type { BattleUnitState } from "../core/battle/types";
-import type { DeclaredActionEffect } from "./declarations";
-import { assertValidDeclaredActionEffect } from "./declarations";
+import type {
+  DeclaredActionEffect,
+  EnemyNoblePhantasmContext,
+} from "./declarations";
+import {
+  assertValidDeclaredActionEffect,
+  assertValidEnemyNoblePhantasmContext,
+} from "./declarations";
 
 export interface BattlePassiveEffectGroup {
   stableId: string;
@@ -16,6 +22,8 @@ export interface BattleActionEffectSequence {
   cooldownAtMax?: number;
   /** Position of the damaging attack among source-ordered effects. */
   attackOrder: number | null;
+  /** Enemy-only explicit stages for this NP action. */
+  noblePhantasmContext?: EnemyNoblePhantasmContext;
   effects: readonly DeclaredActionEffect[];
 }
 
@@ -100,6 +108,7 @@ function assertCombatant(data: CombatantActionEffectData): void {
         action.skillSlot === undefined
         || action.cooldownAtMax === undefined
         || action.attackOrder !== null
+        || action.noblePhantasmContext !== undefined
       ) {
         throw new RangeError(
           `${action.stableId} skill metadata is incomplete`,
@@ -127,6 +136,17 @@ function assertCombatant(data: CombatantActionEffectData): void {
       throw new RangeError(
         `${action.stableId} noble phantasm metadata is invalid`,
       );
+    }
+    if (action.noblePhantasmContext) {
+      assertValidEnemyNoblePhantasmContext(
+        action.noblePhantasmContext,
+        `${action.stableId}.noblePhantasmContext`,
+      );
+      if (action.noblePhantasmContext.actionStableId !== action.stableId) {
+        throw new RangeError(
+          `${action.stableId} noble phantasm context action ID is inconsistent`,
+        );
+      }
     }
     assertOrderedEffects(
       action.effects,

@@ -9,6 +9,10 @@ import type {
   EnemyFrontlineLimit,
   EnemyReplacementMode,
 } from "../../core/battle/state";
+import type {
+  DeclaredActionInteger,
+  EnemyNoblePhantasmContext,
+} from "../../effects/declarations";
 
 export const ENEMY_DATA_SCHEMA_VERSION = 1 as const;
 
@@ -45,10 +49,10 @@ export interface EnemyChargeAttackDefinition {
   targetPolicy?: EnemyAttackTargetPolicy;
   cardType: CommandCardType;
   hitWeights: readonly number[];
-  damageMultiplierPermille: number;
+  damageMultiplierPermille: DeclaredActionInteger;
   chargeMax: number;
-  levelScaling: "fixed";
-  overchargeScaling: "none";
+  levelScaling: "fixed" | "noble_phantasm_level";
+  overchargeScaling: "none" | "overcharge";
 }
 
 export interface EnemyDefinition {
@@ -83,6 +87,8 @@ export interface EnemyEncounterPlacement {
   attack: number;
   charge: number;
   breakGaugeHp: readonly number[];
+  /** Optional explicit stages for this placement's charge attack. */
+  noblePhantasmContext?: EnemyNoblePhantasmContext;
 }
 
 export interface EnemyEncounterWave {

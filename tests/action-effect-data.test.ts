@@ -189,6 +189,46 @@ describe("battle action-effect data registry", () => {
       dataId: "another-servant",
     })).toThrow(/stale action-effect data/);
   });
+
+  it("keeps enemy NP context action-scoped and rejects it on skills or another action ID", () => {
+    const enemyNp = actionData("ally-a", {
+      actions: [{
+        ...actionData().actions[1],
+        noblePhantasmContext: {
+          actionStableId: "test-np",
+          noblePhantasmLevel: 2,
+          overchargeStage: 4,
+        },
+      }],
+    });
+    expect(createBattleActionEffectDataRegistry([enemyNp])
+      .byInstanceId["ally-a"]?.actions[0]?.noblePhantasmContext)
+      .toEqual({
+        actionStableId: "test-np",
+        noblePhantasmLevel: 2,
+        overchargeStage: 4,
+      });
+
+    const mismatched = actionData("ally-a", {
+      actions: [{
+        ...actionData().actions[1],
+        noblePhantasmContext: {
+          actionStableId: "another-np",
+          noblePhantasmLevel: 2,
+        },
+      }],
+    });
+    expect(() => createBattleActionEffectDataRegistry([mismatched]))
+      .toThrow(/context action ID is inconsistent/);
+
+    const skillContext = actionData();
+    skillContext.actions[0].noblePhantasmContext = {
+      actionStableId: "skill-one",
+      overchargeStage: 1,
+    };
+    expect(() => createBattleActionEffectDataRegistry([skillContext]))
+      .toThrow(/skill metadata is incomplete/);
+  });
 });
 
 describe("declared action-effect execution", () => {

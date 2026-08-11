@@ -400,6 +400,8 @@ export interface BattleActionLogEntry {
   outcome: BattleLogActionOutcome;
   targetsAtStart: BattleLogUnitRef[];
   calculation: AttackCalculationData | null;
+  /** Present only when an enemy NP actually used an explicit NP level. */
+  noblePhantasmLevel?: number;
   overchargeStage: number | null;
   critical: BattleLogCritical | null;
   declaredEffects: BattleLogDeclaredEffectGroup[];
@@ -430,6 +432,7 @@ export interface CreateBattleActionLogEntryInput {
   outcome: BattleLogActionOutcome;
   targetInstanceIds: readonly string[];
   calculation: AttackCalculationData | null;
+  noblePhantasmLevel?: number;
   overchargeStage: number | null;
   critical: BattleLogCritical | null;
   declaredEffectGroups?: readonly DeclaredActionEffectGroupResult[];
@@ -1001,6 +1004,9 @@ export function createBattleActionLogEntry(
       battleLogUnitRef(input.unitIndex, instanceId)
     ),
     calculation: input.calculation,
+    ...(input.noblePhantasmLevel === undefined
+      ? {}
+      : { noblePhantasmLevel: input.noblePhantasmLevel }),
     overchargeStage: input.overchargeStage,
     critical: input.critical,
     declaredEffects: declaredEffectGroups(

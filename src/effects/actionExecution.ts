@@ -19,7 +19,6 @@ import type {
   BattleUnitState,
 } from "../core/battle/types";
 import type { DeterministicRng } from "../core/rng";
-import type { NoblePhantasmLevel } from "../formulas/np";
 import type {
   CommandCardRedistributionResult,
 } from "../core/cards/deck";
@@ -41,6 +40,7 @@ import {
 import type {
   DeclaredActionEffect,
   DeclaredActionInteger,
+  EnemyNoblePhantasmContext,
 } from "./declarations";
 import {
   resolveTargetLocations,
@@ -50,8 +50,8 @@ import {
 import type { EffectRuntimeCounters } from "./types";
 
 export interface DeclaredActionExecutionContext {
-  noblePhantasmLevel?: NoblePhantasmLevel;
-  overchargeStage?: 1 | 2 | 3 | 4 | 5;
+  noblePhantasmLevel?: EnemyNoblePhantasmContext["noblePhantasmLevel"];
+  overchargeStage?: EnemyNoblePhantasmContext["overchargeStage"];
   selectedTargetInstanceId?: string;
   preparedCommandCardRedistributions?: readonly CommandCardRedistributionResult[];
 }

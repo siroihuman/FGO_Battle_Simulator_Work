@@ -294,6 +294,68 @@ describe("initial enemy format 1 data", () => {
     });
   });
 
+  it("validates five-stage format-1 values and copies only the required placement context", () => {
+    const definition = {
+      ...RADIANT_ARM_OF_DAWN_SABER,
+      chargeAttack: {
+        ...RADIANT_ARM_OF_DAWN_SABER.chargeAttack!,
+        damageMultiplierPermille: {
+          scaling: "noble_phantasm_level" as const,
+          values: [2_000, 3_000, 4_000, 5_000, 6_000] as const,
+        },
+        levelScaling: "noble_phantasm_level" as const,
+      },
+    };
+    const basePlacement = enemyInstance("enemy-w3-1").placement;
+    const instance = createEnemyBattleInstance(definition, {
+      ...basePlacement,
+      instanceId: "enemy-staged-context",
+      noblePhantasmContext: {
+        actionStableId: definition.chargeAttack.stableId,
+        noblePhantasmLevel: 3,
+      },
+    });
+    expect(instance.attackData.enemyAttacks[1]).toMatchObject({
+      npDamageMultiplierPermille: {
+        scaling: "noble_phantasm_level",
+        values: [2_000, 3_000, 4_000, 5_000, 6_000],
+      },
+      noblePhantasmContext: {
+        actionStableId: definition.chargeAttack.stableId,
+        noblePhantasmLevel: 3,
+      },
+    });
+    expect(instance.actionEffectData.actions[0]?.noblePhantasmContext)
+      .toEqual(instance.attackData.enemyAttacks[1]?.noblePhantasmContext);
+
+    expect(() => createEnemyDataRegistry([{
+      ...definition,
+      chargeAttack: {
+        ...definition.chargeAttack,
+        damageMultiplierPermille: {
+          scaling: "noble_phantasm_level",
+          values: [1, 2, 3, 4],
+        } as never,
+      },
+    }])).toThrow(/levels 1 through 5/);
+    expect(() => createEnemyBattleInstance(definition, {
+      ...basePlacement,
+      instanceId: "enemy-context-missing",
+    })).toThrow(/noblePhantasmContext is required/);
+    expect(() => createEnemyBattleInstance(
+      RADIANT_ARM_OF_DAWN_SABER,
+      {
+        ...basePlacement,
+        instanceId: "enemy-fixed-unused-context",
+        noblePhantasmContext: {
+          actionStableId:
+            RADIANT_ARM_OF_DAWN_SABER.chargeAttack!.stableId,
+          overchargeStage: 1,
+        },
+      },
+    )).toThrow(/unused by the fixed charge attack/);
+  });
+
   it("rejects invalid or unresolved format data before battle state or RNG work", () => {
     expect(() => createEnemyDataRegistry([{
       ...RADIANT_ARM_OF_DAWN_SABER,
@@ -643,5 +705,110 @@ describe("initial enemy suspend and replay", () => {
         { enemy: { instanceId: "enemy-w1-3" }, before: 0, after: 1 },
       ],
     });
+  });
+
+  it("directly restores and replays staged enemy NP context, logs, counters, and all six RNG streams", () => {
+    const definition = {
+      ...RADIANT_ARM_OF_DAWN_SABER,
+      chargeAttack: {
+        ...RADIANT_ARM_OF_DAWN_SABER.chargeAttack!,
+        damageMultiplierPermille: {
+          scaling: "overcharge" as const,
+          values: [2_000, 3_000, 4_000, 5_000, 6_000] as const,
+        },
+        overchargeScaling: "overcharge" as const,
+      },
+    };
+    const basePlacement = enemyInstance("enemy-w3-1").placement;
+    const staged = createEnemyBattleInstance(definition, {
+      ...basePlacement,
+      instanceId: "enemy-staged-session",
+      charge: 4,
+      noblePhantasmContext: {
+        actionStableId: definition.chargeAttack.stableId,
+        overchargeStage: 3,
+      },
+    });
+    const allies = [ally("ally-a"), ally("ally-b"), ally("ally-c")];
+    let session = createBattleSession({
+      state: createBattleState({
+        ally: { frontline: allies, reserve: [] },
+        waves: [{ enemy: {
+          frontline: [staged.unit, null, null],
+          reserve: [],
+        } }],
+        enemyFrontlineLimit: 3,
+      }),
+      rng: new BattleRng("staged-enemy-np-session"),
+      registry: createBattleAttackDataRegistry([
+        ...allies.map((current) => combatantData(
+          current.instanceId,
+          current.dataId,
+          { attack: 1, starRatePermille: 0 },
+        )),
+        staged.attackData,
+      ]),
+      actionEffectRegistry: createBattleActionEffectDataRegistry([
+        staged.actionEffectData,
+      ]),
+    });
+    const cardIds = session.loop.state.commandDeck.currentHand
+      .slice(0, 3)
+      .map(({ cardId }) => cardId);
+    const turn = resolveBattleSessionTurn(session, { cardIds });
+    expect(turn.result.accepted).toBe(true);
+    session = turn.session;
+
+    const enemyBatch = session.turnLogs[0]?.records.find(
+      (record) => record.recordType === "action_batch"
+        && record.batch.kind === "enemy_turn",
+    );
+    if (!enemyBatch || enemyBatch.recordType !== "action_batch") {
+      throw new Error("missing staged enemy NP action log");
+    }
+    expect(enemyBatch.batch.entries[0]).toMatchObject({
+      action: { kind: "enemy_noble_phantasm" },
+      overchargeStage: 3,
+      calculation: { npDamageMultiplierPermille: 4_000 },
+    });
+    expect(enemyBatch.batch.entries[0]).not.toHaveProperty(
+      "noblePhantasmLevel",
+    );
+
+    const save = createBattleSuspendSave(session);
+    expect(save).toMatchObject({
+      schemaVersion: 4,
+      dataSchemaVersion: "1.38.0",
+      battleLogSchemaVersion: 5,
+      battleTurnLogSchemaVersion: 2,
+    });
+    expect(save.attackData.combatants.find(
+      ({ instanceId }) => instanceId === staged.unit.instanceId,
+    )?.enemyAttacks[1]).toMatchObject({
+      noblePhantasmContext: {
+        actionStableId: definition.chargeAttack.stableId,
+        overchargeStage: 3,
+      },
+    });
+    expect(save.actionEffectData?.combatants[0]?.actions[0])
+      .toMatchObject({
+        noblePhantasmContext: {
+          actionStableId: definition.chargeAttack.stableId,
+          overchargeStage: 3,
+        },
+      });
+
+    const restored = restoreBattleSession(save);
+    const replayed = replayBattleSession(save);
+    expect(restored.loop.state).toEqual(session.loop.state);
+    expect(restored.loop.counters).toEqual(session.loop.counters);
+    expect(restored.loop.rng.snapshot()).toEqual(session.loop.rng.snapshot());
+    expect(restored.turnLogs).toEqual(session.turnLogs);
+    expect(createBattleSuspendSave(restored)).toEqual(save);
+    expect(replayed.loop.state).toEqual(session.loop.state);
+    expect(replayed.loop.counters).toEqual(session.loop.counters);
+    expect(replayed.loop.rng.snapshot()).toEqual(session.loop.rng.snapshot());
+    expect(Object.keys(replayed.loop.rng.snapshot().streams)).toHaveLength(6);
+    expect(replayed.turnLogs).toEqual(session.turnLogs);
   });
 });

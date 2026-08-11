@@ -1,4 +1,5 @@
 import type { CommonAction } from "./actions";
+import type { NoblePhantasmLevel } from "../formulas/np";
 import {
   assertValidNoblePhantasmCardTypeChangeTemplate,
 } from "./noblePhantasmCardType";
@@ -27,6 +28,23 @@ export type DeclaredActionInteger =
       scaling: "overcharge";
       values: FiveStageInteger;
     };
+
+export type OverchargeStage = 1 | 2 | 3 | 4 | 5;
+
+/**
+ * Explicit enemy-NP stages selected for one battle instance and one action.
+ * Only stages actually used by that action are present.
+ */
+export interface EnemyNoblePhantasmContext {
+  actionStableId: string;
+  noblePhantasmLevel?: NoblePhantasmLevel;
+  overchargeStage?: OverchargeStage;
+}
+
+export interface DeclaredActionScalingRequirements {
+  noblePhantasmLevel: boolean;
+  overchargeStage: boolean;
+}
 
 export type UnsupportedActionParameter =
   | string
@@ -149,6 +167,66 @@ export function assertValidDeclaredActionInteger(
     throw new RangeError(`${name}.scaling is invalid`);
   }
   assertFiveStageInteger(value.values, `${name}.values`);
+}
+
+export function declaredActionIntegerScaling(
+  value: DeclaredActionInteger,
+): "noble_phantasm_level" | "overcharge" | null {
+  return typeof value === "number" ? null : value.scaling;
+}
+
+/** Returns every staged integer axis used by one ordered effect list. */
+export function declaredActionScalingRequirements(
+  effects: readonly DeclaredActionEffect[],
+): DeclaredActionScalingRequirements {
+  let noblePhantasmLevel = false;
+  let overchargeStage = false;
+  for (const effect of effects) {
+    const action = effect.action;
+    const value = action.kind === "change_np" || action.kind === "gain_stars"
+      ? action.amount
+      : null;
+    if (value === null || typeof value === "number") continue;
+    if (value.scaling === "noble_phantasm_level") {
+      noblePhantasmLevel = true;
+    } else if (value.scaling === "overcharge") {
+      overchargeStage = true;
+    }
+  }
+  return { noblePhantasmLevel, overchargeStage };
+}
+
+export function isOverchargeStage(
+  value: unknown,
+): value is OverchargeStage {
+  return Number.isSafeInteger(value)
+    && typeof value === "number"
+    && value >= 1
+    && value <= 5;
+}
+
+export function assertValidEnemyNoblePhantasmContext(
+  context: EnemyNoblePhantasmContext,
+  name: string,
+): void {
+  if (
+    typeof context.actionStableId !== "string"
+    || context.actionStableId.trim().length === 0
+  ) {
+    throw new RangeError(`${name}.actionStableId must not be empty`);
+  }
+  if (
+    context.noblePhantasmLevel !== undefined
+    && !isOverchargeStage(context.noblePhantasmLevel)
+  ) {
+    throw new RangeError(`${name}.noblePhantasmLevel must be from 1 to 5`);
+  }
+  if (
+    context.overchargeStage !== undefined
+    && !isOverchargeStage(context.overchargeStage)
+  ) {
+    throw new RangeError(`${name}.overchargeStage must be from 1 to 5`);
+  }
 }
 
 function assertUniqueStrings(values: readonly string[], name: string): void {
