@@ -238,9 +238,14 @@ if (manifest) {
     "クリティカル率0%・100%は乱数を消費してはいけません"
   );
   assert(
-    manifest.coreRules.commandCardRedistributionStatus === "specified_not_implemented"
+    manifest.coreRules.commandCardRedistributionStatus === "implemented"
       && manifest.coreRules.commandCardRedistributionActionId === "redistribute_command_cards",
-    "カード再配布は未実装の宣言的共通戦場操作として仕様化されていなければなりません"
+    "カード再配布は宣言的共通戦場操作として実装されていなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.declaredBattlefieldActions)
+      === JSON.stringify(["redistribute_command_cards"]),
+    "宣言的共通戦場操作の一覧が一致しません"
   );
   assert(
     manifest.coreRules.commandCardRedistributionBoundary
@@ -370,9 +375,11 @@ if (manifest) {
   assert(
     manifest.coreRules.battleSuspendCardRedistributionOuterSchemaChange === false
       && manifest.coreRules.battleSuspendCardRedistributionDataSchemaChangeOnImplementation === true
+      && manifest.coreRules.battleSuspendCardRedistributionDataSchemaVersion === "1.38.0"
+      && manifest.coreRules.battleSuspendPreRedistributionDataSchemaVersion === "1.37.0"
       && manifest.coreRules.battleSuspendLegacyStarDistributionMigration
         === "add_legacy_mode_without_draw_or_state_change",
-    "カード再配布対応は形式4を維持し、実装時のデータ版更新と乱数非消費の旧配分移行を必要とします"
+    "カード再配布対応は形式4・データ1.38.0と乱数非消費の旧配分移行を必要とします"
   );
   assert(
     manifest.coreRules.allySkillOperationsSavedAndReplayed === true

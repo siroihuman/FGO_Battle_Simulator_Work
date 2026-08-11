@@ -162,7 +162,7 @@ describe("battle session persistence and replay", () => {
       kind: "battle_suspend",
       schemaVersion: 4,
       specVersion: "1.0.0",
-      dataSchemaVersion: "1.37.0",
+      dataSchemaVersion: "1.38.0",
       rngAlgorithmVersion: 1,
       battleLogSchemaVersion: 5,
       battleTurnLogSchemaVersion: 2,

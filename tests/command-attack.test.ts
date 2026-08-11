@@ -120,6 +120,8 @@ function withHand(
     .slice(0, 5 - selected.length);
   return {
     ...state,
+    commandStarDistributionMode: "legacy_on_command_confirmation",
+    commandStarDistribution: null,
     commandDeck: {
       ...state.commandDeck,
       currentHand: [...selected, ...fillers],

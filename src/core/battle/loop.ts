@@ -16,6 +16,9 @@ import {
   selectCommandCards,
   type CommandCardSelectionResult,
 } from "../cards/selection";
+import {
+  finalizeInputBoundaryCommandStarDistribution,
+} from "../cards/critical";
 import { BattleRng } from "../rng";
 import type {
   BattleActionEffectDataRegistry,
@@ -39,6 +42,7 @@ export interface BattleLoop {
 export interface CreateBattleLoopInput {
   state: BattleState;
   rng: BattleRng;
+  registry: BattleAttackDataRegistry;
   counters?: EffectRuntimeCounters;
 }
 
@@ -75,13 +79,26 @@ function assertInputBoundary(state: BattleState): void {
 function distributeNextHand(
   state: BattleState,
   rng: BattleRng,
-): CommandCardDrawResult {
+  registry: BattleAttackDataRegistry,
+): { state: BattleState; draw: CommandCardDrawResult } {
   assertInputBoundary(state);
-  return drawCommandCards(
+  const draw = drawCommandCards(
     state.commandDeck,
     state.formation.ally,
     rng.stream("cards"),
   );
+  const stateWithHand: BattleState = {
+    ...state,
+    commandDeck: draw.deck,
+    commandStarDistribution: null,
+  };
+  const finalized = finalizeInputBoundaryCommandStarDistribution(
+    stateWithHand,
+    registry,
+    rng.stream("critical"),
+    true,
+  );
+  return { state: finalized.state, draw };
 }
 
 /**
@@ -98,12 +115,13 @@ export function createBattleLoop(
       "initial battle loop state must not already have a command hand",
     );
   }
-  const initialHand = distributeNextHand(input.state, input.rng);
+  const initialHand = distributeNextHand(
+    input.state,
+    input.rng,
+    input.registry,
+  );
   return {
-    state: {
-      ...input.state,
-      commandDeck: initialHand.deck,
-    },
+    state: initialHand.state,
     rng: input.rng,
     counters: input.counters ?? createEffectRuntimeCounters(),
   };
@@ -142,11 +160,9 @@ export function resolveBattleLoopTurn(
     && nextState.outcome === "ongoing"
     && nextState.phase === "ally_action"
   ) {
-    nextHand = distributeNextHand(nextState, loop.rng);
-    nextState = {
-      ...nextState,
-      commandDeck: nextHand.deck,
-    };
+    const distributed = distributeNextHand(nextState, loop.rng, input.registry);
+    nextHand = distributed.draw;
+    nextState = distributed.state;
   }
   return {
     accepted: true,

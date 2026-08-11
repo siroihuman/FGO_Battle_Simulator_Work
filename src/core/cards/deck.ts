@@ -9,6 +9,7 @@ export type CommandDeckRebuildReason =
   | "initial"
   | "exhausted"
   | "ally_departure"
+  | "card_redistribution"
   | "forced";
 
 export interface CommandCard {
@@ -32,6 +33,18 @@ export interface CommandCardDrawResult {
   hand: CommandCard[];
   rebuiltBeforeDraw: boolean;
   exhaustedAfterDraw: boolean;
+}
+
+export interface CommandCardRedistributionResult {
+  deck: CommandCardDeckState;
+  hand: CommandCard[];
+  cycleBefore: number;
+  cycleAfter: number;
+  drawsInCycleBefore: number;
+  drawsInCycleAfter: number;
+  previousHandCardIds: string[];
+  sourceCardCount: number;
+  remainingCardCount: number;
 }
 
 function livingFrontline(
@@ -67,6 +80,54 @@ function buildSourceCards(ally: SideFormation): CommandCard[] {
       type,
     }));
   });
+}
+
+function assertUniqueCardIds(
+  cards: readonly CommandCard[],
+  name: string,
+): void {
+  const ids = cards.map(({ cardId }) => cardId);
+  if (new Set(ids).size !== ids.length) {
+    throw new RangeError(`${name} contains duplicate command card IDs`);
+  }
+}
+
+/** Validates the currently persisted deck before an atomic active redeal. */
+export function assertCommandCardDeckCanBeRedistributed(
+  deck: CommandCardDeckState,
+  ally: SideFormation,
+): void {
+  if (!Number.isSafeInteger(deck.cycle) || deck.cycle < 1) {
+    throw new RangeError("command deck cycle must be a positive safe integer");
+  }
+  if (!Number.isSafeInteger(deck.drawsInCycle) || deck.drawsInCycle < 0) {
+    throw new RangeError("command deck drawsInCycle must be non-negative");
+  }
+  if (deck.currentHand.length !== 5) {
+    throw new RangeError("command redistribution requires a five-card hand");
+  }
+  assertUniqueCardIds(deck.sourceCards, "command deck sourceCards");
+  assertUniqueCardIds(deck.remainingCards, "command deck remainingCards");
+  assertUniqueCardIds(deck.currentHand, "command deck currentHand");
+  const sourceIds = new Set(deck.sourceCards.map(({ cardId }) => cardId));
+  for (const card of [...deck.remainingCards, ...deck.currentHand]) {
+    if (!sourceIds.has(card.cardId)) {
+      throw new RangeError(
+        `command deck card is absent from sourceCards: ${card.cardId}`,
+      );
+    }
+  }
+  const distributedIds = new Set(deck.currentHand.map(({ cardId }) => cardId));
+  if (deck.remainingCards.some(({ cardId }) => distributedIds.has(cardId))) {
+    throw new RangeError("command deck hand and remainingCards must be disjoint");
+  }
+  const nextSource = buildSourceCards(ally);
+  if (nextSource.length < 5) {
+    throw new RangeError(
+      "command redistribution requires at least one living frontline ally",
+    );
+  }
+  assertUniqueCardIds(nextSource, "command redistribution sourceCards");
 }
 
 export function createCommandCardDeck(
@@ -121,6 +182,39 @@ function drawFive(
     hand.push(drawn);
   }
   return { hand, remaining };
+}
+
+/**
+ * Resets the complete distribution cycle from the current living frontline
+ * and immediately draws five normal command cards without replacement.
+ */
+export function redistributeCommandCards(
+  deck: CommandCardDeckState,
+  ally: SideFormation,
+  rng: DeterministicRng,
+): CommandCardRedistributionResult {
+  assertCommandCardDeckCanBeRedistributed(deck, ally);
+  const sourceCards = buildSourceCards(ally);
+  const draw = drawFive(sourceCards, rng);
+  const nextDeck: CommandCardDeckState = {
+    cycle: deck.cycle + 1,
+    drawsInCycle: 1,
+    sourceCards,
+    remainingCards: draw.remaining,
+    currentHand: draw.hand,
+    lastRebuildReason: "card_redistribution",
+  };
+  return {
+    deck: nextDeck,
+    hand: draw.hand,
+    cycleBefore: deck.cycle,
+    cycleAfter: nextDeck.cycle,
+    drawsInCycleBefore: deck.drawsInCycle,
+    drawsInCycleAfter: nextDeck.drawsInCycle,
+    previousHandCardIds: deck.currentHand.map(({ cardId }) => cardId),
+    sourceCardCount: sourceCards.length,
+    remainingCardCount: draw.remaining.length,
+  };
 }
 
 /**

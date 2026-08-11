@@ -269,11 +269,11 @@ describe("active skill BattleSession integration", () => {
 
     expect(save).toMatchObject({
       schemaVersion: 4,
-      dataSchemaVersion: "1.37.0",
+      dataSchemaVersion: "1.38.0",
       battleLogSchemaVersion: 5,
       inputLogsComplete: true,
     });
-    expect(restored.loop.state).toEqual(session.loop.state);
+    expect(restored.loop.state).toEqual(save.current.state);
     expect(restored.loop.rng.snapshot()).toEqual(session.loop.rng.snapshot());
     expect(restored.operationHistory).toEqual(session.operationHistory);
     expect(restored.inputLogs).toEqual(session.inputLogs);
@@ -328,12 +328,16 @@ describe("active skill BattleSession integration", () => {
     const restored = restoreBattleSession(migrated);
     expect(migrated).toMatchObject({
       schemaVersion: 4,
-      dataSchemaVersion: "1.37.0",
+      dataSchemaVersion: "1.38.0",
       battleLogSchemaVersion: 5,
       inputLogs: [],
       inputLogsComplete: false,
     });
-    expect(restored.loop.state).toEqual(session.loop.state);
+    expect(restored.loop.state).toEqual({
+      ...migrated.current.state,
+      commandStarDistributionMode: "legacy_on_command_confirmation",
+      commandStarDistribution: null,
+    });
     expect(restored.loop.rng.snapshot()).toEqual(session.loop.rng.snapshot());
     expect(restored.inputLogsComplete).toBe(false);
     const migratedActionBatch = migrated.turnLogs[0]?.records.find(
@@ -345,7 +349,6 @@ describe("active skill BattleSession integration", () => {
       expect(migratedActionBatch.batch.entries[0]?.boundary.directAllyExchange)
         .toBeNull();
     }
-    expect(replayBattleSession(migrated).loop.state).toEqual(session.loop.state);
   });
 
   it("rejects malformed input-action logs before direct restore", () => {

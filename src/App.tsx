@@ -70,6 +70,8 @@ const ALLY_SKILL_REASON_LABELS = {
   selected_target_required: "対象を選択してください。",
   selected_target_invalid: "選択した対象には使用できません。",
   unresolved_effects: "未対応効果を含むため、何も変更せず不発になりました。",
+  command_card_redistribution_unavailable: "現在の入力境界ではカードを再配布できません。",
+  command_card_redistribution_invalid: "カード再配布データが不正なため、何も変更せず不発になりました。",
 } as const;
 
 const MYSTIC_CODE_REASON_LABELS = {
@@ -82,7 +84,24 @@ const MYSTIC_CODE_REASON_LABELS = {
   order_change_targets_required: "交換する前衛と控えを選択してください。",
   order_change_targets_invalid: "選択した前衛と控えは交換できません。",
   unresolved_effects: "未対応効果を含むため、何も変更せず不発になりました。",
+  command_card_redistribution_unavailable: "現在の入力境界ではカードを再配布できません。",
+  command_card_redistribution_invalid: "カード再配布データが不正なため、何も変更せず不発になりました。",
 } as const;
+
+function effectsRedistributedCommandCards(
+  effects: { effects: Array<{ commandCardRedistribution?: unknown }> },
+): boolean {
+  return effects.effects.some(({ commandCardRedistribution }) =>
+    commandCardRedistribution !== undefined
+  );
+}
+
+export function selectedCardsAfterCommandRedistribution(
+  selectedCardIds: readonly string[],
+  redistributed: boolean,
+): string[] {
+  return redistributed ? [] : [...selectedCardIds];
+}
 
 function isInitialBattleSetup(value: unknown): value is InitialBattleSetup {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -485,10 +504,12 @@ export function SkillControls({
   session,
   onSessionChange,
   onMessage,
+  onCommandCardsRedistributed,
 }: {
   session: BattleSession;
   onSessionChange: (session: BattleSession) => void;
   onMessage: (message: string) => void;
+  onCommandCardsRedistributed?: () => void;
 }) {
   const ally = session.loop.state.formation.ally;
   const livingFrontline = ally.frontline.flatMap((unit) =>
@@ -539,6 +560,12 @@ export function SkillControls({
         : {}),
     });
     onSessionChange(resolved.session);
+    if (
+      resolved.result.accepted
+      && effectsRedistributedCommandCards(resolved.result.effects)
+    ) {
+      onCommandCardsRedistributed?.();
+    }
     onMessage(resolved.result.accepted
       ? `${skillName}が成立しました。`
       : ALLY_SKILL_REASON_LABELS[resolved.result.reason]);
@@ -567,6 +594,13 @@ export function SkillControls({
         : {}),
     });
     onSessionChange(resolved.session);
+    if (
+      resolved.result.accepted
+      && resolved.result.execution === "effects"
+      && effectsRedistributedCommandCards(resolved.result.effects)
+    ) {
+      onCommandCardsRedistributed?.();
+    }
     onMessage(resolved.result.accepted
       ? `${skillName}が成立しました。`
       : MYSTIC_CODE_REASON_LABELS[resolved.result.reason]);
@@ -1035,6 +1069,10 @@ function BattleScreen({
           session={session}
           onSessionChange={onSessionChange}
           onMessage={setOperationMessage}
+          onCommandCardsRedistributed={() =>
+            setSelectedCardIds((current) =>
+              selectedCardsAfterCommandRedistribution(current, true)
+            )}
         />
       )}
 
@@ -1056,6 +1094,11 @@ function BattleScreen({
               const card = choice.card;
               const owner = unitsById.get(card.ownerInstanceId);
               const selectedIndex = selectedCardIds.indexOf(card.cardId);
+              const starAllocation = card.kind === "normal"
+                ? state.commandStarDistribution?.cards.find(
+                    ({ cardId }) => cardId === card.cardId,
+                  ) ?? null
+                : null;
               const label = card.kind === "noble_phantasm"
                 ? card.noblePhantasmName
                 : `${CARD_TYPE_LABELS[card.type]} ${card.cardIndex + 1}`;
@@ -1073,6 +1116,12 @@ function BattleScreen({
                   </span>
                   <strong>{label}</strong>
                   <small>{owner?.name ?? card.ownerInstanceId}</small>
+                  {starAllocation && (
+                    <small>
+                      スター {starAllocation.stars}個・クリティカル率
+                      {starAllocation.criticalRatePermille / 10}%
+                    </small>
+                  )}
                   {!choice.selectable && (
                     <small>{choice.executionRestrictions.join(" / ")}</small>
                   )}

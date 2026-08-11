@@ -83,6 +83,8 @@ function battle(): BattleState {
   });
   return {
     ...initial,
+    commandStarDistributionMode: "legacy_on_command_confirmation",
+    commandStarDistribution: null,
     commandDeck: {
       ...initial.commandDeck,
       currentHand: initial.commandDeck.sourceCards

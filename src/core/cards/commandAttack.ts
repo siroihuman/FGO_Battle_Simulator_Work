@@ -70,6 +70,7 @@ import type {
   CommandCardSelection,
 } from "./selection";
 import {
+  assertStoredCommandStarDistribution,
   resolveCommandCardCritical,
   resolveCommandStarDistribution,
   type CommandCardCriticalResult,
@@ -548,14 +549,24 @@ export function resolveAllyCommandAttacks(
 ): AllyCommandAttacksResult {
   let counters = input.counters
     ?? createEffectRuntimeCounters();
-  const starDistributionCapture = captureBattleLogRng(
-    { critical: input.rng.critical },
-    () => resolveCommandStarDistribution(
-      input.state,
-      input.registry,
-      input.rng.critical,
-    ),
-  );
+  const starDistributionCapture =
+    input.state.commandStarDistributionMode
+        === "legacy_on_command_confirmation"
+      ? captureBattleLogRng(
+          { critical: input.rng.critical },
+          () => resolveCommandStarDistribution(
+            input.state,
+            input.registry,
+            input.rng.critical,
+          ),
+        )
+      : {
+          result: assertStoredCommandStarDistribution(
+            input.state,
+            input.registry,
+          ),
+          events: [],
+        };
   const starDistribution = starDistributionCapture.result;
   const actionRngEvents = new Map<
     number,

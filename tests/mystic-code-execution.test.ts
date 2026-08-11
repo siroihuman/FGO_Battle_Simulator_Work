@@ -21,6 +21,7 @@ import { resolveMysticCodeSkillUse } from "../src/effects/mysticCodeExecution";
 import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
 import { applyEffect, createEffectRuntimeCounters } from "../src/effects/runtime";
 import { unit } from "./helpers/battle";
+import { combatantData } from "./helpers/attackData";
 
 function selectedState(dataId: "atlas-academy-uniform" | "normal-chaldea-uniform") {
   const rng = new BattleRng(`selected-${dataId}`);
@@ -339,7 +340,11 @@ describe("Mystic Code skill execution", () => {
       state: initialized.state,
       rng: initialized.rng,
       counters: initialized.counters,
-      registry: createBattleAttackDataRegistry([]),
+      registry: createBattleAttackDataRegistry(
+        ["ally-a", "ally-b", "ally-c", "ally-d"].map((instanceId) =>
+          combatantData(instanceId, instanceId)
+        ),
+      ),
       mysticCodeRegistry: INITIAL_MYSTIC_CODE_REGISTRY,
     });
     session = resolveBattleSessionMysticCodeSkill(session, {
