@@ -390,10 +390,10 @@ if (manifest) {
     "味方能動スキル操作は入力境界ログ・保存・リプレイへ統合しなければなりません"
   );
   assert(
-    manifest.status === "mage-association-uniform-implemented"
+    manifest.status === "mage-association-uniform-acceptance-passed"
       && manifest.dataSchemaVersion === "1.38.0"
       && manifest.coreRules.battleSuspendSchemaVersion === 4,
-    "魔術協会制服の実装では保存形式4・データ1.38.0を変更してはいけません"
+    "魔術協会制服の統合受入後も保存形式4・データ1.38.0を変更してはいけません"
   );
   assert(
     JSON.stringify(manifest.specifiedContent?.mysticCodes)

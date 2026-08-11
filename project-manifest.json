@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "mage-association-uniform-implemented",
+  "status": "mage-association-uniform-acceptance-passed",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
