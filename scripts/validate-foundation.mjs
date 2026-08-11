@@ -390,10 +390,10 @@ if (manifest) {
     "味方能動スキル操作は入力境界ログ・保存・リプレイへ統合しなければなりません"
   );
   assert(
-    manifest.status === "mage-association-uniform-specified"
+    manifest.status === "mage-association-uniform-implemented"
       && manifest.dataSchemaVersion === "1.38.0"
       && manifest.coreRules.battleSuspendSchemaVersion === 4,
-    "魔術協会制服の仕様確定では保存形式4・データ1.38.0を変更してはいけません"
+    "魔術協会制服の実装では保存形式4・データ1.38.0を変更してはいけません"
   );
   assert(
     JSON.stringify(manifest.specifiedContent?.mysticCodes)
@@ -402,7 +402,7 @@ if (manifest) {
         dataId: "mage-association-uniform",
         schemaVersion: 2,
         levelPolicy: "max",
-        implementationStatus: "specified_not_registered",
+        implementationStatus: "implemented",
         source: "https://w.atwiki.jp/f_go/pages/41.html",
         sourceCheckedAt: "2026-08-11",
         skills: [{
@@ -428,7 +428,16 @@ if (manifest) {
           effects: [{ order: 1, action: "redistribute_command_cards" }],
         }],
       }]),
-    "魔術協会制服の形式2後続登録仕様が正本と一致しません"
+    "魔術協会制服の形式2具体データ仕様が正本と一致しません"
+  );
+  assert(
+    JSON.stringify(manifest.initialContent?.mysticCodes)
+      === JSON.stringify([
+        "アトラス院制服",
+        "ノーマルカルデア制服",
+        "魔術協会制服",
+      ]),
+    "初期魔術礼装レジストリは3着でなければなりません"
   );
   assert(
     manifest.coreRules.servantDataSchemaVersion === 1,

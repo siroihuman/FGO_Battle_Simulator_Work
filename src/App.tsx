@@ -23,6 +23,7 @@ import {
 } from "./data/craftEssences";
 import {
   INITIAL_MYSTIC_CODE_DEFINITIONS,
+  type MysticCodeSkillDefinition,
 } from "./data/mysticCodes";
 import {
   INITIAL_SERVANT_DEFINITIONS,
@@ -101,6 +102,16 @@ export function selectedCardsAfterCommandRedistribution(
   redistributed: boolean,
 ): string[] {
   return redistributed ? [] : [...selectedCardIds];
+}
+
+/** Returns whether the UI must supply one unit ID; validity stays engine-owned. */
+export function mysticCodeSkillUsesSelectedUnitInput(
+  skill: MysticCodeSkillDefinition,
+): boolean {
+  return skill.execution === "effects" && skill.effects.some(
+    ({ target }) =>
+      target.relation !== "self" && target.selection === "single",
+  );
 }
 
 function isInitialBattleSetup(value: unknown): value is InitialBattleSetup {
@@ -575,11 +586,14 @@ export function SkillControls({
     skillStableId: string,
     skillName: string,
     execution: "effects" | "order_change",
+    usesSelectedUnitInput: boolean,
   ) {
     const resolved = resolveBattleSessionMysticCodeSkill(session, {
       kind: "mystic_code_skill",
       skillStableId,
-      ...(execution === "effects" && selectedTargetInstanceId
+      ...(execution === "effects"
+        && usesSelectedUnitInput
+        && selectedTargetInstanceId
         ? { selectedTargetInstanceId }
         : {}),
       ...(execution === "order_change"
@@ -725,6 +739,7 @@ export function SkillControls({
                       skill.stableId,
                       skill.name,
                       skill.execution,
+                      mysticCodeSkillUsesSelectedUnitInput(skill),
                     )}
                   >
                     <strong>スキル{skill.slot}：{skill.name}</strong>

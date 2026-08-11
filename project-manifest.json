@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "mage-association-uniform-specified",
+  "status": "mage-association-uniform-implemented",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -375,7 +375,7 @@
         "dataId": "mage-association-uniform",
         "schemaVersion": 2,
         "levelPolicy": "max",
-        "implementationStatus": "specified_not_registered",
+        "implementationStatus": "implemented",
         "source": "https://w.atwiki.jp/f_go/pages/41.html",
         "sourceCheckedAt": "2026-08-11",
         "skills": [
@@ -437,7 +437,8 @@
     ],
     "mysticCodes": [
       "アトラス院制服",
-      "ノーマルカルデア制服"
+      "ノーマルカルデア制服",
+      "魔術協会制服"
     ],
     "craftEssences": [
       {
