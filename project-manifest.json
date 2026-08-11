@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "turn-end-trigger-star-gain-specified",
+  "status": "turn-end-trigger-star-gain-implemented",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -167,6 +167,7 @@
       "seed",
       "rng_positions",
       "turn_end_activations",
+      "turn_end_star_additions",
       "breaks",
       "hp_settlements",
       "enemy_charge_changes",
@@ -339,7 +340,8 @@
     "conditionalAttackTriggerMismatchConsumesRng": false,
     "triggerStarGainDestinationRequired": true,
     "turnEndTriggerStarGain": {
-      "status": "specified_implementation_pending",
+      "status": "accepted",
+      "v1InitialScope": true,
       "endingSides": [
         "ally",
         "enemy"
@@ -367,7 +369,8 @@
         "requested",
         "before",
         "added",
-        "after"
+        "after",
+        "overflow"
       ],
       "battleSuspendSchemaChange": false,
       "dataSchemaChange": false,
@@ -381,7 +384,7 @@
         "turn_logs"
       ],
       "uiRecalculates": false,
-      "implementationStatus": "specified_not_implemented"
+      "implementationStatus": "implemented_and_accepted"
     },
     "noblePhantasmCardTypeChangeCategory": "buff",
     "noblePhantasmCardTypeChangeMutatesIntrinsicType": false,

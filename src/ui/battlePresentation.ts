@@ -131,6 +131,14 @@ function turnEndChanges(record: BattleLogTurnEndRecord): string[] {
     poison: "毒",
     curse: "呪い",
   } as const;
+  for (const activation of record.activations) {
+    for (const action of activation.actions) {
+      if (!action.starAddition) continue;
+      changes.push(
+        `${unitName(activation.owner.name, activation.owner.instanceId)}：次回用スター ${action.starAddition.before}→${action.starAddition.after}（要求${action.starAddition.requested}・獲得${action.starAddition.added}・上限超過${action.starAddition.overflow}）`,
+      );
+    }
+  }
   for (const settlement of record.hpSettlements) {
     for (const contribution of settlement.slipDamageContributions) {
       if (!contribution.slipDamageKind) continue;

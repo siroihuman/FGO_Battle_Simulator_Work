@@ -108,6 +108,9 @@ export function assertValidEffectTrigger(
   );
   (trigger.actions ?? []).forEach((action, index) => {
     const actionName = `${name}.actions[${index}]`;
+    if (!action || typeof action !== "object" || !action.action) {
+      throw new RangeError(`${actionName}.action is required`);
+    }
     if (action.turnEndSettlement && trigger.timing !== "turn_end") {
       throw new RangeError(
         `${actionName}.turnEndSettlement requires turn_end timing`,
@@ -143,16 +146,28 @@ export function assertValidEffectTrigger(
       );
     }
     if (
-      action.target.relation !== "self"
+      !action.target
+      || action.target.relation !== "self"
       || action.target.selection !== "single"
     ) {
       throw new RangeError(
         `${actionName} gain_stars must use a self target`,
       );
     }
-    if (trigger.timing === "turn_end") {
+    if (
+      trigger.timing === "turn_end"
+      && action.action.destination !== "next_command"
+    ) {
       throw new RangeError(
-        `${actionName} gain_stars is not supported for turn_end yet`,
+        `${actionName} turn_end gain_stars must use next_command destination`,
+      );
+    }
+    if (
+      trigger.timing === "turn_end"
+      && action.turnEndSettlement !== undefined
+    ) {
+      throw new RangeError(
+        `${actionName} turn_end gain_stars cannot use turnEndSettlement`,
       );
     }
   });

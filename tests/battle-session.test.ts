@@ -270,6 +270,118 @@ describe("battle session persistence and replay", () => {
     expect(createBattleSuspendSave(restored)).toEqual(save);
   });
 
+  it("restores turn-end stars without rerunning them and replays exact state, counters, RNG, and logs", () => {
+    let counters = createEffectRuntimeCounters();
+    let applied = applyEffect(
+      unit("ally-a", "ally"),
+      {
+        stableId: "saved-ally-end-stars",
+        name: "保存対象・味方終了時スター",
+        effectType: "saved-ally-end-stars",
+        category: "buff",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: {
+              kind: "gain_stars",
+              amount: 10,
+              destination: "next_command",
+            },
+          }],
+        },
+      },
+      "ally-a",
+      counters,
+    );
+    const allyA = applied.unit;
+    counters = applied.counters;
+    applied = applyEffect(
+      unit("enemy-a", "enemy", {
+        hp: 1_000_000,
+        maxHp: 1_000_000,
+        baseMaxHp: 1_000_000,
+        enemyAction: enemyAction(),
+      }),
+      {
+        stableId: "saved-enemy-end-stars",
+        name: "保存対象・敵終了時スター",
+        effectType: "saved-enemy-end-stars",
+        category: "buff",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: {
+              kind: "gain_stars",
+              amount: 7,
+              destination: "next_command",
+            },
+          }],
+        },
+      },
+      "enemy-a",
+      counters,
+    );
+    counters = applied.counters;
+    const initialState = {
+      ...createBattleState({
+        ally: {
+          frontline: [
+            allyA,
+            unit("ally-b", "ally"),
+            unit("ally-c", "ally"),
+          ],
+          reserve: [],
+        },
+        waves: [{
+          enemy: {
+            frontline: [applied.unit, null, null],
+            reserve: [],
+          },
+        }],
+        enemyFrontlineLimit: 3,
+      }),
+      nextCommandStars: 88,
+    };
+    let session = createBattleSession({
+      state: initialState,
+      rng: new BattleRng("saved-turn-end-stars"),
+      registry: registry(),
+      counters,
+    });
+    session = resolveBattleSessionTurn(session, {
+      cardIds: firstThreeCardIds(session),
+    }).session;
+    const save = parseBattleSuspendSave(
+      serializeBattleSuspendSave(session),
+    );
+    const restored = restoreBattleSession(save);
+    const replayed = replayBattleSession(save);
+
+    expect(save).toMatchObject({
+      schemaVersion: 4,
+      dataSchemaVersion: "1.38.0",
+      battleLogSchemaVersion: 5,
+      battleTurnLogSchemaVersion: 2,
+    });
+    expect(session.loop.state).toMatchObject({
+      commandStars: 99,
+      nextCommandStars: 0,
+    });
+    expect(restored.loop.state).toEqual(session.loop.state);
+    expect(restored.loop.counters).toEqual(session.loop.counters);
+    expect(restored.loop.rng.snapshot()).toEqual(session.loop.rng.snapshot());
+    expect(restored.turnLogs).toEqual(session.turnLogs);
+    expect(restored.turnLogs).toHaveLength(1);
+    expect(replayed.loop.state).toEqual(session.loop.state);
+    expect(replayed.loop.counters).toEqual(session.loop.counters);
+    expect(replayed.loop.rng.snapshot()).toEqual(session.loop.rng.snapshot());
+    expect(Object.keys(replayed.loop.rng.snapshot().streams)).toHaveLength(6);
+    expect(replayed.turnLogs).toEqual(session.turnLogs);
+    expect(createBattleSuspendSave(restored)).toEqual(save);
+  });
+
   it("rejects function-based AI before it can change state or RNG", () => {
     const session = createSession("unsupported-selector");
     const before = session.loop.rng.snapshot();

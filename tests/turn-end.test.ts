@@ -257,6 +257,33 @@ describe("side turn-end integration", () => {
     });
   });
 
+  it("rejects a connected declaration when the battle-state star resolver is missing", () => {
+    const applied = register(
+      formation(),
+      "ally-a",
+      recurring("unconnected-turn-end-stars", {
+        kind: "gain_stars",
+        amount: 10,
+        destination: "next_command",
+      }),
+      createEffectRuntimeCounters(),
+    );
+    const rng = new BattleRng("unconnected-turn-end-stars");
+    const before = rng.snapshot();
+
+    expect(() => resolveSideTurnEnd(
+      applied.formation,
+      "ally",
+      applied.counters,
+      rng.stream("effects"),
+    )).toThrow(/requires the battle-state coordinator/);
+    expect(rng.snapshot()).toEqual(before);
+    expect(applied.counters).toEqual({
+      nextInstanceNumber: 2,
+      nextRegistrationOrder: 2,
+    });
+  });
+
   it("delays effects registered during the phase until the next matching turn end", () => {
     let state = withHp(formation(), "ally-b", 5_000);
     let counters = createEffectRuntimeCounters();

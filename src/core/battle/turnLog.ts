@@ -74,6 +74,14 @@ export interface BattleLogTurnEndAction {
     | "recurring_hp_recovery"
     | "slip_damage"
     | null;
+  starAddition?: {
+    bucket: "next_command";
+    requested: number;
+    before: number;
+    added: number;
+    after: number;
+    overflow: number;
+  };
   results: BattleLogCommonActionResult[];
 }
 
@@ -339,6 +347,9 @@ function turnEndActivationLogs(
         battleLogUnitRef(unitIndex, instanceId)
       ),
       deferredSettlement: action.deferredSettlement ?? null,
+      ...(action.starAddition
+        ? { starAddition: { ...action.starAddition } }
+        : {}),
       results: action.batch.results.map((result, index) =>
         createBattleLogCommonActionResult(
           result,

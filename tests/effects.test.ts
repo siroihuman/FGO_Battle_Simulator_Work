@@ -89,6 +89,163 @@ describe("effect registration and classification", () => {
     )).toThrow(/must be debuff effects/);
   });
 
+  it("accepts only connected turn-end star declarations without advancing counters on rejection", () => {
+    const target = unit("ally-a", "ally");
+    const counters = createEffectRuntimeCounters();
+    const valid: EffectTemplate = {
+      stableId: "turn-end-stars",
+      name: "終了時スター獲得",
+      effectType: "turn-end-stars",
+      category: "buff",
+      trigger: {
+        timing: "turn_end",
+        actions: [{
+          target: { relation: "self", selection: "single" },
+          action: {
+            kind: "gain_stars",
+            amount: 10,
+            destination: "next_command",
+          },
+        }],
+      },
+    };
+
+    const applied = applyEffect(target, valid, target.instanceId, counters);
+    expect(applied.effect.instanceId).toBe("effect-1");
+    expect(applied.counters).toEqual({
+      nextInstanceNumber: 2,
+      nextRegistrationOrder: 2,
+    });
+
+    const rejected: Array<[string, EffectTemplate]> = [
+      ["command destination", {
+        ...valid,
+        stableId: "turn-end-stars-command",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: {
+              kind: "gain_stars",
+              amount: 10,
+              destination: "command",
+            },
+          }],
+        },
+      }],
+      ["invalid target", {
+        ...valid,
+        stableId: "turn-end-stars-all",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "allies", selection: "all" },
+            action: {
+              kind: "gain_stars",
+              amount: 10,
+              destination: "next_command",
+            },
+          }],
+        },
+      }],
+      ["negative amount", {
+        ...valid,
+        stableId: "turn-end-stars-negative",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: {
+              kind: "gain_stars",
+              amount: -1,
+              destination: "next_command",
+            },
+          }],
+        },
+      }],
+      ["fractional amount", {
+        ...valid,
+        stableId: "turn-end-stars-fractional",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: {
+              kind: "gain_stars",
+              amount: 1.5,
+              destination: "next_command",
+            },
+          }],
+        },
+      }],
+      ["settlement combination", {
+        ...valid,
+        stableId: "turn-end-stars-settlement",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: {
+              kind: "gain_stars",
+              amount: 10,
+              destination: "next_command",
+            },
+            turnEndSettlement: "recurring_hp_recovery",
+          }],
+        },
+      }],
+      ["missing destination", {
+        ...valid,
+        stableId: "turn-end-stars-missing-destination",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: {
+              kind: "gain_stars",
+              amount: 10,
+            } as never,
+          }],
+        },
+      }],
+      ["missing target", {
+        ...valid,
+        stableId: "turn-end-stars-missing-target",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            action: {
+              kind: "gain_stars",
+              amount: 10,
+              destination: "next_command",
+            },
+          } as never],
+        },
+      }],
+      ["missing action", {
+        ...valid,
+        stableId: "turn-end-stars-missing-action",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+          } as never],
+        },
+      }],
+    ];
+
+    for (const [label, template] of rejected) {
+      expect(
+        () => applyEffect(target, template, target.instanceId, counters),
+        label,
+      ).toThrow(RangeError);
+      expect(counters, label).toEqual({
+        nextInstanceNumber: 1,
+        nextRegistrationOrder: 1,
+      });
+    }
+  });
+
   it("classifies only the Roma trait grant as a debuff", () => {
     expect(categoryForGrantedTrait("roma")).toBe("debuff");
     expect(categoryForGrantedTrait("dragon")).toBe("other");

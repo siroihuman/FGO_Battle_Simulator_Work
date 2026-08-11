@@ -43,6 +43,7 @@
 - 魔術協会制服の統合受入結果: [`qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md`](qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md)
 - スリップダメージ倍加の統合受入結果: [`qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md`](qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md)
 - 敵宝具Lv・OC文脈と段階別宣言値の統合受入結果: [`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)
+- ターン終了トリガーによるスター獲得の統合受入結果: [`qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md`](qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md)
 - 詳細な完了履歴・決定理由・旧規則: [`archive/README.md`](archive/README.md)
 
 詳細仕様は現在も有効な正本です。履歴を確認する必要がある場合だけアーカイブを開いてください。

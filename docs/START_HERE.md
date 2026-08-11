@@ -4,16 +4,16 @@
 
 ## 現在地点
 
-- フェーズ: 17／ターン終了トリガーによるスター獲得（仕様確定）
-- 状態: D-073に従い、味方・敵の終了時スター獲得を次回味方コマンド用だけへ資料順に加算し、99個上限、控え停止、確定ターンログ、形式4・データ1.38.0の保存・直接再開・固定シードリプレイ、UI非再計算を維持する仕様を確定済み。共通処理と具体コンテンツは未実装。
+- フェーズ: 17／ターン終了トリガーによるスター獲得（共通処理・統合受入完了）
+- 状態: D-073・D-074に従い、味方・敵の終了時スター獲得を次回味方コマンド用だけへ資料順に加算し、各加算の99個上限、控え・途中退場・途中登場停止、確定ターンログ、形式4・データ1.38.0の保存・直接再開・固定シードリプレイ、UI非再計算を共通処理へ接続済み。今回の方針変更によりv1.0初期完成範囲へ含め、同範囲の未実装は0件。具体コンテンツは未追加。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. ターン終了トリガーによるスター獲得の共通処理を実装する（システム実装担当、推奨モデル: `gpt-5.6-sol`、思考レベル: `high`）。D-073の次回用限定、資料順加算、99個上限、控え停止、確定ターンログ、形式4・データ1.38.0の保存・直接再開・固定シードリプレイ、UI非再計算を実装・回帰検査し、具体コンテンツは追加しない。
+1. v1.0初期完成範囲外の具体コンテンツ追加へ進む前に、追加対象をサーヴァントまたは敵から1件だけ選定する（企画・仕様選定担当、推奨モデル: `gpt-5.6-sol`、思考レベル: `high`）。候補は正本の未実装一覧と既存共通処理だけから整理し、この作業ではデータ・実装・形式番号を変更しない。
 
-今回の受入詳細は[`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)、スリップダメージ倍加の受入詳細は[`qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md`](qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md)、魔術協会制服の受入詳細は[`qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md`](qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md)、カード再配布共通処理の受入詳細は[`qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md`](qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md)、v1.0初期範囲の受入詳細は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
+ターン終了スター獲得の受入詳細は[`qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md`](qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md)、敵宝具段階文脈は[`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)、スリップダメージ倍加は[`qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md`](qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md)、魔術協会制服は[`qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md`](qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md)、カード再配布共通処理は[`qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md`](qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md)、従来のv1.0初期範囲は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
 
 ## 最初に読むもの
 

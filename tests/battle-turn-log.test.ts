@@ -347,6 +347,129 @@ describe("battle-turn timeline log", () => {
     );
   });
 
+  it("records each confirmed turn-end star addition and presents only saved values", () => {
+    let counters = createEffectRuntimeCounters();
+    let applied = applyEffect(
+      unit("ally-a", "ally"),
+      {
+        stableId: "ally-end-stars",
+        name: "味方終了時スター",
+        effectType: "ally-end-stars",
+        category: "buff",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: {
+              kind: "gain_stars",
+              amount: 10,
+              destination: "next_command",
+            },
+          }],
+        },
+      },
+      "ally-a",
+      counters,
+    );
+    const allyA = applied.unit;
+    counters = applied.counters;
+    applied = applyEffect(
+      unit("enemy-a", "enemy", {
+        hp: 1_000_000,
+        maxHp: 1_000_000,
+        baseMaxHp: 1_000_000,
+        enemyAction: enemyAction(),
+      }),
+      {
+        stableId: "enemy-end-stars",
+        name: "敵終了時スター",
+        effectType: "enemy-end-stars",
+        category: "buff",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: {
+              kind: "gain_stars",
+              amount: 7,
+              destination: "next_command",
+            },
+          }],
+        },
+      },
+      "enemy-a",
+      counters,
+    );
+    counters = applied.counters;
+    const state = {
+      ...battle({ allyA, enemyA: applied.unit }),
+      commandStars: 3,
+      nextCommandStars: 87,
+    };
+    const result = resolveBattleTurn({
+      state,
+      selection: selection(state),
+      registry: allyRegistry(),
+      rng: new BattleRng("turn-end-star-log"),
+      counters,
+    });
+    const turnEnds = result.battleLog.records.filter(
+      (record) => record.recordType === "turn_end",
+    );
+
+    expect(turnEnds).toHaveLength(2);
+    expect(turnEnds.map((record) =>
+      record.recordType === "turn_end"
+        ? record.activations[0].actions[0].starAddition
+        : null
+    )).toEqual([
+      {
+        bucket: "next_command",
+        requested: 10,
+        before: 88,
+        added: 10,
+        after: 98,
+        overflow: 0,
+      },
+      {
+        bucket: "next_command",
+        requested: 7,
+        before: 98,
+        added: 1,
+        after: 99,
+        overflow: 6,
+      },
+    ]);
+    expect(result.state).toMatchObject({
+      phase: "ally_action",
+      commandStars: 99,
+      nextCommandStars: 0,
+    });
+
+    const savedOnly = structuredClone(result.battleLog);
+    const savedEnemyEnd = savedOnly.records.find(
+      (record) => record.recordType === "turn_end" && record.side === "enemy",
+    );
+    if (!savedEnemyEnd || savedEnemyEnd.recordType !== "turn_end") {
+      throw new Error("missing saved enemy turn-end log");
+    }
+    const savedAddition = savedEnemyEnd.activations[0].actions[0].starAddition;
+    if (!savedAddition) throw new Error("missing saved star addition");
+    Object.assign(savedAddition, {
+      requested: 40,
+      before: 41,
+      added: 2,
+      after: 43,
+      overflow: 38,
+    });
+    const summary = summarizeBattleTurnLogs([savedOnly]).find(
+      ({ kind, title }) => kind === "turn_end" && title === "敵ターン終了",
+    );
+    expect(summary?.changes).toContain(
+      "enemy-a：次回用スター 41→43（要求40・獲得2・上限超過38）",
+    );
+  });
+
   it("records amplified slip details and presents only the saved confirmed values", () => {
     let counters = createEffectRuntimeCounters();
     let applied = applyEffect(

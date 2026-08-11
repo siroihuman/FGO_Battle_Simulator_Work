@@ -40,6 +40,7 @@ import {
   setBattleFormation,
   type BattleState,
 } from "./state";
+import { addNextCommandStars } from "./starState";
 
 export interface AllyTurnEndResolution {
   state: BattleState;
@@ -143,6 +144,18 @@ export function resolveAllyTurnEnd(
     {
       snapshot,
       advanceDurations: false,
+      resolveStarGain: ({ requested }) => {
+        const addition = addNextCommandStars(currentState, requested);
+        currentState = addition.state;
+        return {
+          bucket: "next_command",
+          requested: addition.requested,
+          before: addition.before,
+          added: addition.added,
+          after: addition.after,
+          overflow: addition.requested - addition.added,
+        };
+      },
     },
   );
   currentCounters = recurring.counters;
@@ -200,6 +213,7 @@ export function resolveEnemyTurnEnd(
     state.formation,
     "enemy",
   );
+  let currentState = state;
   const recurring = resolveSideTurnEnd(
     state.formation,
     "enemy",
@@ -208,9 +222,21 @@ export function resolveEnemyTurnEnd(
     {
       snapshot,
       advanceDurations: false,
+      resolveStarGain: ({ requested }) => {
+        const addition = addNextCommandStars(currentState, requested);
+        currentState = addition.state;
+        return {
+          bucket: "next_command",
+          requested: addition.requested,
+          before: addition.before,
+          added: addition.added,
+          after: addition.after,
+          overflow: addition.requested - addition.added,
+        };
+      },
     },
   );
-  let currentState = applyFormation(state, recurring.formation);
+  currentState = applyFormation(currentState, recurring.formation);
 
   const allyReplacement = resolveAllyDefeatReplacement(currentState);
   currentState = allyReplacement.state;
