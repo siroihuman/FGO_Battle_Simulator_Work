@@ -390,10 +390,10 @@ if (manifest) {
     "味方能動スキル操作は入力境界ログ・保存・リプレイへ統合しなければなりません"
   );
   assert(
-    manifest.status === "mage-association-uniform-acceptance-passed"
+    manifest.status === "slip-damage-amplification-specification-complete"
       && manifest.dataSchemaVersion === "1.38.0"
       && manifest.coreRules.battleSuspendSchemaVersion === 4,
-    "魔術協会制服の統合受入後も保存形式4・データ1.38.0を変更してはいけません"
+    "スリップダメージ倍加の仕様確定後も保存形式4・データ1.38.0を変更してはいけません"
   );
   assert(
     JSON.stringify(manifest.specifiedContent?.mysticCodes)
@@ -729,6 +729,29 @@ if (manifest) {
     JSON.stringify(manifest.coreRules.blackGrailRecurringHpReduction)
       === JSON.stringify({ amount: 500, canDefeat: true, turnEndSettlement: null }),
     "黒の聖杯の毎ターンHP減少はHP0可能な共通HP減少でなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.slipDamageAmplification)
+      === JSON.stringify({
+        status: "specified_not_implemented",
+        categories: {
+          burn: "spread_of_fire",
+          poison: "toxic",
+          curse: "evil_curse"
+        },
+        baseAggregation: "per_category_sum_before_multiplier",
+        matchingAmplifierAggregation: "sum_at_each_slip_trigger_activation",
+        percentUnit: "permille",
+        formula: "floor(category_base_total*(1000+matching_amplifier_total)/1000)_per_category",
+        rounding: "floor_per_category",
+        settlement: "existing_recovery_and_slip_simultaneous_hp1_clamp",
+        defeatBehavior: "no_break_guts_or_death",
+        reserveProgression: "paused",
+        saveSchemaChange: false,
+        dataSchemaChange: false,
+        uiRecalculates: false
+      }),
+    "スリップダメージ倍加の対象・合計・発動時倍率・切捨て・保存・UI規則が不正です"
   );
 
   const initialCraftEssences = manifest.initialContent?.craftEssences ?? [];

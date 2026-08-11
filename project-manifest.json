@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "mage-association-uniform-acceptance-passed",
+  "status": "slip-damage-amplification-specification-complete",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -249,6 +249,25 @@
       "amount": 500,
       "canDefeat": true,
       "turnEndSettlement": null
+    },
+    "slipDamageAmplification": {
+      "status": "specified_not_implemented",
+      "categories": {
+        "burn": "spread_of_fire",
+        "poison": "toxic",
+        "curse": "evil_curse"
+      },
+      "baseAggregation": "per_category_sum_before_multiplier",
+      "matchingAmplifierAggregation": "sum_at_each_slip_trigger_activation",
+      "percentUnit": "permille",
+      "formula": "floor(category_base_total*(1000+matching_amplifier_total)/1000)_per_category",
+      "rounding": "floor_per_category",
+      "settlement": "existing_recovery_and_slip_simultaneous_hp1_clamp",
+      "defeatBehavior": "no_break_guts_or_death",
+      "reserveProgression": "paused",
+      "saveSchemaChange": false,
+      "dataSchemaChange": false,
+      "uiRecalculates": false
     },
     "battleLoadoutUnsupportedStartEffect": "reject_before_state_or_rng_change",
     "mysticCodeSelectionSkillCount": 3,
