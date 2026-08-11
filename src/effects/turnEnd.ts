@@ -48,6 +48,22 @@ export interface TurnEndActionResult {
   targetInstanceIds: string[];
   batch: CommonActionBatchResult;
   deferredSettlement?: TurnEndSettlementKind;
+  starGainRequest?: TurnEndStarGainRequest;
+  starAddition?: TurnEndStarAddition;
+}
+
+export interface TurnEndStarGainRequest {
+  destination: "next_command";
+  requested: number;
+}
+
+export interface TurnEndStarAddition {
+  bucket: "next_command";
+  requested: number;
+  before: number;
+  added: number;
+  after: number;
+  overflow: number;
 }
 
 export interface TurnEndActivationResult {
@@ -106,6 +122,9 @@ export interface SideTurnEndSnapshot {
 export interface ResolveSideTurnEndOptions {
   snapshot?: SideTurnEndSnapshot;
   advanceDurations?: boolean;
+  resolveStarGain?: (
+    request: TurnEndStarGainRequest,
+  ) => TurnEndStarAddition;
 }
 
 export interface SideTurnEndDurationResult {
@@ -374,6 +393,10 @@ export function resolveSideTurnEnd(
       !currentEffect
       || currentEffect.registrationOrder > registrationCutoff
       || currentEffect.trigger?.timing !== "turn_end"
+      || !collectTriggerActivations(
+        [ownerLocation],
+        { timing: "turn_end" },
+      ).some(({ effect }) => effect.instanceId === currentEffect.instanceId)
     ) {
       activations.push({
         ownerInstanceId: candidate.ownerInstanceId,
@@ -412,11 +435,6 @@ export function resolveSideTurnEnd(
     const actionResults: TurnEndActionResult[] = [];
     const actions = currentEffect.trigger.actions ?? [];
     for (const [actionIndex, action] of actions.entries()) {
-      if (action.action.kind === "gain_stars") {
-        throw new RangeError(
-          "turn_end gain_stars requires the future battle-state resolver",
-        );
-      }
       const targetLocations = resolveTargetLocations(
         currentFormation,
         candidate.ownerInstanceId,
@@ -430,6 +448,47 @@ export function resolveSideTurnEnd(
         currentEffect.sourceInstanceId ?? candidate.ownerInstanceId;
       const actionSource =
         findUnitLocation(currentFormation, sourceInstanceId)?.unit ?? null;
+      if (action.action.kind === "gain_stars") {
+        if (
+          action.action.destination !== "next_command"
+          || action.turnEndSettlement !== undefined
+        ) {
+          throw new RangeError(
+            "turn_end gain_stars requires next_command without settlement",
+          );
+        }
+        const request = targetLocations.length === 0
+          ? undefined
+          : {
+              destination: "next_command" as const,
+              requested: action.action.amount,
+            };
+        if (request && !options.resolveStarGain) {
+          throw new RangeError(
+            "turn_end gain_stars requires the battle-state coordinator",
+          );
+        }
+        actionResults.push({
+          actionIndex,
+          action,
+          targetInstanceIds: targetLocations.map(
+            ({ unit }) => unit.instanceId,
+          ),
+          batch: {
+            source: actionSource,
+            targets: actionTargets,
+            counters: currentCounters,
+            results: [],
+          },
+          ...(request
+            ? {
+                starGainRequest: request,
+                starAddition: options.resolveStarGain!(request),
+              }
+            : {}),
+        });
+        continue;
+      }
       if (action.turnEndSettlement) {
         queueHpSettlement(
           pendingHpSettlements,

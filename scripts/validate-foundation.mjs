@@ -350,6 +350,7 @@ if (manifest) {
       "seed",
       "rng_positions",
       "turn_end_activations",
+      "turn_end_star_additions",
       "breaks",
       "hp_settlements",
       "enemy_charge_changes",
@@ -561,8 +562,9 @@ if (manifest) {
   );
   const turnEndStarGain = manifest.coreRules.turnEndTriggerStarGain;
   assert(
-    manifest.status === "turn-end-trigger-star-gain-specified"
-      && turnEndStarGain.status === "specified_implementation_pending"
+    manifest.status === "turn-end-trigger-star-gain-implemented"
+      && turnEndStarGain.status === "accepted"
+      && turnEndStarGain.v1InitialScope === true
       && JSON.stringify(turnEndStarGain.endingSides) === JSON.stringify([
         "ally",
         "enemy"
@@ -588,14 +590,15 @@ if (manifest) {
         "requested",
         "before",
         "added",
-        "after"
+        "after",
+        "overflow"
       ])
       && turnEndStarGain.battleSuspendSchemaChange === false
       && turnEndStarGain.dataSchemaChange === false
       && turnEndStarGain.battleLogSchemaChange === false
       && turnEndStarGain.battleTurnLogSchemaChange === false
       && turnEndStarGain.uiRecalculates === false
-      && turnEndStarGain.implementationStatus === "specified_not_implemented",
+      && turnEndStarGain.implementationStatus === "implemented_and_accepted",
     "ターン終了トリガーのスター獲得仕様が一致しません"
   );
   assert(
@@ -1022,6 +1025,7 @@ const mandatoryFiles = [
   "docs/DECISION_LOG.md",
   "docs/NEW_CHAT_GUIDE.md",
   "docs/HANDOFF_TEMPLATE.md",
+  "docs/qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md",
   "docs/archive/README.md",
   "docs/archive/2026-08-04/PROJECT_RULES_v1.0.0.md",
   "docs/archive/2026-08-04/IMPLEMENTATION_STATUS_v1.0.0.md",
@@ -1058,9 +1062,10 @@ assert(startHere.includes("## 現在地点"), "作業開始ページに現在地
 assert(startHere.includes("## 次の作業"), "作業開始ページに次の作業がありません");
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
-  startHere.includes("ターン終了トリガーによるスター獲得（仕様確定）")
-    && startHere.includes("ターン終了トリガーによるスター獲得の共通処理を実装する"),
-  "作業開始ページにターン終了スターの仕様確定と次の実装作業がありません"
+  startHere.includes("ターン終了トリガーによるスター獲得（共通処理・統合受入完了）")
+    && startHere.includes("同範囲の未実装は0件")
+    && startHere.includes("具体コンテンツ追加へ進む前に"),
+  "作業開始ページにターン終了スターの受入結果と次作業がありません"
 );
 
 const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
@@ -1068,8 +1073,10 @@ assert(implementationStatus.includes("## 現在地点"), "実装状況に現在�
 assert(implementationStatus.includes("## 次の実装"), "実装状況に次の実装がありません");
 assert(
   implementationStatus.includes("D-073")
-    && implementationStatus.includes("形式4・データ1.38.0・行動ログ形式5を維持"),
-  "実装状況にターン終了スターの決定と版判定がありません"
+    && implementationStatus.includes("D-074")
+    && implementationStatus.includes("v1.0初期完成範囲へ追加")
+    && implementationStatus.includes("形式4・データ1.38.0・敵データ形式1・行動ログ形式5"),
+  "実装状況にターン終了スターの受入結果と版判定がありません"
 );
 
 const decisionLog = await readText("docs/DECISION_LOG.md");
@@ -1079,8 +1086,10 @@ assert(
     && decisionLog.includes("## D-071 次の作業を敵宝具段階文脈の統合受入検査とする")
     && decisionLog.includes("## D-072 次の仕様化対象をターン終了トリガーによるスター獲得とする")
     && decisionLog.includes("## D-073 ターン終了スター獲得を次回味方コマンド用へ順次加算する")
-    && decisionLog.includes("## D-074 次の実装対象をターン終了スター獲得の共通処理とする"),
-  "決定記録にターン終了スターの仕様と次の実装作業がありません"
+    && decisionLog.includes("## D-074 次の実装対象をターン終了スター獲得の共通処理とする")
+    && decisionLog.includes("## D-075 ターン終了スター獲得をv1.0初期完成範囲へ含める")
+    && decisionLog.includes("## D-076 次の作業を初期範囲外の具体コンテンツ追加対象の選定とする"),
+  "決定記録にターン終了スターの実装・初期範囲・次作業がありません"
 );
 
 const enemyNpAcceptance = await readText(
@@ -1094,8 +1103,20 @@ assert(
 );
 const docsIndex = await readText("docs/INDEX.md");
 assert(
-  docsIndex.includes("qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"),
-  "文書索引に敵宝具段階文脈の統合受入報告がありません"
+  docsIndex.includes("qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md")
+    && docsIndex.includes("qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md"),
+  "文書索引に最新の統合受入報告がありません"
+);
+
+const turnEndStarAcceptance = await readText(
+  "docs/qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md"
+);
+assert(
+  turnEndStarAcceptance.includes("判定: 合格")
+    && turnEndStarAcceptance.includes("基準mainコミット: `e5b13b7981aef49f9d300a967609fdcc4a5771f7`")
+    && turnEndStarAcceptance.includes("中断保存形式4、データ1.38.0、敵データ形式1、行動ログ形式5、ターンログ形式2")
+    && turnEndStarAcceptance.includes("v1.0初期完成範囲の未実装は0件"),
+  "ターン終了スター獲得の統合受入報告が正本と一致しません"
 );
 
 const effectsAndTiming = await readText("docs/specs/EFFECTS_AND_TIMING.md");

@@ -51,6 +51,7 @@ function register(
 function battle(options: {
   allyA?: ReturnType<typeof unit>;
   allyB?: ReturnType<typeof unit>;
+  allyC?: ReturnType<typeof unit>;
   allyReserve?: ReturnType<typeof unit>[];
   enemyA?: ReturnType<typeof unit>;
   enemyReserve?: ReturnType<typeof unit>[];
@@ -62,7 +63,7 @@ function battle(options: {
       frontline: [
         options.allyA ?? unit("ally-a", "ally"),
         options.allyB ?? unit("ally-b", "ally"),
-        unit("ally-c", "ally"),
+        options.allyC ?? unit("ally-c", "ally"),
       ],
       reserve: options.allyReserve ?? [],
     },
@@ -109,7 +110,236 @@ const self = {
   selection: "single",
 } as const;
 
+function turnEndStars(
+  stableId: string,
+  amount: number,
+  options: {
+    priority?: number;
+    activationRatePermille?: number;
+    remainingTurns?: number;
+  } = {},
+): EffectTemplate {
+  return {
+    stableId,
+    name: stableId,
+    effectType: stableId,
+    category: "buff",
+    remainingTurns: options.remainingTurns,
+    trigger: {
+      timing: "turn_end",
+      priority: options.priority,
+      activationRatePermille: options.activationRatePermille,
+      actions: [{
+        target: self,
+        action: {
+          kind: "gain_stars",
+          amount,
+          destination: "next_command",
+        },
+      }],
+    },
+  };
+}
+
 describe("ally turn-end coordinator", () => {
+  it("adds ally turn-end stars sequentially to the pending bucket with a per-action cap", () => {
+    let counters = createEffectRuntimeCounters();
+    let allyA = unit("ally-a", "ally");
+    const secondWithTwoChildren = turnEndStars("second-stars", 10);
+    secondWithTwoChildren.trigger!.actions = [
+      ...secondWithTwoChildren.trigger!.actions!,
+      {
+        target: self,
+        action: {
+          kind: "gain_stars",
+          amount: 4,
+          destination: "next_command",
+        },
+      },
+    ];
+    for (const template of [
+      turnEndStars("first-stars", 5, { priority: -10 }),
+      secondWithTwoChildren,
+    ]) {
+      const applied = register(allyA, template, counters);
+      allyA = applied.unit;
+      counters = applied.counters;
+    }
+    const countersBefore = { ...counters };
+    const battleRng = new BattleRng("ally-turn-end-stars");
+    const state = {
+      ...battle({ allyA }),
+      commandStars: 7,
+      nextCommandStars: 88,
+    };
+
+    const result = resolveAllyTurnEnd(
+      beginAllyTurnEnd(state),
+      counters,
+      battleRng.stream("effects"),
+    );
+
+    expect(result.state).toMatchObject({
+      phase: "enemy_action",
+      commandStars: 7,
+      nextCommandStars: 99,
+    });
+    expect(result.recurring.activations.flatMap((activation) =>
+      activation.actions.map(({ starAddition }) => starAddition)
+    )).toEqual([
+      {
+        bucket: "next_command",
+        requested: 5,
+        before: 88,
+        added: 5,
+        after: 93,
+        overflow: 0,
+      },
+      {
+        bucket: "next_command",
+        requested: 10,
+        before: 93,
+        added: 6,
+        after: 99,
+        overflow: 4,
+      },
+      {
+        bucket: "next_command",
+        requested: 4,
+        before: 99,
+        added: 0,
+        after: 99,
+        overflow: 4,
+      },
+    ]);
+    expect(result.counters).toEqual(countersBefore);
+    expect(battleRng.snapshot().streams).toEqual(
+      new BattleRng("ally-turn-end-stars").snapshot().streams,
+    );
+  });
+
+  it("does not activate turn-end star effects for reserves, removed states, dead owners, or arrivals after the snapshot", () => {
+    let counters = createEffectRuntimeCounters();
+    let allyA = unit("ally-a", "ally");
+    let applied = register(
+      allyA,
+      {
+        stableId: "remove-next-stars",
+        name: "後続スター解除",
+        effectType: "remove-next-stars",
+        category: "other",
+        trigger: {
+          timing: "turn_end",
+          priority: -20,
+          actions: [{
+            target: {
+              relation: "allies",
+              selection: "single",
+              selectedInstanceId: "ally-b",
+            },
+            action: {
+              kind: "remove_effects",
+              request: { mode: "all", category: "buff" },
+            },
+          }],
+        },
+      },
+      counters,
+    );
+    allyA = applied.unit;
+    counters = applied.counters;
+    applied = register(
+      allyA,
+      {
+        stableId: "defeat-next-owner",
+        name: "後続所持者撃破",
+        effectType: "defeat-next-owner",
+        category: "other",
+        trigger: {
+          timing: "turn_end",
+          priority: -10,
+          actions: [{
+            target: {
+              relation: "allies",
+              selection: "single",
+              selectedInstanceId: "ally-c",
+            },
+            action: {
+              kind: "reduce_hp",
+              amount: 10_000,
+              canDefeat: true,
+            },
+          }],
+        },
+      },
+      counters,
+    );
+    allyA = applied.unit;
+    counters = applied.counters;
+    applied = register(
+      unit("ally-b", "ally"),
+      turnEndStars("removed-stars", 10),
+      counters,
+    );
+    const allyB = applied.unit;
+    counters = applied.counters;
+    applied = register(
+      unit("ally-c", "ally"),
+      turnEndStars("dead-owner-stars", 10),
+      counters,
+    );
+    const allyC = applied.unit;
+    counters = applied.counters;
+    applied = register(
+      unit("ally-d", "ally"),
+      turnEndStars("reserve-arrival-stars", 10),
+      counters,
+    );
+    const allyD = applied.unit;
+    counters = applied.counters;
+    applied = register(
+      unit("ally-e", "ally"),
+      turnEndStars("reserve-stars", 10),
+      counters,
+    );
+    const allyE = applied.unit;
+    counters = applied.counters;
+
+    const result = resolveAllyTurnEnd(
+      beginAllyTurnEnd(battle({
+        allyA,
+        allyB,
+        allyC,
+        allyReserve: [allyD, allyE],
+      })),
+      counters,
+      new BattleRng("turn-end-star-candidate-recheck").stream("effects"),
+    );
+
+    expect(result.state.nextCommandStars).toBe(0);
+    expect(result.recurring.activations.map(({ outcome }) => outcome)).toEqual([
+      "activated",
+      "activated",
+      "effect_unavailable",
+      "owner_unavailable",
+    ]);
+    expect(
+      result.recurring.activations.flatMap(({ actions }) => actions)
+        .filter(({ starAddition }) => starAddition),
+    ).toEqual([]);
+    expect(
+      result.state.formation.ally.frontline.map(
+        (current) => current?.instanceId ?? null,
+      ),
+    ).toEqual(["ally-a", "ally-b", "ally-d"]);
+    expect(
+      findUnitLocation(result.state.formation, "ally-d")?.unit.effects,
+    ).toEqual([expect.objectContaining({ stableId: "reserve-arrival-stars" })]);
+    expect(
+      findUnitLocation(result.state.formation, "ally-e")?.unit.effects,
+    ).toEqual([expect.objectContaining({ stableId: "reserve-stars" })]);
+  });
+
   it("runs break actions before ally recurring effects and then ticks cooldowns", () => {
     let counters = createEffectRuntimeCounters();
     let applied = register(
@@ -374,6 +604,42 @@ describe("ally turn-end coordinator", () => {
 });
 
 describe("enemy turn-end coordinator", () => {
+  it("adds enemy turn-end stars to pending and activates them only when ally input begins", () => {
+    let counters = createEffectRuntimeCounters();
+    const applied = register(
+      unit("enemy-a", "enemy"),
+      turnEndStars("enemy-turn-end-stars", 10),
+      counters,
+    );
+    counters = applied.counters;
+    let state = {
+      ...battle({ enemyA: applied.unit }),
+      commandStars: 12,
+      nextCommandStars: 96,
+    };
+    state = completeAllyTurnEnd(beginAllyTurnEnd(state));
+
+    const result = resolveEnemyTurnEnd(
+      beginEnemyTurnEnd(state),
+      counters,
+      new BattleRng("enemy-turn-end-stars").stream("effects"),
+    );
+
+    expect(result.recurring.activations[0].actions[0].starAddition).toEqual({
+      bucket: "next_command",
+      requested: 10,
+      before: 96,
+      added: 3,
+      after: 99,
+      overflow: 7,
+    });
+    expect(result.state).toMatchObject({
+      phase: "ally_action",
+      commandStars: 99,
+      nextCommandStars: 0,
+    });
+  });
+
   it("removes a defeated enemy, ticks current units, then performs standard replacement", () => {
     let counters = createEffectRuntimeCounters();
     const applied = register(
@@ -509,6 +775,14 @@ describe("enemy turn-end coordinator", () => {
             {
               target: self,
               action: {
+                kind: "gain_stars",
+                amount: 10,
+                destination: "next_command",
+              },
+            },
+            {
+              target: self,
+              action: {
                 kind: "reduce_hp",
                 amount: 10_000,
                 canDefeat: true,
@@ -531,6 +805,8 @@ describe("enemy turn-end coordinator", () => {
     expect(result.state).toMatchObject({
       phase: "finished",
       outcome: "victory",
+      commandStars: 0,
+      nextCommandStars: 10,
     });
   });
 
