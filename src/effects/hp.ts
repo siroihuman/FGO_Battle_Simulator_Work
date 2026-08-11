@@ -10,7 +10,7 @@ import {
   resolveLethalHp,
   type LethalHpResolution,
 } from "./survival";
-import type { AppliedEffect } from "./types";
+import type { AppliedEffect, SlipDamageKind } from "./types";
 
 export interface HpRecoveryOptions {
   ignoreRecoveryModifiers?: boolean;
@@ -91,6 +91,18 @@ export interface RecurringHpRecoveryContribution {
   ignoreHealingBlock?: boolean;
 }
 
+export interface TurnEndSlipDamageContribution {
+  baseAmount: number;
+  kind: SlipDamageKind | null;
+  amplifierPermille: number;
+}
+
+export interface TurnEndSlipDamageCategoryResult {
+  kind: SlipDamageKind;
+  baseAmount: number;
+  resolvedDamage: number;
+}
+
 export type TurnEndHpSettlementOutcome =
   | "no_target"
   | "dead"
@@ -110,6 +122,7 @@ export interface TurnEndHpSettlementResult {
   totalBaseRecovery: number;
   scaledRecovery: number;
   totalSlipDamage: number;
+  slipDamageCategories: TurnEndSlipDamageCategoryResult[];
   hpBefore: number | null;
   hpAfter: number | null;
   hpChange: number;
@@ -489,7 +502,7 @@ function uniqueUnits(
 export function resolveTurnEndHpSettlement(
   target: BattleUnitState | null,
   recoveries: readonly RecurringHpRecoveryContribution[],
-  slipDamageAmounts: readonly number[],
+  slipDamageContributions: readonly TurnEndSlipDamageContribution[],
 ): TurnEndHpSettlementResult {
   recoveries.forEach(({ baseAmount }, index) => {
     assertNonNegativeAmount(
@@ -497,8 +510,15 @@ export function resolveTurnEndHpSettlement(
       `turn-end recovery contribution[${index}]`,
     );
   });
-  slipDamageAmounts.forEach((amount, index) => {
-    assertNonNegativeAmount(amount, `turn-end slip damage[${index}]`);
+  slipDamageContributions.forEach((contribution, index) => {
+    assertNonNegativeAmount(
+      contribution.baseAmount,
+      `turn-end slip damage[${index}].baseAmount`,
+    );
+    assertNonNegativeAmount(
+      contribution.amplifierPermille,
+      `turn-end slip damage[${index}].amplifierPermille`,
+    );
   });
 
   const originalSourceUnits = uniqueUnits(
@@ -511,11 +531,47 @@ export function resolveTurnEndHpSettlement(
     ),
     "total turn-end base recovery",
   );
-  const totalSlipDamage = toSafeNumber(
-    slipDamageAmounts.reduce(
-      (sum, amount) => sum + BigInt(amount),
+  const slipDamageCategories: TurnEndSlipDamageCategoryResult[] = [];
+  let untypedSlipDamage = 0n;
+  for (const kind of ["burn", "poison", "curse"] as const) {
+    const matching = slipDamageContributions.filter(
+      (contribution) => contribution.kind === kind,
+    );
+    if (matching.length === 0) continue;
+    const baseAmount = matching.reduce(
+      (sum, contribution) => sum + BigInt(contribution.baseAmount),
       0n,
-    ),
+    );
+    const amplifiedNumerator = matching.reduce(
+      (sum, contribution) =>
+        sum
+        + BigInt(contribution.baseAmount)
+          * BigInt(1000 + contribution.amplifierPermille),
+      0n,
+    );
+    slipDamageCategories.push({
+      kind,
+      baseAmount: toSafeNumber(
+        baseAmount,
+        `${kind} turn-end base damage`,
+      ),
+      resolvedDamage: toSafeNumber(
+        amplifiedNumerator / 1000n,
+        `${kind} amplified turn-end damage`,
+      ),
+    });
+  }
+  for (const contribution of slipDamageContributions) {
+    if (contribution.kind === null) {
+      untypedSlipDamage += BigInt(contribution.baseAmount);
+    }
+  }
+  const totalSlipDamage = toSafeNumber(
+    untypedSlipDamage
+      + slipDamageCategories.reduce(
+        (sum, category) => sum + BigInt(category.resolvedDamage),
+        0n,
+      ),
     "total turn-end slip damage",
   );
   const emptyResult = (
@@ -527,6 +583,7 @@ export function resolveTurnEndHpSettlement(
     totalBaseRecovery,
     scaledRecovery: 0,
     totalSlipDamage,
+    slipDamageCategories,
     hpBefore: target?.hp ?? null,
     hpAfter: target?.hp ?? null,
     hpChange: 0,
@@ -696,6 +753,7 @@ export function resolveTurnEndHpSettlement(
     totalBaseRecovery,
     scaledRecovery,
     totalSlipDamage,
+    slipDamageCategories,
     hpBefore,
     hpAfter,
     hpChange,

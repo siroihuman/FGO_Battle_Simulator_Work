@@ -21,7 +21,11 @@ import {
   collectTriggerActivations,
 } from "../src/effects/triggers";
 import { resolveTriggerEvent } from "../src/effects/triggerExecution";
-import type { EffectTemplate } from "../src/effects/types";
+import type {
+  EffectTemplate,
+  SlipDamageAmplifierKind,
+  SlipDamageKind,
+} from "../src/effects/types";
 import { formation, unit } from "./helpers/battle";
 
 const attackUp: EffectTemplate = {
@@ -49,6 +53,40 @@ describe("effect registration and classification", () => {
     expect(second.unit.effects.map(({ registrationOrder }) => registrationOrder)).toEqual([
       1, 2,
     ]);
+  });
+
+  it("validates typed slip declarations and debuff-only amplifiers", () => {
+    const target = unit("ally-a", "ally");
+    const counters = createEffectRuntimeCounters();
+    expect(() => applyEffect(
+      target,
+      {
+        ...attackUp,
+        stableId: "invalid-slip-kind-placement",
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: { kind: "heal_hp", amount: 500 },
+            turnEndSettlement: "recurring_hp_recovery",
+            slipDamageKind: "burn",
+          }],
+        },
+      },
+      null,
+      counters,
+    )).toThrow(/requires slip_damage settlement/);
+    expect(() => applyEffect(
+      target,
+      {
+        ...attackUp,
+        stableId: "invalid-amplifier-category",
+        value: 550,
+        slipDamageAmplifierKind: "spread_of_fire",
+      },
+      null,
+      counters,
+    )).toThrow(/must be debuff effects/);
   });
 
   it("classifies only the Roma trait grant as a debuff", () => {
@@ -120,6 +158,67 @@ describe("effect duration and removal", () => {
     const byId = removeEffects(target, { mode: "by_id", stableId: "id_only" });
     expect(byId.removed).toHaveLength(1);
     expect(byId.unit.effects[0].stableId).toBe("unremovable");
+  });
+
+  it("separates burn, poison, and curse removal from their amplifiers while general debuff removal reaches both", () => {
+    const pairs: Array<[SlipDamageKind, SlipDamageAmplifierKind]> = [
+      ["burn", "spread_of_fire"],
+      ["poison", "toxic"],
+      ["curse", "evil_curse"],
+    ];
+    for (const [slipKind, amplifierKind] of pairs) {
+      let counters = createEffectRuntimeCounters();
+      let target = unit("ally-a", "ally");
+      const slipTemplate: EffectTemplate = {
+        stableId: slipKind,
+        name: slipKind,
+        effectType: slipKind,
+        category: "debuff",
+        classifications: [slipKind],
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: { kind: "reduce_hp", amount: 500, canDefeat: false },
+            turnEndSettlement: "slip_damage",
+            slipDamageKind: slipKind,
+          }],
+        },
+      };
+      const amplifierTemplate: EffectTemplate = {
+        stableId: amplifierKind,
+        name: amplifierKind,
+        effectType: amplifierKind,
+        category: "debuff",
+        classifications: [amplifierKind],
+        value: 550,
+        slipDamageAmplifierKind: amplifierKind,
+      };
+      for (const template of [slipTemplate, amplifierTemplate]) {
+        const applied = applyEffect(target, template, null, counters);
+        target = applied.unit;
+        counters = applied.counters;
+      }
+
+      const slipOnly = removeEffects(target, {
+        mode: "all",
+        category: "debuff",
+        classifications: [slipKind],
+      });
+      expect(slipOnly.removed.map(({ effect }) => effect.stableId)).toEqual([
+        slipKind,
+      ]);
+      expect(slipOnly.unit.effects.map(({ stableId }) => stableId)).toEqual([
+        amplifierKind,
+      ]);
+      expect(removeEffects(target, {
+        mode: "all",
+        category: "debuff",
+      }).removed.map(({ effect }) => effect.stableId)).toEqual([
+        amplifierKind,
+        slipKind,
+      ]);
+    }
   });
 });
 

@@ -2,7 +2,10 @@ import type {
   SideTurnEndResult,
   TurnEndHpContribution,
 } from "../../effects/turnEnd";
-import type { RemovedEffect } from "../../effects/types";
+import type {
+  RemovedEffect,
+  SlipDamageKind,
+} from "../../effects/types";
 import type {
   BattleRngSnapshot,
   RngStreamName,
@@ -91,6 +94,10 @@ export interface BattleLogTurnEndHpContribution {
   actionIndex: number;
   source: BattleLogUnitRef | null;
   amount: number;
+  slipDamageKind?: SlipDamageKind;
+  amplifierPermille?: number;
+  categoryBaseAmount?: number;
+  categoryResolvedDamage?: number;
   ignoreRecoveryModifiers: boolean;
   ignoreHealingBlock: boolean;
 }
@@ -104,6 +111,11 @@ export interface BattleLogTurnEndHpSettlement {
     totalBaseRecovery: number;
     scaledRecovery: number;
     totalSlipDamage: number;
+    slipDamageCategories?: Array<{
+      kind: SlipDamageKind;
+      baseAmount: number;
+      resolvedDamage: number;
+    }>;
     hpBefore: number | null;
     hpAfter: number | null;
     hpChange: number;
@@ -353,6 +365,14 @@ function hpContributionLog(
       ? battleLogUnitRef(unitIndex, contribution.sourceInstanceId)
       : null,
     amount: contribution.amount,
+    ...(contribution.slipDamageKind
+      ? {
+          slipDamageKind: contribution.slipDamageKind,
+          amplifierPermille: contribution.amplifierPermille ?? 0,
+          categoryBaseAmount: contribution.categoryBaseAmount,
+          categoryResolvedDamage: contribution.categoryResolvedDamage,
+        }
+      : {}),
     ignoreRecoveryModifiers:
       contribution.ignoreRecoveryModifiers ?? false,
     ignoreHealingBlock:
@@ -381,6 +401,14 @@ function hpSettlementLogs(
       totalBaseRecovery: settlement.result.totalBaseRecovery,
       scaledRecovery: settlement.result.scaledRecovery,
       totalSlipDamage: settlement.result.totalSlipDamage,
+      ...(settlement.result.slipDamageCategories.length > 0
+        ? {
+            slipDamageCategories:
+              settlement.result.slipDamageCategories.map(
+                (category) => ({ ...category }),
+              ),
+          }
+        : {}),
       hpBefore: settlement.result.hpBefore,
       hpAfter: settlement.result.hpAfter,
       hpChange: settlement.result.hpChange,

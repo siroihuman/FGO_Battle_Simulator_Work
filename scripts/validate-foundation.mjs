@@ -390,7 +390,7 @@ if (manifest) {
     "味方能動スキル操作は入力境界ログ・保存・リプレイへ統合しなければなりません"
   );
   assert(
-    manifest.status === "slip-damage-amplification-specification-complete"
+    manifest.status === "slip-damage-amplification-implemented"
       && manifest.dataSchemaVersion === "1.38.0"
       && manifest.coreRules.battleSuspendSchemaVersion === 4,
     "スリップダメージ倍加の仕様確定後も保存形式4・データ1.38.0を変更してはいけません"
@@ -733,7 +733,7 @@ if (manifest) {
   assert(
     JSON.stringify(manifest.coreRules.slipDamageAmplification)
       === JSON.stringify({
-        status: "specified_not_implemented",
+        status: "implemented_acceptance_pending",
         categories: {
           burn: "spread_of_fire",
           poison: "toxic",
@@ -749,6 +749,10 @@ if (manifest) {
         reserveProgression: "paused",
         saveSchemaChange: false,
         dataSchemaChange: false,
+        runtimeTypeSource: "src/effects/types.ts",
+        amplifierLookupSource: "src/effects/slipDamage.ts",
+        settlementSource: "src/effects/hp.ts",
+        confirmedLogSource: "src/core/battle/turnLog.ts",
         uiRecalculates: false
       }),
     "スリップダメージ倍加の対象・合計・発動時倍率・切捨て・保存・UI規則が不正です"

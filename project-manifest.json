@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "slip-damage-amplification-specification-complete",
+  "status": "slip-damage-amplification-implemented",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -251,7 +251,7 @@
       "turnEndSettlement": null
     },
     "slipDamageAmplification": {
-      "status": "specified_not_implemented",
+      "status": "implemented_acceptance_pending",
       "categories": {
         "burn": "spread_of_fire",
         "poison": "toxic",
@@ -267,6 +267,10 @@
       "reserveProgression": "paused",
       "saveSchemaChange": false,
       "dataSchemaChange": false,
+      "runtimeTypeSource": "src/effects/types.ts",
+      "amplifierLookupSource": "src/effects/slipDamage.ts",
+      "settlementSource": "src/effects/hp.ts",
+      "confirmedLogSource": "src/core/battle/turnLog.ts",
       "uiRecalculates": false
     },
     "battleLoadoutUnsupportedStartEffect": "reject_before_state_or_rng_change",

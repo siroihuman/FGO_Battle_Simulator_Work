@@ -14,6 +14,10 @@ import {
 import { createBattleState } from "../src/core/battle/state";
 import type { EnemyActionState } from "../src/core/battle/types";
 import { BattleRng } from "../src/core/rng";
+import {
+  applyEffect,
+  createEffectRuntimeCounters,
+} from "../src/effects/runtime";
 import { combatantData } from "./helpers/attackData";
 import { unit } from "./helpers/battle";
 
@@ -167,6 +171,103 @@ describe("battle session persistence and replay", () => {
       battleLogSchemaVersion: 5,
       battleTurnLogSchemaVersion: 2,
     });
+  });
+
+  it("directly restores amplified slip once and replays state, counters, six RNG streams, and exact logs", () => {
+    let counters = createEffectRuntimeCounters();
+    let applied = applyEffect(
+      unit("ally-a", "ally", { hp: 5_000 }),
+      {
+        stableId: "saved-spread",
+        name: "延焼",
+        effectType: "spread-of-fire",
+        category: "debuff",
+        classifications: ["spread_of_fire"],
+        value: 550,
+        remainingTurns: 2,
+        slipDamageAmplifierKind: "spread_of_fire",
+      },
+      "enemy-a",
+      counters,
+    );
+    counters = applied.counters;
+    applied = applyEffect(
+      applied.unit,
+      {
+        stableId: "saved-burn",
+        name: "やけど",
+        effectType: "burn",
+        category: "debuff",
+        classifications: ["burn"],
+        remainingTurns: 2,
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: { kind: "reduce_hp", amount: 550, canDefeat: false },
+            turnEndSettlement: "slip_damage",
+            slipDamageKind: "burn",
+          }],
+        },
+      },
+      "enemy-a",
+      counters,
+    );
+    counters = applied.counters;
+    let session = createBattleSession({
+      state: createBattleState({
+        ally: {
+          frontline: [
+            applied.unit,
+            unit("ally-b", "ally"),
+            unit("ally-c", "ally"),
+          ],
+          reserve: [],
+        },
+        waves: [{
+          enemy: {
+            frontline: [
+              unit("enemy-a", "enemy", {
+                hp: 1_000_000,
+                maxHp: 1_000_000,
+                baseMaxHp: 1_000_000,
+                enemyAction: enemyAction(),
+              }),
+              null,
+              null,
+            ],
+            reserve: [],
+          },
+        }],
+        enemyFrontlineLimit: 3,
+      }),
+      rng: new BattleRng("saved-amplified-slip"),
+      registry: registry(),
+      counters,
+    });
+    session = resolveBattleSessionTurn(session, {
+      cardIds: firstThreeCardIds(session),
+    }).session;
+    const save = parseBattleSuspendSave(
+      serializeBattleSuspendSave(session),
+    );
+    const restored = restoreBattleSession(save);
+    const replayed = replayBattleSession(save);
+
+    expect(save).toMatchObject({
+      schemaVersion: 4,
+      dataSchemaVersion: "1.38.0",
+      battleTurnLogSchemaVersion: 2,
+    });
+    expect(restored.loop.state).toEqual(session.loop.state);
+    expect(restored.turnLogs).toEqual(session.turnLogs);
+    expect(restored.loop.state.formation.ally.frontline[0]?.hp).toBe(4_148);
+    expect(replayed.loop.state).toEqual(session.loop.state);
+    expect(replayed.loop.counters).toEqual(session.loop.counters);
+    expect(replayed.loop.rng.snapshot()).toEqual(session.loop.rng.snapshot());
+    expect(Object.keys(replayed.loop.rng.snapshot().streams)).toHaveLength(6);
+    expect(replayed.turnLogs).toEqual(session.turnLogs);
+    expect(createBattleSuspendSave(restored)).toEqual(save);
   });
 
   it("rejects function-based AI before it can change state or RNG", () => {

@@ -55,6 +55,13 @@ export type TurnEndSettlementKind =
   | "recurring_hp_recovery"
   | "slip_damage";
 
+export type SlipDamageKind = "burn" | "poison" | "curse";
+
+export type SlipDamageAmplifierKind =
+  | "spread_of_fire"
+  | "toxic"
+  | "evil_curse";
+
 /**
  * One trigger action is resolved against all matching targets in formation
  * order before the next action is started.
@@ -73,6 +80,11 @@ export interface TriggerAction {
    * and settled together after all eligible turn-end triggers activate.
    */
   turnEndSettlement?: TurnEndSettlementKind;
+  /**
+   * Distinguishes the three standard nonlethal slip categories. An omitted
+   * value remains ordinary, non-amplified slip damage.
+   */
+  slipDamageKind?: SlipDamageKind;
 }
 
 export type EffectFlagValue = boolean | number | string;
@@ -89,6 +101,8 @@ export interface EffectTemplate {
   removalPolicy?: EffectRemovalPolicy;
   durationTick?: EffectDurationTick;
   trigger?: EffectTrigger;
+  /** Marks a debuff whose value amplifies exactly one standard slip kind. */
+  slipDamageAmplifierKind?: SlipDamageAmplifierKind;
   flags?: Record<string, EffectFlagValue>;
 }
 
@@ -112,6 +126,7 @@ export interface AppliedEffect extends Required<
   remainingTurns: number | null;
   remainingUses: number | null;
   trigger?: EffectTrigger;
+  slipDamageAmplifierKind?: SlipDamageAmplifierKind;
   registrationOrder: number;
 }
 
