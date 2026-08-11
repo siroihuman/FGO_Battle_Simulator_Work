@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "slip-damage-amplification-accepted",
+  "status": "enemy-noble-phantasm-context-specified",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -373,7 +373,70 @@
     "enemySkillSingleTargetSource": "ai_request",
     "enemySkillCompletedActionBoundary": true,
     "declaredActionLogUsesExecutionResults": true,
-    "enemyNoblePhantasmScaledDeclaredValues": "unsupported_until_context_data",
+    "enemyNoblePhantasmScaledDeclaredValues": "specified_implementation_pending",
+    "enemyNoblePhantasmContext": {
+      "scope": "battle_instance_and_action",
+      "authoringSplit": "enemy_definition_values_and_encounter_context",
+      "noblePhantasmLevels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "overchargeStages": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "valueKinds": [
+        "fixed",
+        "noble_phantasm_level",
+        "overcharge"
+      ],
+      "stagedValueCount": 5,
+      "requiredOnlyWhenScalingUsed": true,
+      "fixedValuesRequireNoContext": true,
+      "inferNoblePhantasmLevelFromEnemyLevel": false,
+      "inferOverchargeFromCharge": false,
+      "snapshotTiming": "enemy_noble_phantasm_preflight",
+      "sameSnapshotFor": [
+        "attack_multiplier",
+        "before_attack_declared_effects",
+        "after_attack_declared_effects",
+        "action_log"
+      ],
+      "invalidHandling": "typed_full_action_skip_before_target_charge_state_counters_and_rng",
+      "skipReasons": [
+        "enemy_noble_phantasm_context_missing",
+        "enemy_noble_phantasm_context_invalid",
+        "enemy_noble_phantasm_data_invalid",
+        "action_effects_unresolved"
+      ],
+      "selectionConsumesRng": false,
+      "fixedEnemyAttackCompatibility": true,
+      "saveContainers": [
+        "attackData",
+        "actionEffectData"
+      ],
+      "directResume": "restore_saved_context_values_and_logs_without_registry_recalculation",
+      "replayEquality": [
+        "state",
+        "effect_runtime_counters",
+        "six_rng_streams",
+        "action_logs",
+        "turn_logs"
+      ],
+      "uiRecalculates": false,
+      "battleSuspendSchemaVersion": 4,
+      "dataSchemaVersion": "1.38.0",
+      "enemyDataSchemaVersion": 1,
+      "battleLogSchemaVersion": 5,
+      "battleTurnLogSchemaVersion": 2,
+      "fixedOnlyLogShapeUnchanged": true
+    },
     "servantPassiveInitializationOrder": "formation_order_including_reserve",
     "allySkillCooldownTiming": "before_skill_effects",
     "allySkillConsumesCommandAction": false,

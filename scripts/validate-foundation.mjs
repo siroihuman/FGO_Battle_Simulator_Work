@@ -390,10 +390,9 @@ if (manifest) {
     "味方能動スキル操作は入力境界ログ・保存・リプレイへ統合しなければなりません"
   );
   assert(
-    manifest.status === "slip-damage-amplification-accepted"
-      && manifest.dataSchemaVersion === "1.38.0"
+    manifest.dataSchemaVersion === "1.38.0"
       && manifest.coreRules.battleSuspendSchemaVersion === 4,
-    "スリップダメージ倍加の仕様確定後も保存形式4・データ1.38.0を変更してはいけません"
+    "スリップダメージ倍加受入後も保存形式4・データ1.38.0を変更してはいけません"
   );
   assert(
     JSON.stringify(manifest.specifiedContent?.mysticCodes)
@@ -650,8 +649,62 @@ if (manifest) {
     "宣言効果ログは実行済み結果から作らなければなりません"
   );
   assert(
-    manifest.coreRules.enemyNoblePhantasmScaledDeclaredValues === "unsupported_until_context_data",
-    "敵宝具の段階別宣言値は文脈データ追加まで未対応でなければなりません"
+    manifest.status === "enemy-noble-phantasm-context-specified"
+      && manifest.coreRules.enemyNoblePhantasmScaledDeclaredValues === "specified_implementation_pending",
+    "敵宝具の段階文脈は仕様確定・実装待ちでなければなりません"
+  );
+  const enemyNpContext = manifest.coreRules.enemyNoblePhantasmContext;
+  assert(
+    enemyNpContext?.scope === "battle_instance_and_action"
+      && enemyNpContext.authoringSplit === "enemy_definition_values_and_encounter_context"
+      && JSON.stringify(enemyNpContext.noblePhantasmLevels) === JSON.stringify([1, 2, 3, 4, 5])
+      && JSON.stringify(enemyNpContext.overchargeStages) === JSON.stringify([1, 2, 3, 4, 5])
+      && JSON.stringify(enemyNpContext.valueKinds) === JSON.stringify([
+        "fixed",
+        "noble_phantasm_level",
+        "overcharge",
+      ])
+      && enemyNpContext.stagedValueCount === 5
+      && enemyNpContext.requiredOnlyWhenScalingUsed === true
+      && enemyNpContext.fixedValuesRequireNoContext === true
+      && enemyNpContext.inferNoblePhantasmLevelFromEnemyLevel === false
+      && enemyNpContext.inferOverchargeFromCharge === false
+      && enemyNpContext.snapshotTiming === "enemy_noble_phantasm_preflight"
+      && JSON.stringify(enemyNpContext.sameSnapshotFor) === JSON.stringify([
+        "attack_multiplier",
+        "before_attack_declared_effects",
+        "after_attack_declared_effects",
+        "action_log",
+      ])
+      && enemyNpContext.invalidHandling === "typed_full_action_skip_before_target_charge_state_counters_and_rng"
+      && JSON.stringify(enemyNpContext.skipReasons) === JSON.stringify([
+        "enemy_noble_phantasm_context_missing",
+        "enemy_noble_phantasm_context_invalid",
+        "enemy_noble_phantasm_data_invalid",
+        "action_effects_unresolved",
+      ])
+      && enemyNpContext.selectionConsumesRng === false
+      && enemyNpContext.fixedEnemyAttackCompatibility === true
+      && JSON.stringify(enemyNpContext.saveContainers) === JSON.stringify([
+        "attackData",
+        "actionEffectData",
+      ])
+      && enemyNpContext.directResume === "restore_saved_context_values_and_logs_without_registry_recalculation"
+      && JSON.stringify(enemyNpContext.replayEquality) === JSON.stringify([
+        "state",
+        "effect_runtime_counters",
+        "six_rng_streams",
+        "action_logs",
+        "turn_logs",
+      ])
+      && enemyNpContext.uiRecalculates === false
+      && enemyNpContext.battleSuspendSchemaVersion === 4
+      && enemyNpContext.dataSchemaVersion === "1.38.0"
+      && enemyNpContext.enemyDataSchemaVersion === 1
+      && enemyNpContext.battleLogSchemaVersion === 5
+      && enemyNpContext.battleTurnLogSchemaVersion === 2
+      && enemyNpContext.fixedOnlyLogShapeUnchanged === true,
+    "敵宝具Lv・OCの保持、段階選択、不発、保存、リプレイ、UI規則が不正です"
   );
   assert(
     manifest.coreRules.servantPassiveInitializationOrder === "formation_order_including_reserve",
@@ -955,10 +1008,42 @@ const startHere = await readText("docs/START_HERE.md");
 assert(startHere.includes("## 現在地点"), "作業開始ページに現在地点がありません");
 assert(startHere.includes("## 次の作業"), "作業開始ページに次の作業がありません");
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
+assert(
+  startHere.includes("敵宝具Lv・OC文脈と段階別宣言値（仕様確定）")
+    && startHere.includes("共通処理を実装する"),
+  "作業開始ページに敵宝具段階文脈の現在地点と次作業がありません"
+);
 
 const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
 assert(implementationStatus.includes("## 現在地点"), "実装状況に現在地点がありません");
 assert(implementationStatus.includes("## 次の実装"), "実装状況に次の実装がありません");
+assert(
+  implementationStatus.includes("D-069")
+    && implementationStatus.includes("形式4・データ1.38.0・敵データ形式1を維持"),
+  "実装状況に敵宝具段階文脈の決定と版判定がありません"
+);
+
+const decisionLog = await readText("docs/DECISION_LOG.md");
+assert(
+  decisionLog.includes("## D-069 敵宝具の段階文脈を戦闘個体・行動ごとに明示する")
+    && decisionLog.includes("## D-070 次の実装対象を敵宝具段階文脈の共通処理とする"),
+  "決定記録に敵宝具段階文脈と次作業の決定がありません"
+);
+
+const effectsAndTiming = await readText("docs/specs/EFFECTS_AND_TIMING.md");
+assert(
+  effectsAndTiming.includes("### 敵宝具Lv・OCと段階別宣言値")
+    && effectsAndTiming.includes("values[noblePhantasmLevel - 1]")
+    && effectsAndTiming.includes("values[overchargeStage - 1]"),
+  "効果仕様に敵宝具段階文脈の宣言・選択規則がありません"
+);
+
+const uiAndStorage = await readText("docs/specs/UI_AND_STORAGE.md");
+assert(
+  uiAndStorage.includes("敵宝具の任意の宝具Lv・OC文脈")
+    && uiAndStorage.includes("UIは段階選択、配列参照、文脈補完"),
+  "UI・保存仕様に敵宝具段階文脈の保存と非再計算規則がありません"
+);
 
 const initialContent = await readText("docs/specs/INITIAL_CONTENT.md");
 assert(initialContent.includes("カレイドスコープ"), "初期データ仕様にカレイドスコープがありません");
