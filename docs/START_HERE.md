@@ -4,16 +4,16 @@
 
 ## 現在地点
 
-- フェーズ: 15／スリップダメージ倍加（共通処理実装済み）
-- 状態: やけど・毒・呪いの種類宣言、延焼・蝕毒・呪厄の独立弱体宣言、発動時倍率固定、種類別合計・切捨て、同時HP精算、確定ログ、形式4・データ1.38.0の保存・直接再開・固定シードリプレイ、最小UI表示を共通処理へ接続。具体データは未登録で、統合受入検査は未実施。
+- フェーズ: 15／スリップダメージ倍加（統合受入合格）
+- 状態: D-067の共通型、発動時倍率固定、種類別合計・切捨て、同時HP精算、解除・耐性分離、控え停止、確定ログ、形式4・データ1.38.0の保存・直接再開・固定シードリプレイ、UI非再計算を統合受入済み。具体的な延焼・蝕毒・呪厄コンテンツは未登録。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. 延焼・蝕毒・呪厄によるスリップダメージ倍加の統合受入検査を行う（QA担当、推奨モデル: `gpt-5.6-sol`、思考レベル: `high`）。共通型、種類別精算、後続解除、控え停止、弱体解除分離、確定ログ、形式4・データ1.38.0の保存・直接再開・固定シードリプレイ、UI非再計算を検査し、不具合があれば同じPRで修正する。具体コンテンツ追加には進まない。
+1. 敵固有の宝具Lv・OC文脈と、段階別の敵宝具宣言値を仕様策定する（システム仕様策定担当、推奨モデル: `gpt-5.6-sol`、思考レベル: `high`）。現行の固定宣言値と未対応時の安全な不発を正本に、必要な戦闘文脈、宣言形式、段階選択、保存・リプレイ・ログ・UI非再計算の境界を確定する。仕様で確定できない挙動は質問して停止し、実装や具体的な敵データ追加には進まない。
 
-今回の受入詳細は[`qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md`](qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md)、カード再配布共通処理の受入詳細は[`qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md`](qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md)、v1.0初期範囲の受入詳細は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
+今回の受入詳細は[`qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md`](qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md)、魔術協会制服の受入詳細は[`qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md`](qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md)、カード再配布共通処理の受入詳細は[`qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md`](qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md)、v1.0初期範囲の受入詳細は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
 
 ## 最初に読むもの
 

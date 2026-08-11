@@ -163,6 +163,70 @@ describe("effect application rates", () => {
     expect(rng.snapshot().drawCount).toBe(0);
   });
 
+  it("keeps slip-kind resistance separate from the corresponding amplifier", () => {
+    const pairs = [
+      ["burn", "spread_of_fire"],
+      ["poison", "toxic"],
+      ["curse", "evil_curse"],
+    ] as const;
+
+    for (const [slipKind, amplifierKind] of pairs) {
+      const resistance = register(
+        unit("enemy-a", "enemy"),
+        {
+          stableId: `${slipKind}-resistance`,
+          name: `${slipKind}-resistance`,
+          effectType: COMMON_EFFECT_TYPES.debuffResistance,
+          category: "buff",
+          classifications: [slipKind],
+          value: 1000,
+        },
+        createEffectRuntimeCounters(),
+      );
+      const rng = new BattleRng(`${slipKind}-resistance-separation`).stream(
+        "effects",
+      );
+      const result = resolveEffectApplication(
+        unit("ally-a", "ally"),
+        resistance.unit,
+        [
+          {
+            template: {
+              stableId: slipKind,
+              name: slipKind,
+              effectType: slipKind,
+              category: "debuff",
+              classifications: [slipKind],
+            },
+          },
+          {
+            template: {
+              stableId: amplifierKind,
+              name: amplifierKind,
+              effectType: amplifierKind,
+              category: "debuff",
+              classifications: [amplifierKind],
+              value: 550,
+              slipDamageAmplifierKind: amplifierKind,
+            },
+          },
+        ],
+        resistance.counters,
+        rng,
+      );
+
+      expect(result.results.map(({ outcome }) => outcome)).toEqual([
+        "resisted",
+        "applied",
+      ]);
+      expect(result.unit?.effects.map(({ stableId }) => stableId)).toEqual([
+        `${slipKind}-resistance`,
+        amplifierKind,
+      ]);
+      expect(rng.snapshot().drawCount).toBe(0);
+    }
+  });
+
   it("replays non-certain child-state rolls from the same fixed seed", () => {
     const specs = [
       { template: defenseDown, baseRatePermille: 500 },
