@@ -13,6 +13,8 @@ import { resolveSideTurnEnd } from "../src/effects/turnEnd";
 import type {
   EffectRuntimeCounters,
   EffectTemplate,
+  SlipDamageAmplifierKind,
+  SlipDamageKind,
   TurnEndSettlementKind,
 } from "../src/effects/types";
 import { formation } from "./helpers/battle";
@@ -99,6 +101,53 @@ function settledRecurring(
         },
       ],
     },
+  };
+}
+
+function slipRecurring(
+  stableId: string,
+  amount: number,
+  kind: SlipDamageKind | null,
+  options: Partial<EffectTemplate> = {},
+): EffectTemplate {
+  return {
+    ...recurring(
+      stableId,
+      { kind: "reduce_hp", amount, canDefeat: false },
+      {
+        category: "debuff",
+        classifications: kind ? [kind] : ["other_slip"],
+        ...options,
+      },
+    ),
+    trigger: {
+      timing: "turn_end",
+      ...options.trigger,
+      actions: [{
+        target: self,
+        action: { kind: "reduce_hp", amount, canDefeat: false },
+        turnEndSettlement: "slip_damage",
+        ...(kind ? { slipDamageKind: kind } : {}),
+      }],
+    },
+  };
+}
+
+function slipAmplifier(
+  stableId: string,
+  kind: SlipDamageAmplifierKind,
+  value: number,
+  remainingTurns: number | null = 2,
+): EffectTemplate {
+  return {
+    stableId,
+    name: stableId,
+    effectType: stableId,
+    category: "debuff",
+    classifications: [kind],
+    value,
+    remainingTurns,
+    slipDamageAmplifierKind: kind,
   };
 }
 
@@ -770,6 +819,214 @@ describe("side turn-end integration", () => {
     }
   });
 
+  it("applies 55% spread of fire to burn 550 regardless of application order and floors to 852", () => {
+    const run = (amplifierFirst: boolean) => {
+      let state = withHp(formation(), "ally-a", 5_000);
+      let counters = createEffectRuntimeCounters();
+      const templates = [
+        slipAmplifier("spread-55", "spread_of_fire", 550),
+        slipRecurring("burn-550", 550, "burn"),
+      ];
+      if (!amplifierFirst) templates.reverse();
+      for (const template of templates) {
+        const applied = register(
+          state,
+          "ally-a",
+          template,
+          counters,
+          "enemy-a",
+        );
+        state = applied.formation;
+        counters = applied.counters;
+      }
+      const rng = new BattleRng(
+        amplifierFirst ? "amplifier-first" : "burn-first",
+      ).stream("effects");
+      return {
+        result: resolveSideTurnEnd(state, "ally", counters, rng),
+        rng,
+      };
+    };
+    const first = run(true);
+    const second = run(false);
+    const result = first.result;
+
+    expect(findUnitLocation(result.formation, "ally-a")?.unit.hp).toBe(4_148);
+    expect(second.result.hpSettlements[0].result.totalSlipDamage).toBe(852);
+    expect(result.hpSettlements[0]).toMatchObject({
+      slipDamageContributions: [{
+        amount: 550,
+        slipDamageKind: "burn",
+        amplifierPermille: 550,
+        categoryBaseAmount: 550,
+        categoryResolvedDamage: 852,
+      }],
+      result: {
+        totalSlipDamage: 852,
+        slipDamageCategories: [{
+          kind: "burn",
+          baseAmount: 550,
+          resolvedDamage: 852,
+        }],
+      },
+    });
+    expect(first.rng.snapshot().drawCount).toBe(0);
+    expect(second.rng.snapshot().drawCount).toBe(0);
+  });
+
+  it("separates all three categories, adds duplicate amplifiers, and leaves other slip unchanged", () => {
+    let state = formation();
+    let counters = createEffectRuntimeCounters();
+    const templates: EffectTemplate[] = [
+      slipAmplifier("spread-10", "spread_of_fire", 100),
+      slipAmplifier("spread-5", "spread_of_fire", 50),
+      slipAmplifier("toxic-20", "toxic", 200),
+      slipAmplifier("evil-30", "evil_curse", 300),
+      slipRecurring("burn", 100, "burn"),
+      slipRecurring("poison", 100, "poison"),
+      slipRecurring("curse", 100, "curse"),
+      slipRecurring("other", 40, null),
+    ];
+    for (const template of templates) {
+      const applied = register(
+        state,
+        "ally-a",
+        template,
+        counters,
+        "enemy-a",
+      );
+      state = applied.formation;
+      counters = applied.counters;
+    }
+    const result = resolveSideTurnEnd(
+      state,
+      "ally",
+      counters,
+      new BattleRng("separate-slip-kinds").stream("effects"),
+    );
+
+    expect(result.hpSettlements[0].result).toMatchObject({
+      totalSlipDamage: 405,
+      slipDamageCategories: [
+        { kind: "burn", baseAmount: 100, resolvedDamage: 115 },
+        { kind: "poison", baseAmount: 100, resolvedDamage: 120 },
+        { kind: "curse", baseAmount: 100, resolvedDamage: 130 },
+      ],
+    });
+    expect(
+      result.hpSettlements[0].slipDamageContributions.map(
+        ({ slipDamageKind, amplifierPermille }) => ({
+          slipDamageKind: slipDamageKind ?? null,
+          amplifierPermille,
+        }),
+      ),
+    ).toEqual([
+      { slipDamageKind: "burn", amplifierPermille: 150 },
+      { slipDamageKind: "poison", amplifierPermille: 200 },
+      { slipDamageKind: "curse", amplifierPermille: 300 },
+      { slipDamageKind: null, amplifierPermille: 0 },
+    ]);
+  });
+
+  it("sums same-kind slip before flooring and retains an activation snapshot after dispel", () => {
+    let state = formation();
+    let counters = createEffectRuntimeCounters();
+    for (const template of [
+      slipAmplifier("spread-55", "spread_of_fire", 550),
+      slipRecurring("burn-a", 333, "burn", {
+        trigger: { timing: "turn_end", priority: -10 },
+      }),
+      slipRecurring("burn-b", 217, "burn", {
+        trigger: { timing: "turn_end", priority: -10 },
+      }),
+      recurring(
+        "remove-debuffs-after-slip",
+        { kind: "remove_effects", request: { mode: "all", category: "debuff" } },
+        {
+          category: "buff",
+          remainingTurns: 1,
+          trigger: {
+            timing: "turn_end",
+            priority: 10,
+            actions: [{
+              target: self,
+              action: {
+                kind: "remove_effects",
+                request: { mode: "all", category: "debuff" },
+              },
+            }],
+          },
+        },
+      ),
+    ]) {
+      const applied = register(
+        state,
+        "ally-a",
+        template,
+        counters,
+        template.category === "debuff" ? "enemy-a" : "ally-a",
+      );
+      state = applied.formation;
+      counters = applied.counters;
+    }
+    const result = resolveSideTurnEnd(
+      state,
+      "ally",
+      counters,
+      new BattleRng("snapshot-after-dispel").stream("effects"),
+    );
+
+    expect(result.hpSettlements[0].result).toMatchObject({
+      totalSlipDamage: 852,
+      slipDamageCategories: [{
+        kind: "burn",
+        baseAmount: 550,
+        resolvedDamage: 852,
+      }],
+    });
+    expect(result.hpSettlements[0].slipDamageContributions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ amplifierPermille: 550 }),
+        expect.objectContaining({ amplifierPermille: 550 }),
+      ]),
+    );
+    expect(findUnitLocation(result.formation, "ally-a")?.unit.effects).toEqual([]);
+  });
+
+  it("freezes slip and amplifier durations together while their owner is in reserve", () => {
+    let state = formation();
+    let counters = createEffectRuntimeCounters();
+    for (const template of [
+      slipAmplifier("reserve-spread", "spread_of_fire", 550, 1),
+      slipRecurring("reserve-burn", 550, "burn", { remainingTurns: 1 }),
+    ]) {
+      const applied = register(
+        state,
+        "ally-d",
+        template,
+        counters,
+        "enemy-a",
+      );
+      state = applied.formation;
+      counters = applied.counters;
+    }
+    const result = resolveSideTurnEnd(
+      state,
+      "ally",
+      counters,
+      new BattleRng("reserve-slip-freeze").stream("effects"),
+    );
+
+    expect(result.activations).toEqual([]);
+    expect(findUnitLocation(result.formation, "ally-d")?.unit).toMatchObject({
+      hp: 10_000,
+      effects: [
+        { stableId: "reserve-spread", remainingTurns: 1 },
+        { stableId: "reserve-burn", remainingTurns: 1 },
+      ],
+    });
+  });
+
   it("lets recurring recovery offset slip damage even at maximum HP", () => {
     let state = formation();
     let counters = createEffectRuntimeCounters();
@@ -817,17 +1074,13 @@ describe("side turn-end integration", () => {
     let state = withHp(formation(), "enemy-a", 500);
     let counters = createEffectRuntimeCounters();
     for (const effect of [
+      slipAmplifier("evil-100", "evil_curse", 1_000),
       settledRecurring(
         "small-recovery",
         "recurring_hp_recovery",
         { kind: "heal_hp", amount: 100 },
       ),
-      settledRecurring(
-        "large-curse",
-        "slip_damage",
-        { kind: "reduce_hp", amount: 1_000, canDefeat: false },
-        { category: "debuff" },
-      ),
+      slipRecurring("large-curse", 1_000, "curse"),
     ]) {
       const applied = register(
         state,

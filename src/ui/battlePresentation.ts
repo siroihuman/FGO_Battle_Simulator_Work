@@ -126,6 +126,24 @@ export function summarizeBattleLogBatch(
 
 function turnEndChanges(record: BattleLogTurnEndRecord): string[] {
   const changes: string[] = [];
+  const slipLabels = {
+    burn: "やけど",
+    poison: "毒",
+    curse: "呪い",
+  } as const;
+  for (const settlement of record.hpSettlements) {
+    for (const contribution of settlement.slipDamageContributions) {
+      if (!contribution.slipDamageKind) continue;
+      changes.push(
+        `${unitName(settlement.target.name, settlement.target.instanceId)}：${slipLabels[contribution.slipDamageKind]} 基礎${contribution.amount}・発動時倍加${contribution.amplifierPermille ?? "記録なし"}permille・種類別基礎合計${contribution.categoryBaseAmount ?? "記録なし"}・確定${contribution.categoryResolvedDamage ?? "記録なし"}`,
+      );
+    }
+    if (settlement.slipDamageContributions.length > 0) {
+      changes.push(
+        `${unitName(settlement.target.name, settlement.target.instanceId)}：スリップ合計${settlement.result.totalSlipDamage}・HP ${settlement.result.hpBefore ?? "-"}→${settlement.result.hpAfter ?? "-"}`,
+      );
+    }
+  }
   for (const change of record.enemyChargeChanges) {
     changes.push(
       `${unitName(change.enemy.name, change.enemy.instanceId)}チャージ ${change.before}→${change.after}`,

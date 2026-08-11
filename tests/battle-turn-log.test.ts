@@ -30,6 +30,7 @@ import {
 import { resolveLethalHp } from "../src/effects/survival";
 import { combatantData } from "./helpers/attackData";
 import { unit } from "./helpers/battle";
+import { summarizeBattleTurnLogs } from "../src/ui/battlePresentation";
 
 // Canonical timeline-log requirements:
 // docs/specs/BATTLE_SYSTEM.md, CALCULATIONS_AND_RNG.md,
@@ -289,6 +290,12 @@ describe("battle-turn timeline log", () => {
         hpChange: 1_000,
       },
     });
+    expect(
+      allyEnd.hpSettlements[0].recoveryContributions[0],
+    ).not.toHaveProperty("slipDamageKind");
+    expect(allyEnd.hpSettlements[0].result).not.toHaveProperty(
+      "slipDamageCategories",
+    );
     expect(allyEnd.durations).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -338,6 +345,103 @@ describe("battle-turn timeline log", () => {
     expect(JSON.parse(JSON.stringify(result.battleLog))).toEqual(
       result.battleLog,
     );
+  });
+
+  it("records amplified slip details and presents only the saved confirmed values", () => {
+    let counters = createEffectRuntimeCounters();
+    let applied = applyEffect(
+      unit("ally-a", "ally", { hp: 5_000 }),
+      {
+        stableId: "spread-55",
+        name: "延焼",
+        effectType: "spread-of-fire",
+        category: "debuff",
+        classifications: ["spread_of_fire"],
+        value: 550,
+        remainingTurns: 2,
+        slipDamageAmplifierKind: "spread_of_fire",
+      },
+      "enemy-a",
+      counters,
+    );
+    counters = applied.counters;
+    applied = applyEffect(
+      applied.unit,
+      {
+        stableId: "burn-550",
+        name: "やけど",
+        effectType: "burn",
+        category: "debuff",
+        classifications: ["burn"],
+        remainingTurns: 2,
+        trigger: {
+          timing: "turn_end",
+          actions: [{
+            target: { relation: "self", selection: "single" },
+            action: { kind: "reduce_hp", amount: 550, canDefeat: false },
+            turnEndSettlement: "slip_damage",
+            slipDamageKind: "burn",
+          }],
+        },
+      },
+      "enemy-a",
+      counters,
+    );
+    counters = applied.counters;
+    const result = resolveBattleTurn({
+      state: battle({
+        allyA: applied.unit,
+        enemyA: unit("enemy-a", "enemy", {
+          hp: 1_000_000,
+          maxHp: 1_000_000,
+          baseMaxHp: 1_000_000,
+        }),
+      }),
+      selection: selection(battle({ allyA: applied.unit })),
+      registry: allyRegistry(),
+      rng: new BattleRng("amplified-slip-log"),
+      counters,
+    });
+    const allyEnd = result.battleLog.records.find(
+      (record) => record.recordType === "turn_end" && record.side === "ally",
+    );
+    if (!allyEnd || allyEnd.recordType !== "turn_end") {
+      throw new Error("missing amplified slip turn-end log");
+    }
+    expect(allyEnd.hpSettlements[0]).toMatchObject({
+      slipDamageContributions: [{
+        amount: 550,
+        slipDamageKind: "burn",
+        amplifierPermille: 550,
+        categoryBaseAmount: 550,
+        categoryResolvedDamage: 852,
+      }],
+      result: {
+        totalSlipDamage: 852,
+        slipDamageCategories: [{
+          kind: "burn",
+          baseAmount: 550,
+          resolvedDamage: 852,
+        }],
+      },
+    });
+
+    const savedOnly = structuredClone(result.battleLog);
+    const savedEnd = savedOnly.records.find(
+      (record) => record.recordType === "turn_end" && record.side === "ally",
+    );
+    if (!savedEnd || savedEnd.recordType !== "turn_end") {
+      throw new Error("missing saved turn-end log");
+    }
+    savedEnd.hpSettlements[0].slipDamageContributions[0].categoryResolvedDamage = 123;
+    savedEnd.hpSettlements[0].result.totalSlipDamage = 456;
+    const summary = summarizeBattleTurnLogs([{ ...savedOnly }]).find(
+      ({ kind, title }) => kind === "turn_end" && title === "味方ターン終了",
+    );
+    expect(summary?.changes).toEqual(expect.arrayContaining([
+      expect.stringContaining("確定123"),
+      expect.stringContaining("スリップ合計456"),
+    ]));
   });
 
   it("records break settlement and its on-break trigger at ally turn end", () => {

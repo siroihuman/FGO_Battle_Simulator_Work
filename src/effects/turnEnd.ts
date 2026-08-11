@@ -21,6 +21,7 @@ import {
   advanceOwnerTurnEnd,
   consumeUnitEffectUse,
 } from "./runtime";
+import { slipDamageAmplifierPermille } from "./slipDamage";
 import { resolveTargetLocations } from "./targeting";
 import {
   attemptTriggerActivation,
@@ -31,6 +32,7 @@ import type {
   RemovedEffect,
   TriggerActivation,
   TriggerAction,
+  SlipDamageKind,
   TurnEndSettlementKind,
 } from "./types";
 
@@ -70,6 +72,10 @@ export interface TurnEndHpContribution {
   actionIndex: number;
   sourceInstanceId: string | null;
   amount: number;
+  slipDamageKind?: SlipDamageKind;
+  amplifierPermille?: number;
+  categoryBaseAmount?: number;
+  categoryResolvedDamage?: number;
   ignoreRecoveryModifiers?: boolean;
   ignoreHealingBlock?: boolean;
 }
@@ -232,6 +238,7 @@ function assertSettlementAction(action: TriggerAction): void {
 
 function queueHpSettlement(
   pendingSettlements: Map<string, PendingHpSettlement>,
+  formation: BattleFormation,
   candidate: {
     ownerInstanceId: string;
     effect: {
@@ -254,6 +261,12 @@ function queueHpSettlement(
     );
   }
   for (const targetInstanceId of targetInstanceIds) {
+    const target = findUnitLocation(formation, targetInstanceId)?.unit;
+    if (!target) {
+      throw new RangeError(
+        `missing turn-end settlement target: ${targetInstanceId}`,
+      );
+    }
     let pending = pendingSettlements.get(targetInstanceId);
     if (!pending) {
       pending = {
@@ -270,6 +283,17 @@ function queueHpSettlement(
       actionIndex,
       sourceInstanceId,
       amount: action.action.amount,
+      ...(action.turnEndSettlement === "slip_damage"
+        ? {
+            ...(action.slipDamageKind
+              ? { slipDamageKind: action.slipDamageKind }
+              : {}),
+            amplifierPermille: slipDamageAmplifierPermille(
+              target,
+              action.slipDamageKind ?? null,
+            ),
+          }
+        : {}),
       ...(action.action.kind === "heal_hp"
         ? {
             ignoreRecoveryModifiers:
@@ -409,6 +433,7 @@ export function resolveSideTurnEnd(
       if (action.turnEndSettlement) {
         queueHpSettlement(
           pendingHpSettlements,
+          currentFormation,
           candidate,
           actionIndex,
           action,
@@ -484,14 +509,34 @@ export function resolveSideTurnEnd(
     const result = resolveTurnEndHpSettlement(
       target,
       recoveryContributions,
-      pending.slipDamageContributions.map(({ amount }) => amount),
+      pending.slipDamageContributions.map((contribution) => ({
+        baseAmount: contribution.amount,
+        kind: contribution.slipDamageKind ?? null,
+        amplifierPermille: contribution.amplifierPermille ?? 0,
+      })),
     );
     currentFormation = applyHpSettlement(currentFormation, result);
     hpSettlements.push({
       targetInstanceId: pending.targetInstanceId,
       recoveryContributions: pending.recoveryContributions,
-      slipDamageContributions:
-        pending.slipDamageContributions,
+      slipDamageContributions: pending.slipDamageContributions.map(
+        (contribution) => {
+          const category = contribution.slipDamageKind
+            ? result.slipDamageCategories.find(
+                ({ kind }) => kind === contribution.slipDamageKind,
+              )
+            : undefined;
+          return {
+            ...contribution,
+            ...(category
+              ? {
+                  categoryBaseAmount: category.baseAmount,
+                  categoryResolvedDamage: category.resolvedDamage,
+                }
+              : {}),
+          };
+        },
+      ),
       result,
     });
   }

@@ -40,6 +40,12 @@ const TRIGGER_CARD_TYPES = [
   "buster",
   "extra",
 ] as const;
+const SLIP_DAMAGE_KINDS = ["burn", "poison", "curse"] as const;
+const SLIP_DAMAGE_AMPLIFIER_KINDS = [
+  "spread_of_fire",
+  "toxic",
+  "evil_curse",
+] as const;
 
 function assertUniqueListedValues(
   values: readonly string[] | undefined,
@@ -107,6 +113,20 @@ export function assertValidEffectTrigger(
         `${actionName}.turnEndSettlement requires turn_end timing`,
       );
     }
+    if (
+      action.slipDamageKind !== undefined
+      && !SLIP_DAMAGE_KINDS.includes(action.slipDamageKind)
+    ) {
+      throw new RangeError(`${actionName}.slipDamageKind is invalid`);
+    }
+    if (
+      action.slipDamageKind !== undefined
+      && action.turnEndSettlement !== "slip_damage"
+    ) {
+      throw new RangeError(
+        `${actionName}.slipDamageKind requires slip_damage settlement`,
+      );
+    }
     if (action.action.kind !== "gain_stars") return;
     assertSafeInteger(action.action.amount, `${actionName}.action.amount`);
     if (action.action.amount < 0) {
@@ -166,6 +186,30 @@ export function applyEffect(
   assertOptionalCount(template.remainingUses, "remainingUses");
   assertSafeInteger(template.value ?? 0, "effect value");
   assertValidEffectTrigger(template.trigger);
+  if (
+    template.slipDamageAmplifierKind !== undefined
+    && !SLIP_DAMAGE_AMPLIFIER_KINDS.includes(
+      template.slipDamageAmplifierKind,
+    )
+  ) {
+    throw new RangeError("slipDamageAmplifierKind is invalid");
+  }
+  if (
+    template.slipDamageAmplifierKind !== undefined
+    && template.category !== "debuff"
+  ) {
+    throw new RangeError(
+      "slip damage amplifiers must be debuff effects",
+    );
+  }
+  if (
+    template.slipDamageAmplifierKind !== undefined
+    && (template.value ?? 0) < 0
+  ) {
+    throw new RangeError(
+      "slip damage amplifier value must not be negative",
+    );
+  }
   assertValidNoblePhantasmCardTypeChangeTemplate(template);
   const classifications = [...new Set(template.classifications ?? [])];
   if (classifications.some((classification) => classification.length === 0)) {
@@ -186,6 +230,7 @@ export function applyEffect(
     removalPolicy: template.removalPolicy ?? "removable",
     durationTick: template.durationTick ?? "owner_turn_end",
     trigger: template.trigger,
+    slipDamageAmplifierKind: template.slipDamageAmplifierKind,
     registrationOrder: counters.nextRegistrationOrder,
     flags: { ...(template.flags ?? {}) },
   };
