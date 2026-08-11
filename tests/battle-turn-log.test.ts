@@ -110,6 +110,8 @@ function battle(options: BattleOptions = {}): BattleState {
   );
   return {
     ...state,
+    commandStarDistributionMode: "legacy_on_command_confirmation",
+    commandStarDistribution: null,
     commandDeck: {
       ...state.commandDeck,
       currentHand: allyCards,

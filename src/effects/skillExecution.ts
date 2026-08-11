@@ -12,6 +12,10 @@ import {
 } from "../core/battle/state";
 import type { DeterministicRng } from "../core/rng";
 import {
+  finalizeInputBoundaryCommandStarDistribution,
+} from "../core/cards/critical";
+import type { BattleAttackDataRegistry } from "../core/battle/actionData";
+import {
   battleActionEffectSequence,
   combatantActionEffectData,
   type BattleActionEffectDataRegistry,
@@ -23,6 +27,10 @@ import {
   type DeclaredActionEffectsResult,
 } from "./actionExecution";
 import type { EffectRuntimeCounters } from "./types";
+import {
+  completeCommandCardRedistributionEffects,
+  prepareCommandCardRedistributions,
+} from "./commandCardRedistribution";
 
 export type AllySkillUseRejectionReason =
   | "invalid_phase"
@@ -32,7 +40,9 @@ export type AllySkillUseRejectionReason =
   | "skill_on_cooldown"
   | "selected_target_required"
   | "selected_target_invalid"
-  | "unresolved_effects";
+  | "unresolved_effects"
+  | "command_card_redistribution_unavailable"
+  | "command_card_redistribution_invalid";
 
 export type AllySkillUseResult =
   | {
@@ -61,6 +71,11 @@ export interface ResolveAllySkillUseInput {
   selectedTargetInstanceId?: string;
   counters: EffectRuntimeCounters;
   rng: DeterministicRng;
+  commandCards?: {
+    attackRegistry: BattleAttackDataRegistry;
+    cardsRng: DeterministicRng;
+    criticalRng: DeterministicRng;
+  };
 }
 
 function rejected(
@@ -141,6 +156,14 @@ export function resolveAllySkillUse(
   if (cooldownBefore > 0) {
     return rejected(input, "skill_on_cooldown");
   }
+  const preparedRedistributions = prepareCommandCardRedistributions(
+    input.state,
+    skill.effects,
+    input.commandCards,
+  );
+  if (!preparedRedistributions.accepted) {
+    return rejected(input, preparedRedistributions.reason);
+  }
   const cooldownAfterUse = skill.cooldownAtMax ?? 0;
   const sourceWithCooldown = {
     ...sourceLocation.unit,
@@ -159,20 +182,39 @@ export function resolveAllySkillUse(
     skill.effects,
     {
       selectedTargetInstanceId: input.selectedTargetInstanceId,
+      preparedCommandCardRedistributions:
+        preparedRedistributions.redistributions,
     },
     input.counters,
     input.rng,
   );
   const boundary = resolveActionBoundary(effects.state);
+  const finalized = input.commandCards
+    ? finalizeInputBoundaryCommandStarDistribution(
+        boundary.state,
+        input.commandCards.attackRegistry,
+        input.commandCards.criticalRng,
+        preparedRedistributions.redistributions.length > 0,
+      )
+    : {
+        state: boundary.state,
+        distribution: boundary.state.commandStarDistribution,
+        recalculated: false,
+      };
+  const completedEffects = completeCommandCardRedistributionEffects(
+    effects,
+    input.state,
+    finalized.state,
+  );
   return {
     accepted: true,
-    state: boundary.state,
-    counters: effects.counters,
+    state: finalized.state,
+    counters: completedEffects.counters,
     sourceInstanceId: input.sourceInstanceId,
     skill,
     cooldownBefore,
     cooldownAfterUse,
-    effects,
-    boundary,
+    effects: completedEffects,
+    boundary: { ...boundary, state: finalized.state },
   };
 }

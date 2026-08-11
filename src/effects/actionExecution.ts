@@ -20,6 +20,12 @@ import type {
 } from "../core/battle/types";
 import type { DeterministicRng } from "../core/rng";
 import type { NoblePhantasmLevel } from "../formulas/np";
+import type {
+  CommandCardRedistributionResult,
+} from "../core/cards/deck";
+import type {
+  ResolvedCommandStarDistribution,
+} from "../core/cards/critical";
 import {
   executeCommonActionForTargets,
   type CommonAction,
@@ -47,12 +53,22 @@ export interface DeclaredActionExecutionContext {
   noblePhantasmLevel?: NoblePhantasmLevel;
   overchargeStage?: 1 | 2 | 3 | 4 | 5;
   selectedTargetInstanceId?: string;
+  preparedCommandCardRedistributions?: readonly CommandCardRedistributionResult[];
 }
 
 export type DeclaredActionEffectOutcome =
   | "resolved"
   | "no_target"
   | "unsupported";
+
+export interface DeclaredCommandCardRedistributionResult
+  extends CommandCardRedistributionResult {
+  commandStarsBefore: number;
+  commandStarsAfter: number;
+  nextCommandStarsBefore: number;
+  nextCommandStarsAfter: number;
+  starDistribution: ResolvedCommandStarDistribution | null;
+}
 
 export interface DeclaredActionEffectResult {
   effectStableId: string;
@@ -62,6 +78,7 @@ export interface DeclaredActionEffectResult {
   resolvedAmount?: number;
   batch?: CommonActionBatchResult;
   starAddition?: BattleStarAddition;
+  commandCardRedistribution?: DeclaredCommandCardRedistributionResult;
   unsupportedMechanicId?: string;
 }
 
@@ -238,6 +255,9 @@ type PreparedDeclaredAction =
       amount: number;
       destination: BattleStarBucket;
       resolvedAmount: number;
+    }
+  | {
+      kind: "redistribute_command_cards";
     };
 
 function preparedAction(
@@ -268,6 +288,9 @@ function preparedAction(
       resolvedAmount: amount,
     };
   }
+  if (effect.action.kind === "redistribute_command_cards") {
+    return { kind: "redistribute_command_cards" };
+  }
   return { kind: "common", action: effect.action };
 }
 
@@ -289,6 +312,7 @@ export function executeDeclaredActionEffects(
   let currentCounters = counters;
   const results: DeclaredActionEffectResult[] = [];
   const unresolvedEffectStableIds: string[] = [];
+  let redistributionIndex = 0;
 
   for (const effect of [...effects].sort((left, right) => left.order - right.order)) {
     const prepared = preparedAction(effect, context);
@@ -303,6 +327,37 @@ export function executeDeclaredActionEffects(
           effect.action.kind === "unsupported"
             ? effect.action.mechanicId
             : undefined,
+      });
+      continue;
+    }
+    if (prepared.kind === "redistribute_command_cards") {
+      const redistribution =
+        context.preparedCommandCardRedistributions?.[redistributionIndex];
+      redistributionIndex += 1;
+      if (!redistribution) {
+        throw new RangeError(
+          "prepared command-card redistribution is missing",
+        );
+      }
+      currentState = {
+        ...currentState,
+        commandDeck: redistribution.deck,
+        commandStarDistributionMode: "input_boundary_persisted",
+        commandStarDistribution: null,
+      };
+      results.push({
+        effectStableId: effect.stableId,
+        order: effect.order,
+        outcome: "resolved",
+        targetInstanceIds: [],
+        commandCardRedistribution: {
+          ...redistribution,
+          commandStarsBefore: currentState.commandStars,
+          commandStarsAfter: currentState.commandStars,
+          nextCommandStarsBefore: currentState.nextCommandStars,
+          nextCommandStarsAfter: currentState.nextCommandStars,
+          starDistribution: null,
+        },
       });
       continue;
     }
@@ -399,6 +454,7 @@ export function executeExternalDeclaredActionEffects(
   let currentCounters = counters;
   const results: DeclaredActionEffectResult[] = [];
   const unresolvedEffectStableIds: string[] = [];
+  let redistributionIndex = 0;
 
   for (const effect of [...effects].sort((left, right) => left.order - right.order)) {
     const prepared = preparedAction(effect, context);
@@ -413,6 +469,37 @@ export function executeExternalDeclaredActionEffects(
           effect.action.kind === "unsupported"
             ? effect.action.mechanicId
             : undefined,
+      });
+      continue;
+    }
+    if (prepared.kind === "redistribute_command_cards") {
+      const redistribution =
+        context.preparedCommandCardRedistributions?.[redistributionIndex];
+      redistributionIndex += 1;
+      if (!redistribution) {
+        throw new RangeError(
+          "prepared command-card redistribution is missing",
+        );
+      }
+      currentState = {
+        ...currentState,
+        commandDeck: redistribution.deck,
+        commandStarDistributionMode: "input_boundary_persisted",
+        commandStarDistribution: null,
+      };
+      results.push({
+        effectStableId: effect.stableId,
+        order: effect.order,
+        outcome: "resolved",
+        targetInstanceIds: [],
+        commandCardRedistribution: {
+          ...redistribution,
+          commandStarsBefore: currentState.commandStars,
+          commandStarsAfter: currentState.commandStars,
+          nextCommandStarsBefore: currentState.nextCommandStars,
+          nextCommandStarsAfter: currentState.nextCommandStars,
+          starDistribution: null,
+        },
       });
       continue;
     }

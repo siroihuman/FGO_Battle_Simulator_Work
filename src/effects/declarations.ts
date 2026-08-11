@@ -58,6 +58,10 @@ export type DeclaredEffectAction =
       destination: "command" | "next_command";
     }
   | {
+      /** Resets and redraws the current normal-command-card cycle. */
+      kind: "redistribute_command_cards";
+    }
+  | {
       /** Explicit marker for a known content effect not supported by the engine. */
       kind: "unsupported";
       mechanicId: string;
@@ -99,6 +103,7 @@ const DECLARED_ACTION_KINDS: readonly string[] = [
   "increase_np_by_current_rate",
   "change_enemy_charge",
   "gain_stars",
+  "redistribute_command_cards",
   "apply_effects",
   "remove_effects",
   "unsupported",
@@ -240,6 +245,7 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
     }
     return;
   }
+  if (action.kind === "redistribute_command_cards") return;
   if (action.kind === "unsupported") {
     if (!/^[a-z][a-z0-9_]*$/.test(action.mechanicId)) {
       throw new RangeError(`${name}.mechanicId must be lower_snake_case`);
@@ -361,6 +367,17 @@ export function assertValidDeclaredActionEffect(
   ) {
     throw new RangeError(
       `${name}.action gain_stars must use a self target`,
+    );
+  }
+  if (
+    effect.action.kind === "redistribute_command_cards"
+    && (
+      effect.target.relation !== "self"
+      || effect.target.selection !== "single"
+    )
+  ) {
+    throw new RangeError(
+      `${name}.action redistribute_command_cards must use a self target`,
     );
   }
 }

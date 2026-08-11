@@ -46,6 +46,7 @@ import {
   createBattleActionLogEntry,
   createBattleLogContext,
   createBattleLogUnitIndex,
+  mergeBattleLogRngEvents,
   type BattleLogBatch,
   type BattleLogUnitRef,
 } from "./log";
@@ -61,16 +62,23 @@ import {
   RNG_ALGORITHM_VERSION,
   type BattleRngSnapshot,
 } from "../rng";
+import {
+  assertCommandStarDistributionState,
+} from "../cards/critical";
+import {
+  hasCommandCardRedistribution,
+} from "../../effects/commandCardRedistribution";
 
 /** Increment only with an explicit migration or replay compatibility policy. */
 export const BATTLE_SUSPEND_SCHEMA_VERSION = 4 as const;
 export const BATTLE_SUSPEND_SPEC_VERSION = "1.0.0" as const;
-export const BATTLE_SUSPEND_DATA_SCHEMA_VERSION = "1.37.0" as const;
+export const BATTLE_SUSPEND_DATA_SCHEMA_VERSION = "1.38.0" as const;
 export const BATTLE_TURN_LOG_SCHEMA_VERSION = 2 as const;
 
 const LEGACY_BATTLE_SUSPEND_SCHEMA_VERSION = 3 as const;
 const LEGACY_BATTLE_SUSPEND_DATA_SCHEMA_VERSION = "1.36.0" as const;
 const LEGACY_BATTLE_LOG_SCHEMA_VERSION = 4 as const;
+const PRE_REDISTRIBUTION_DATA_SCHEMA_VERSION = "1.37.0" as const;
 
 export interface BattleReplayTurnInput {
   cardIds: string[];
@@ -370,10 +378,12 @@ function createSessionFromInitial(
   assertCounters(initial.counters);
   assertBattleLoadoutState(initial.state);
   assertSelectedMysticCodeData(initial.state, mysticCodeRegistry);
+  assertCommandStarDistributionState(initial.state, registry, true);
   const initialCopy = cloneJson(initial);
   const loop = createBattleLoop({
     state: cloneJson(initialCopy.state),
     rng: BattleRng.restore(initialCopy.rng),
+    registry,
     counters: cloneJson(initialCopy.counters),
   });
   return {
@@ -490,6 +500,7 @@ interface CreateInputActionLogInput {
   boundary?: ActionBoundaryResult;
   directAllyExchange?: DirectAllyExchangeEvent | null;
   rngEvents: Parameters<typeof createBattleActionLogEntry>[0]["rngEvents"];
+  setupRngEvents?: BattleLogBatch["setupRngEvents"];
 }
 
 function createInputActionLog(
@@ -544,7 +555,7 @@ function createInputActionLog(
     stopReason: input.accepted
       ? "input_action_resolved"
       : (input.rejectionReason ?? "input_action_rejected"),
-    setupRngEvents: [],
+    setupRngEvents: input.setupRngEvents ?? [],
     entries: [entry],
   };
 }
@@ -567,6 +578,64 @@ function allySkillName(
     : null;
 }
 
+function allySkillUsesCommandCardRedistribution(
+  session: BattleSession,
+  input: BattleReplayAllySkillInput,
+): boolean {
+  const source = findUnitLocation(
+    session.loop.state.formation,
+    input.sourceInstanceId,
+  )?.unit;
+  if (!source || !session.actionEffectRegistry) return false;
+  const combatant = combatantActionEffectData(
+    session.actionEffectRegistry,
+    source,
+  );
+  const skill = combatant
+    ? battleActionEffectSequence(combatant, input.skillStableId)
+    : null;
+  return Boolean(skill && hasCommandCardRedistribution(skill.effects));
+}
+
+function mysticCodeSkillUsesCommandCardRedistribution(
+  session: BattleSession,
+  input: BattleReplayMysticCodeSkillInput,
+): boolean {
+  const selected = session.loop.state.loadout.mysticCode;
+  const definition = selected && session.mysticCodeRegistry
+    ? mysticCodeDefinition(session.mysticCodeRegistry, selected.dataId)
+    : null;
+  const skill = definition?.skills.find(
+    ({ stableId }) => stableId === input.skillStableId,
+  );
+  return Boolean(
+    skill
+    && skill.execution === "effects"
+    && hasCommandCardRedistribution(skill.effects),
+  );
+}
+
+function splitInputBoundaryRngEvents(
+  events: Parameters<typeof createBattleActionLogEntry>[0]["rngEvents"],
+): {
+  setup: BattleLogBatch["setupRngEvents"];
+  action: Parameters<typeof createBattleActionLogEntry>[0]["rngEvents"];
+} {
+  const captured = events ?? [];
+  return {
+    setup: mergeBattleLogRngEvents(
+      captured.filter(({ stream }) =>
+        stream === "cards" || stream === "critical"
+      ),
+    ),
+    action: mergeBattleLogRngEvents(
+      captured.filter(({ stream }) =>
+        stream !== "cards" && stream !== "critical"
+      ),
+    ),
+  };
+}
+
 /** Resolves, logs, and records one active Servant skill operation. */
 export function resolveBattleSessionAllySkill(
   session: BattleSession,
@@ -574,8 +643,19 @@ export function resolveBattleSessionAllySkill(
 ): BattleSessionAllySkillResult {
   const operation = normalizeReplayAllySkillInput(input);
   const actionName = allySkillName(session, operation);
+  const atomicRedistribution = allySkillUsesCommandCardRedistribution(
+    session,
+    operation,
+  );
+  const operationRng = atomicRedistribution
+    ? BattleRng.restore(session.loop.rng.snapshot())
+    : session.loop.rng;
   const captured = captureBattleLogRng(
-    { effects: session.loop.rng.stream("effects") },
+    {
+      cards: operationRng.stream("cards"),
+      effects: operationRng.stream("effects"),
+      critical: operationRng.stream("critical"),
+    },
     () => session.actionEffectRegistry
       ? resolveAllySkillUse({
           state: session.loop.state,
@@ -586,7 +666,12 @@ export function resolveBattleSessionAllySkill(
             ? {}
             : { selectedTargetInstanceId: operation.selectedTargetInstanceId }),
           counters: session.loop.counters,
-          rng: session.loop.rng.stream("effects"),
+          rng: operationRng.stream("effects"),
+          commandCards: {
+            attackRegistry: session.registry,
+            cardsRng: operationRng.stream("cards"),
+            criticalRng: operationRng.stream("critical"),
+          },
         })
       : {
           accepted: false as const,
@@ -596,6 +681,10 @@ export function resolveBattleSessionAllySkill(
         },
   );
   const result = captured.result;
+  if (atomicRedistribution && !result.accepted) {
+    return { session, result };
+  }
+  const rngEvents = splitInputBoundaryRngEvents(captured.events);
   const targetInstanceIds = result.accepted
     ? result.effects.effects.flatMap(({ targetInstanceIds: targets }) => targets)
     : operation.selectedTargetInstanceId
@@ -631,7 +720,8 @@ export function resolveBattleSessionAllySkill(
           boundary: result.boundary,
         }
       : {}),
-    rngEvents: captured.events,
+    rngEvents: rngEvents.action,
+    setupRngEvents: rngEvents.setup,
   });
   return {
     session: {
@@ -640,6 +730,7 @@ export function resolveBattleSessionAllySkill(
         ...session.loop,
         state: result.state,
         counters: result.counters,
+        rng: result.accepted ? operationRng : session.loop.rng,
       },
       operationHistory: [...session.operationHistory, operation],
       inputLogs: [...session.inputLogs, inputLog],
@@ -664,8 +755,19 @@ export function resolveBattleSessionMysticCodeSkill(
   const actionName = definition?.skills.find(
     ({ stableId }) => stableId === operation.skillStableId,
   )?.name ?? null;
+  const atomicRedistribution = mysticCodeSkillUsesCommandCardRedistribution(
+    session,
+    operation,
+  );
+  const operationRng = atomicRedistribution
+    ? BattleRng.restore(session.loop.rng.snapshot())
+    : session.loop.rng;
   const captured = captureBattleLogRng(
-    { effects: session.loop.rng.stream("effects") },
+    {
+      cards: operationRng.stream("cards"),
+      effects: operationRng.stream("effects"),
+      critical: operationRng.stream("critical"),
+    },
     () => session.mysticCodeRegistry
       ? resolveMysticCodeSkillUse({
           state: session.loop.state,
@@ -678,7 +780,12 @@ export function resolveBattleSessionMysticCodeSkill(
             ? { orderChange: operation.orderChange }
             : {}),
           counters: session.loop.counters,
-          rng: session.loop.rng.stream("effects"),
+          rng: operationRng.stream("effects"),
+          commandCards: {
+            attackRegistry: session.registry,
+            cardsRng: operationRng.stream("cards"),
+            criticalRng: operationRng.stream("critical"),
+          },
         })
       : {
           accepted: false as const,
@@ -688,6 +795,10 @@ export function resolveBattleSessionMysticCodeSkill(
         },
   );
   const result = captured.result;
+  if (atomicRedistribution && !result.accepted) {
+    return { session, result };
+  }
+  const rngEvents = splitInputBoundaryRngEvents(captured.events);
   const targetInstanceIds = result.accepted
     ? result.execution === "effects"
       ? result.effects.effects.flatMap(({ targetInstanceIds: targets }) => targets)
@@ -730,7 +841,8 @@ export function resolveBattleSessionMysticCodeSkill(
             : null,
         }
       : {}),
-    rngEvents: captured.events,
+    rngEvents: rngEvents.action,
+    setupRngEvents: rngEvents.setup,
   });
   return {
     session: {
@@ -739,6 +851,7 @@ export function resolveBattleSessionMysticCodeSkill(
         ...session.loop,
         state: result.state,
         counters: result.counters,
+        rng: result.accepted ? operationRng : session.loop.rng,
       },
       operationHistory: [...session.operationHistory, operation],
       inputLogs: [...session.inputLogs, inputLog],
@@ -751,6 +864,8 @@ export function resolveBattleSessionMysticCodeSkill(
 export function createBattleSuspendSave(
   session: BattleSession,
 ): BattleSuspendSave {
+  assertCommandStarDistributionState(session.initial.state, session.registry, true);
+  assertCommandStarDistributionState(session.loop.state, session.registry);
   return cloneJson({
     kind: "battle_suspend" as const,
     schemaVersion: BATTLE_SUSPEND_SCHEMA_VERSION,
@@ -790,6 +905,26 @@ interface LegacyBattleSuspendSave extends Omit<
   schemaVersion: typeof LEGACY_BATTLE_SUSPEND_SCHEMA_VERSION;
   dataSchemaVersion: typeof LEGACY_BATTLE_SUSPEND_DATA_SCHEMA_VERSION;
   battleLogSchemaVersion: typeof LEGACY_BATTLE_LOG_SCHEMA_VERSION;
+}
+
+interface PreRedistributionBattleSuspendSave extends Omit<
+  BattleSuspendSave,
+  "dataSchemaVersion"
+> {
+  dataSchemaVersion: typeof PRE_REDISTRIBUTION_DATA_SCHEMA_VERSION;
+}
+
+function addLegacyCommandStarDistribution(
+  snapshot: BattleLoopSuspendSnapshot | BattleSessionInitialSnapshot,
+): typeof snapshot {
+  return {
+    ...snapshot,
+    state: {
+      ...snapshot.state,
+      commandStarDistributionMode: "legacy_on_command_confirmation",
+      commandStarDistribution: null,
+    },
+  };
 }
 
 function assertLegacySaveHeader(save: LegacyBattleSuspendSave): void {
@@ -840,6 +975,8 @@ function migrateLegacyBattleSuspendSave(
     schemaVersion: BATTLE_SUSPEND_SCHEMA_VERSION,
     dataSchemaVersion: BATTLE_SUSPEND_DATA_SCHEMA_VERSION,
     battleLogSchemaVersion: BATTLE_LOG_SCHEMA_VERSION,
+    initial: addLegacyCommandStarDistribution(legacy.initial),
+    current: addLegacyCommandStarDistribution(legacy.current),
     inputLogs: [],
     inputLogsComplete: false,
     turnLogs: legacy.turnLogs.map((turnLog) => ({
@@ -853,6 +990,29 @@ function migrateLegacyBattleSuspendSave(
           : record
       ),
     })),
+  });
+}
+
+/** Adds only the explicit legacy allocation mode; no cards, stars, or RNG run. */
+function migratePreRedistributionBattleSuspendSave(
+  save: PreRedistributionBattleSuspendSave,
+): BattleSuspendSave {
+  if (
+    save.kind !== "battle_suspend"
+    || save.schemaVersion !== BATTLE_SUSPEND_SCHEMA_VERSION
+    || save.specVersion !== BATTLE_SUSPEND_SPEC_VERSION
+    || save.dataSchemaVersion !== PRE_REDISTRIBUTION_DATA_SCHEMA_VERSION
+    || save.rngAlgorithmVersion !== RNG_ALGORITHM_VERSION
+    || save.battleLogSchemaVersion !== BATTLE_LOG_SCHEMA_VERSION
+    || save.battleTurnLogSchemaVersion !== BATTLE_TURN_LOG_SCHEMA_VERSION
+  ) {
+    throw new RangeError("unsupported pre-redistribution battle suspend format");
+  }
+  return cloneJson({
+    ...save,
+    dataSchemaVersion: BATTLE_SUSPEND_DATA_SCHEMA_VERSION,
+    initial: addLegacyCommandStarDistribution(save.initial),
+    current: addLegacyCommandStarDistribution(save.current),
   });
 }
 
@@ -946,6 +1106,8 @@ export function restoreBattleSession(save: BattleSuspendSave): BattleSession {
     : undefined;
   assertSelectedMysticCodeData(save.initial.state, mysticCodeRegistry);
   assertSelectedMysticCodeData(save.current.state, mysticCodeRegistry);
+  assertCommandStarDistributionState(save.initial.state, registry, true);
+  assertCommandStarDistributionState(save.current.state, registry);
   const history = save.operationHistory.map(normalizeReplayOperation);
   const logs = cloneJson(save.turnLogs);
   return {
@@ -980,9 +1142,23 @@ export function parseBattleSuspendSave(serialized: string): BattleSuspendSave {
     (parsed as { schemaVersion?: unknown }).schemaVersion
       === LEGACY_BATTLE_SUSPEND_SCHEMA_VERSION
   ) {
-    return migrateLegacyBattleSuspendSave(
+    const migrated = migrateLegacyBattleSuspendSave(
       parsed as LegacyBattleSuspendSave,
     );
+    assertInputActionLogs(migrated);
+    return migrated;
+  }
+  if (
+    (parsed as { schemaVersion?: unknown }).schemaVersion
+      === BATTLE_SUSPEND_SCHEMA_VERSION
+    && (parsed as { dataSchemaVersion?: unknown }).dataSchemaVersion
+      === PRE_REDISTRIBUTION_DATA_SCHEMA_VERSION
+  ) {
+    const migrated = migratePreRedistributionBattleSuspendSave(
+      parsed as PreRedistributionBattleSuspendSave,
+    );
+    assertInputActionLogs(migrated);
+    return migrated;
   }
   const save = parsed as BattleSuspendSave;
   assertSaveHeader(save);

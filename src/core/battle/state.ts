@@ -3,6 +3,10 @@ import {
   createCommandCardDeck,
   type CommandCardDeckState,
 } from "../cards/deck";
+import type {
+  CommandStarDistributionMode,
+  ResolvedCommandStarDistribution,
+} from "../cards/critical";
 import { npCap } from "../../formulas/np";
 import { assertValidFormation } from "./formation";
 import type {
@@ -104,6 +108,10 @@ export interface BattleState {
   commandStars: number;
   /** Stars generated for the next ally command phase. */
   nextCommandStars: number;
+  /** Timing policy retained for deterministic legacy-save replay. */
+  commandStarDistributionMode: CommandStarDistributionMode;
+  /** Final allocation for the current five-card input boundary. */
+  commandStarDistribution: ResolvedCommandStarDistribution | null;
   /** Cooldowns of the three selected Mystic Code skills. */
   mysticCodeCooldowns: number[];
   /** Exact selections whose battle-start values have been applied. */
@@ -722,6 +730,8 @@ export function createBattleState(
     enemyReplacementMode,
     commandStars: 0,
     nextCommandStars: 0,
+    commandStarDistributionMode: "input_boundary_persisted",
+    commandStarDistribution: null,
     mysticCodeCooldowns: normalizeMysticCodeCooldowns(
       input.mysticCodeCooldowns,
     ),

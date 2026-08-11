@@ -256,6 +256,38 @@ export interface BattleLogDeclaredEffect {
     added: number;
     after: number;
   } | null;
+  commandCardRedistribution: {
+    cycleBefore: number;
+    cycleAfter: number;
+    drawsInCycleBefore: number;
+    drawsInCycleAfter: number;
+    rebuildReason: "card_redistribution";
+    previousHandCardIds: string[];
+    newHandCardIds: string[];
+    sourceCardCount: number;
+    remainingCardCount: number;
+    commandStarsBefore: number;
+    commandStarsAfter: number;
+    nextCommandStarsBefore: number;
+    nextCommandStarsAfter: number;
+    starDistribution: {
+      commandStars: number;
+      distributed: number;
+      unassigned: number;
+      cards: Array<{
+        cardId: string;
+        ownerInstanceId: string;
+        cardIndex: number;
+        cardType: "quick" | "arts" | "buster";
+        baseWeight: number;
+        starFocusModPermille: number;
+        randomBonus: number;
+        effectiveWeight: number;
+        stars: number;
+        criticalRatePermille: number;
+      }>;
+    } | null;
+  } | null;
   results: BattleLogCommonActionResult[];
 }
 
@@ -643,6 +675,49 @@ function declaredEffectGroups(
             before: effect.starAddition.before,
             added: effect.starAddition.added,
             after: effect.starAddition.after,
+          }
+        : null,
+      commandCardRedistribution: effect.commandCardRedistribution
+        ? {
+            cycleBefore: effect.commandCardRedistribution.cycleBefore,
+            cycleAfter: effect.commandCardRedistribution.cycleAfter,
+            drawsInCycleBefore:
+              effect.commandCardRedistribution.drawsInCycleBefore,
+            drawsInCycleAfter:
+              effect.commandCardRedistribution.drawsInCycleAfter,
+            rebuildReason: "card_redistribution" as const,
+            previousHandCardIds: [
+              ...effect.commandCardRedistribution.previousHandCardIds,
+            ],
+            newHandCardIds: effect.commandCardRedistribution.hand.map(
+              ({ cardId }) => cardId,
+            ),
+            sourceCardCount:
+              effect.commandCardRedistribution.sourceCardCount,
+            remainingCardCount:
+              effect.commandCardRedistribution.remainingCardCount,
+            commandStarsBefore:
+              effect.commandCardRedistribution.commandStarsBefore,
+            commandStarsAfter:
+              effect.commandCardRedistribution.commandStarsAfter,
+            nextCommandStarsBefore:
+              effect.commandCardRedistribution.nextCommandStarsBefore,
+            nextCommandStarsAfter:
+              effect.commandCardRedistribution.nextCommandStarsAfter,
+            starDistribution: effect.commandCardRedistribution.starDistribution
+              ? {
+                  commandStars:
+                    effect.commandCardRedistribution.starDistribution.commandStars,
+                  distributed:
+                    effect.commandCardRedistribution.starDistribution.distributed,
+                  unassigned:
+                    effect.commandCardRedistribution.starDistribution.unassigned,
+                  cards:
+                    effect.commandCardRedistribution.starDistribution.cards.map(
+                      (card) => ({ ...card }),
+                    ),
+                }
+              : null,
           }
         : null,
       results: (effect.batch?.results ?? []).map(

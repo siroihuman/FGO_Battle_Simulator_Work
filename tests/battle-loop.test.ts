@@ -52,6 +52,7 @@ function createLoop(seed = "battle-loop"): ReturnType<typeof createBattleLoop> {
       enemyFrontlineLimit: 3,
     }),
     rng: new BattleRng(seed),
+    registry: registry(),
   });
 }
 

@@ -9,6 +9,10 @@ import {
 } from "../core/battle/replacement";
 import type { BattleState } from "../core/battle/state";
 import type { DeterministicRng } from "../core/rng";
+import type { BattleAttackDataRegistry } from "../core/battle/actionData";
+import {
+  finalizeInputBoundaryCommandStarDistribution,
+} from "../core/cards/critical";
 import {
   mysticCodeDefinition,
   type MysticCodeDataRegistry,
@@ -20,6 +24,10 @@ import {
   type DeclaredActionEffectsResult,
 } from "./actionExecution";
 import type { EffectRuntimeCounters } from "./types";
+import {
+  completeCommandCardRedistributionEffects,
+  prepareCommandCardRedistributions,
+} from "./commandCardRedistribution";
 
 export type MysticCodeSkillUseRejectionReason =
   | "invalid_phase"
@@ -30,7 +38,9 @@ export type MysticCodeSkillUseRejectionReason =
   | "selected_target_invalid"
   | "order_change_targets_required"
   | "order_change_targets_invalid"
-  | "unresolved_effects";
+  | "unresolved_effects"
+  | "command_card_redistribution_unavailable"
+  | "command_card_redistribution_invalid";
 
 export interface MysticCodeOrderChangeSelection {
   frontlineInstanceId: string;
@@ -72,6 +82,11 @@ export interface ResolveMysticCodeSkillUseInput {
   orderChange?: MysticCodeOrderChangeSelection;
   counters: EffectRuntimeCounters;
   rng: DeterministicRng;
+  commandCards?: {
+    attackRegistry: BattleAttackDataRegistry;
+    cardsRng: DeterministicRng;
+    criticalRng: DeterministicRng;
+  };
 }
 
 function rejected(
@@ -167,6 +182,16 @@ export function resolveMysticCodeSkillUse(
     return rejected(input, "action_data_missing");
   }
   if (cooldownBefore > 0) return rejected(input, "skill_on_cooldown");
+  const preparedRedistributions = skill.execution === "effects"
+    ? prepareCommandCardRedistributions(
+        input.state,
+        skill.effects,
+        input.commandCards,
+      )
+    : { accepted: true as const, redistributions: [] };
+  if (!preparedRedistributions.accepted) {
+    return rejected(input, preparedRedistributions.reason);
+  }
   const cooldownAfterUse = skill.cooldownAtMax;
   const stateWithCooldown: BattleState = {
     ...input.state,
@@ -183,9 +208,20 @@ export function resolveMysticCodeSkillUse(
       input.orderChange!.reserveInstanceId,
     );
     const boundary = resolveActionBoundary(exchange.state);
+    const finalized = input.commandCards
+      ? finalizeInputBoundaryCommandStarDistribution(
+          boundary.state,
+          input.commandCards.attackRegistry,
+          input.commandCards.criticalRng,
+        )
+      : {
+          state: boundary.state,
+          distribution: boundary.state.commandStarDistribution,
+          recalculated: false,
+        };
     return {
       accepted: true,
-      state: boundary.state,
+      state: finalized.state,
       counters: input.counters,
       mysticCodeDataId: definition.dataId,
       skill,
@@ -193,7 +229,7 @@ export function resolveMysticCodeSkillUse(
       cooldownAfterUse,
       execution: "order_change",
       exchange,
-      boundary,
+      boundary: { ...boundary, state: finalized.state },
     };
   }
 
@@ -204,21 +240,40 @@ export function resolveMysticCodeSkillUse(
     skill.effects,
     {
       selectedTargetInstanceId: input.selectedTargetInstanceId,
+      preparedCommandCardRedistributions:
+        preparedRedistributions.redistributions,
     },
     input.counters,
     input.rng,
   );
   const boundary = resolveActionBoundary(effects.state);
+  const finalized = input.commandCards
+    ? finalizeInputBoundaryCommandStarDistribution(
+        boundary.state,
+        input.commandCards.attackRegistry,
+        input.commandCards.criticalRng,
+        preparedRedistributions.redistributions.length > 0,
+      )
+    : {
+        state: boundary.state,
+        distribution: boundary.state.commandStarDistribution,
+        recalculated: false,
+      };
+  const completedEffects = completeCommandCardRedistributionEffects(
+    effects,
+    input.state,
+    finalized.state,
+  );
   return {
     accepted: true,
-    state: boundary.state,
-    counters: effects.counters,
+    state: finalized.state,
+    counters: completedEffects.counters,
     mysticCodeDataId: definition.dataId,
     skill,
     cooldownBefore,
     cooldownAfterUse,
     execution: "effects",
-    effects,
-    boundary,
+    effects: completedEffects,
+    boundary: { ...boundary, state: finalized.state },
   };
 }

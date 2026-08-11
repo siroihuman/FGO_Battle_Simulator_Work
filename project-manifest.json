@@ -2,8 +2,8 @@
   "manifestVersion": 1,
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
-  "dataSchemaVersion": "1.37.0",
-  "status": "command-card-redistribution-specified",
+  "dataSchemaVersion": "1.38.0",
+  "status": "command-card-redistribution-implemented",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -113,7 +113,7 @@
     "criticalRatePermillePerStar": 100,
     "commandStarDistributionRng": "critical",
     "fixedCriticalRatesConsumeRng": false,
-    "commandCardRedistributionStatus": "specified_not_implemented",
+    "commandCardRedistributionStatus": "implemented",
     "commandCardRedistributionActionId": "redistribute_command_cards",
     "commandCardRedistributionBoundary": "ally_input_before_card_submission",
     "commandCardRedistributionSource": "current_living_ally_frontline_all_normal_cards",
@@ -199,6 +199,8 @@
     "battleSuspendLegacyMigration": "schema_3_to_4_direct_snapshot_restore",
     "battleSuspendCardRedistributionOuterSchemaChange": false,
     "battleSuspendCardRedistributionDataSchemaChangeOnImplementation": true,
+    "battleSuspendCardRedistributionDataSchemaVersion": "1.38.0",
+    "battleSuspendPreRedistributionDataSchemaVersion": "1.37.0",
     "battleSuspendLegacyStarDistributionMigration": "add_legacy_mode_without_draw_or_state_change",
     "legacyInputActionLogs": "unavailable_and_marked_incomplete",
     "battleReplay": "initial_snapshot_and_json_operations_verified_against_saved_state_rng_and_logs",
@@ -283,6 +285,9 @@
       "increase_np_by_current_rate",
       "change_enemy_charge",
       "gain_stars"
+    ],
+    "declaredBattlefieldActions": [
+      "redistribute_command_cards"
     ],
     "declaredSkillCooldownMinimum": 0,
     "declaredCurrentNpIncreaseRateUnit": "permille_of_current_np",
