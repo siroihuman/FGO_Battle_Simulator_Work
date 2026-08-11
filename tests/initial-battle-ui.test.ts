@@ -337,13 +337,14 @@ describe("minimum initial battle UI adapter", () => {
   });
 
   it("uses only registered initial selection sources and renders labeled mobile-safe controls", () => {
-    expect(Object.keys(INITIAL_MYSTIC_CODE_REGISTRY.byDataId)).toHaveLength(2);
+    expect(Object.keys(INITIAL_MYSTIC_CODE_REGISTRY.byDataId)).toHaveLength(3);
     expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toHaveLength(2);
     const markup = renderToStaticMarkup(createElement(App));
 
     expect(markup).toContain("初期戦闘設定");
     expect(markup).toContain("前衛3騎必須");
     expect(markup).toContain("種火集め（剣基準）極級");
+    expect(markup).toContain("魔術協会制服");
     expect(markup).toContain("戦闘を開始する");
     expect(markup).toContain("disabled");
   });

@@ -11,6 +11,16 @@ const SOURCE = [{
   note: "マスタースキル表の名称、資料順、CT、Lv10効果量を照合。",
 }] as const;
 
+const MAGE_ASSOCIATION_SOURCE = [{
+  url: "https://w.atwiki.jp/f_go/pages/41.html",
+  checkedAt: "2026-08-11",
+  note: "魔術協会制服の正式名称、3スキルの資料順、対象、CT、Lv10効果量を照合。",
+}, {
+  url: "https://w.atwiki.jp/f_go/pages/4673.html",
+  checkedAt: "2026-08-11",
+  note: "コマンドシャッフルによる通常カード配布周期のリセットを照合。",
+}] as const;
+
 export const ATLAS_ACADEMY_UNIFORM: MysticCodeDefinition = {
   schemaVersion: MYSTIC_CODE_DATA_SCHEMA_VERSION,
   dataId: "atlas-academy-uniform",
@@ -161,9 +171,77 @@ export const NORMAL_CHALDEA_UNIFORM: MysticCodeDefinition = {
   sources: SOURCE,
 };
 
+export const MAGE_ASSOCIATION_UNIFORM: MysticCodeDefinition = {
+  schemaVersion: MYSTIC_CODE_DATA_SCHEMA_VERSION,
+  dataId: "mage-association-uniform",
+  name: "魔術協会制服",
+  levelPolicy: "max",
+  skills: [
+    {
+      stableId: "mage-association-full-recovery",
+      name: "全体回復",
+      slot: 1,
+      cooldownAtMax: 12,
+      execution: "effects",
+      effects: [{
+        kind: "effect",
+        stableId: "mage-association-full-recovery-heal",
+        order: 1,
+        description: "生存中の味方前衛全体のHPを2800回復",
+        target: {
+          relation: "allies",
+          selection: "all",
+          life: "alive",
+        },
+        action: { kind: "heal_hp", amount: 2_800 },
+      }],
+    },
+    {
+      stableId: "mage-association-spiritron-transfer",
+      name: "霊子譲渡",
+      slot: 2,
+      cooldownAtMax: 15,
+      execution: "effects",
+      effects: [{
+        kind: "effect",
+        stableId: "mage-association-spiritron-transfer-np",
+        order: 1,
+        description: "選択した生存味方前衛単体のNPを20%増やす",
+        target: {
+          relation: "allies",
+          selection: "single",
+          life: "alive",
+        },
+        action: { kind: "change_np", amount: 2_000 },
+      }],
+    },
+    {
+      stableId: "mage-association-command-shuffle",
+      name: "コマンドシャッフル",
+      slot: 3,
+      cooldownAtMax: 15,
+      execution: "effects",
+      effects: [{
+        kind: "effect",
+        stableId: "mage-association-command-shuffle-redistribution",
+        order: 1,
+        description: "コマンドカードを配り直す",
+        target: {
+          relation: "self",
+          selection: "single",
+          life: "alive",
+        },
+        action: { kind: "redistribute_command_cards" },
+      }],
+    },
+  ],
+  sources: MAGE_ASSOCIATION_SOURCE,
+};
+
 export const INITIAL_MYSTIC_CODE_DEFINITIONS = [
   ATLAS_ACADEMY_UNIFORM,
   NORMAL_CHALDEA_UNIFORM,
+  MAGE_ASSOCIATION_UNIFORM,
 ] as const;
 
 export const INITIAL_MYSTIC_CODE_REGISTRY = createMysticCodeDataRegistry(

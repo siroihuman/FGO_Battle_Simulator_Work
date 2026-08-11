@@ -1,7 +1,10 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { SkillControls } from "../src/App";
+import {
+  SkillControls,
+  mysticCodeSkillUsesSelectedUnitInput,
+} from "../src/App";
 import { findUnitLocation } from "../src/core/battle/formation";
 import {
   createBattleSuspendSave,
@@ -17,6 +20,7 @@ import {
   LIGHT_KOYANSKAYA,
   LUCIFERA,
 } from "../src/data/servants";
+import { MAGE_ASSOCIATION_UNIFORM } from "../src/data/mysticCodes";
 import {
   summarizeBattleInputLogs,
 } from "../src/ui/battlePresentation";
@@ -39,7 +43,10 @@ function ally(
   };
 }
 
-function setup(seed = "active-skill-session"): InitialBattleSetup {
+function setup(
+  seed = "active-skill-session",
+  mysticCodeDataId = "normal-chaldea-uniform",
+): InitialBattleSetup {
   return {
     ...createEmptyInitialBattleSetup(),
     frontline: [
@@ -52,7 +59,7 @@ function setup(seed = "active-skill-session"): InitialBattleSetup {
       emptyInitialAllySlot(),
       emptyInitialAllySlot(),
     ],
-    mysticCodeDataId: "normal-chaldea-uniform",
+    mysticCodeDataId,
     seed,
   };
 }
@@ -220,6 +227,123 @@ describe("active skill BattleSession integration", () => {
       .toContain("ルシフェラ ↔ 光のコヤンスカヤ");
   });
 
+  it("runs registered Mage Association Command Shuffle and preserves save replay", () => {
+    const started = createInitialBattleSession(setup(
+      "mage-association-command-shuffle",
+      "mage-association-uniform",
+    ));
+    const beforeRng = started.loop.rng.snapshot();
+    const cycleBefore = started.loop.state.commandDeck.cycle;
+    const resolved = resolveBattleSessionMysticCodeSkill(started, {
+      kind: "mystic_code_skill",
+      skillStableId: "mage-association-command-shuffle",
+    });
+
+    expect(resolved.result.accepted).toBe(true);
+    expect(resolved.session.loop.state.mysticCodeCooldowns).toEqual([0, 0, 15]);
+    expect(resolved.session.loop.state.commandDeck).toMatchObject({
+      cycle: cycleBefore + 1,
+      drawsInCycle: 1,
+      lastRebuildReason: "card_redistribution",
+    });
+    expect(resolved.session.loop.state.commandDeck.currentHand).toHaveLength(5);
+    expect(resolved.session.loop.rng.snapshot().streams.cards.drawCount)
+      .toBe(beforeRng.streams.cards.drawCount + 5);
+    expect(resolved.session.operationHistory).toEqual([{
+      kind: "mystic_code_skill",
+      skillStableId: "mage-association-command-shuffle",
+    }]);
+    expect(resolved.session.inputLogs[0]).toMatchObject({
+      kind: "ally_input",
+      status: "completed",
+      entries: [{
+        action: {
+          kind: "mystic_code_skill",
+          stableId: "mage-association-command-shuffle",
+          name: "コマンドシャッフル",
+        },
+        outcome: { status: "resolved" },
+        declaredEffects: [{
+          phase: "non_damaging",
+          effects: [{
+            effectStableId:
+              "mage-association-command-shuffle-redistribution",
+            targetInstanceIds: [],
+            commandCardRedistribution: {
+              cycleBefore,
+              cycleAfter: cycleBefore + 1,
+              sourceCardCount: 15,
+              remainingCardCount: 10,
+            },
+          }],
+        }],
+      }],
+    });
+    expect(resolved.session.inputLogs[0]?.setupRngEvents.filter(
+      ({ stream }) => stream === "cards",
+    )).toHaveLength(5);
+
+    const save = createBattleSuspendSave(resolved.session);
+    const restored = restoreBattleSession(save);
+    const replayed = replayBattleSession(save);
+    expect(save).toMatchObject({
+      schemaVersion: 4,
+      dataSchemaVersion: "1.38.0",
+      mysticCodeData: {
+        definitions: expect.arrayContaining([
+          expect.objectContaining({
+            dataId: "mage-association-uniform",
+            name: "魔術協会制服",
+          }),
+        ]),
+      },
+    });
+    expect(createBattleSuspendSave(restored)).toEqual(save);
+    expect(replayed.loop.state).toEqual(resolved.session.loop.state);
+    expect(replayed.loop.rng.snapshot()).toEqual(
+      resolved.session.loop.rng.snapshot(),
+    );
+    expect(replayed.operationHistory).toEqual(resolved.session.operationHistory);
+    expect(replayed.inputLogs).toEqual(resolved.session.inputLogs);
+  });
+
+  it("rejects registered Command Shuffle corruption without any mutation", () => {
+    const started = createInitialBattleSession(setup(
+      "mage-association-atomic-rejection",
+      "mage-association-uniform",
+    ));
+    const corrupt = {
+      ...started,
+      loop: {
+        ...started.loop,
+        state: {
+          ...started.loop.state,
+          commandDeck: {
+            ...started.loop.state.commandDeck,
+            currentHand: started.loop.state.commandDeck.currentHand.slice(0, 4),
+          },
+        },
+      },
+    };
+    const beforeState = corrupt.loop.state;
+    const beforeRng = corrupt.loop.rng.snapshot();
+    const rejected = resolveBattleSessionMysticCodeSkill(corrupt, {
+      kind: "mystic_code_skill",
+      skillStableId: "mage-association-command-shuffle",
+    });
+
+    expect(rejected.result).toMatchObject({
+      accepted: false,
+      reason: "command_card_redistribution_invalid",
+    });
+    expect(rejected.session).toBe(corrupt);
+    expect(rejected.session.loop.state).toBe(beforeState);
+    expect(rejected.session.loop.state.mysticCodeCooldowns).toEqual([0, 0, 0]);
+    expect(rejected.session.operationHistory).toEqual([]);
+    expect(rejected.session.inputLogs).toEqual([]);
+    expect(rejected.session.loop.rng.snapshot()).toEqual(beforeRng);
+  });
+
   it("pauses a reserve Servant CT while advancing active and Mystic Code CT", () => {
     let session = createInitialBattleSession(setup("reserve-cooldown-pause"));
     session = resolveBattleSessionAllySkill(session, {
@@ -378,5 +502,28 @@ describe("active skill BattleSession integration", () => {
     expect(markup).toContain("交換する前衛");
     expect(markup).toContain("交換する控え");
     expect(markup).toContain("オーダーチェンジ");
+  });
+
+  it("renders Mage Association skills and CT values from registered format 2 data", () => {
+    const session = createInitialBattleSession(setup(
+      "mage-association-ui",
+      "mage-association-uniform",
+    ));
+    const markup = renderToStaticMarkup(createElement(SkillControls, {
+      session,
+      onSessionChange: () => undefined,
+      onMessage: () => undefined,
+    }));
+
+    expect(markup).toContain("魔術礼装：魔術協会制服");
+    expect(markup).toContain("スキル1：全体回復");
+    expect(markup).toContain("現在CT 0／使用時CT 12");
+    expect(markup).toContain("スキル2：霊子譲渡");
+    expect(markup).toContain("現在CT 0／使用時CT 15");
+    expect(markup).toContain("スキル3：コマンドシャッフル");
+    expect(markup).not.toContain("交換する控え");
+    expect(MAGE_ASSOCIATION_UNIFORM.skills.map(
+      mysticCodeSkillUsesSelectedUnitInput,
+    )).toEqual([false, true, false]);
   });
 });

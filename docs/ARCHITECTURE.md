@@ -90,7 +90,7 @@
 
 ### 魔術礼装・概念礼装データ
 
-- `src/data/mysticCodes`は形式バージョン2として、安定ID、Lv最大方針、資料順の3スキル、最大Lv時CT、宣言効果または直接オーダーチェンジ、出典を検査する。アトラス院制服とノーマルカルデア制服を別の安定IDで登録する。仕様確定済み・未登録の魔術協会制服も`mage-association-uniform`として既存2着から分離し、後続登録時は共通`heal_hp`、`change_np`、`redistribute_command_cards`だけへ接続する。
+- `src/data/mysticCodes`は形式バージョン2として、安定ID、Lv最大方針、資料順の3スキル、最大Lv時CT、宣言効果または直接オーダーチェンジ、出典を検査する。アトラス院制服、ノーマルカルデア制服、魔術協会制服を別の安定IDで登録する。`mage-association-uniform`は共通`heal_hp`、`change_np`、`redistribute_command_cards`だけへ接続する。
 - `src/effects/mysticCodeExecution.ts`は選択データ、使用フェーズ、対象、CT、未対応効果を変更前に検査し、通常効果を戦闘個体を持たない味方側発生源として共通効果へ渡す。オーダーチェンジは`src/core/battle/replacement.ts`の直接交換を使い、カードデッキを再構築しない。
 - `src/data/craftEssences`は形式バージョン1として、安定ID、レアリティ、最大解放／未解放、選択Lv、最終ATK・HP、開始時宣言効果、出典を検査する。状態として付与する概念礼装効果は解除不能だけを受理する。
 - `src/data/craftEssences/initialCraftEssences.ts`はカレイドスコープと黒の聖杯の最大解放・星5Lv100定義を登録する。開始NP、宝具威力、毎ターンHP減少は既存の共通アクション・共通状態・ターン終了トリガーだけを使用する。

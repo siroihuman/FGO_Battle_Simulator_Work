@@ -23,7 +23,12 @@ import { applyEffect, createEffectRuntimeCounters } from "../src/effects/runtime
 import { unit } from "./helpers/battle";
 import { combatantData } from "./helpers/attackData";
 
-function selectedState(dataId: "atlas-academy-uniform" | "normal-chaldea-uniform") {
+type InitialMysticCodeDataId =
+  | "atlas-academy-uniform"
+  | "normal-chaldea-uniform"
+  | "mage-association-uniform";
+
+function selectedState(dataId: InitialMysticCodeDataId) {
   const rng = new BattleRng(`selected-${dataId}`);
   const counters = createEffectRuntimeCounters();
   const result = initializeBattleLoadout({
@@ -64,7 +69,7 @@ function selectedState(dataId: "atlas-academy-uniform" | "normal-chaldea-uniform
 }
 
 function execute(
-  dataId: "atlas-academy-uniform" | "normal-chaldea-uniform",
+  dataId: InitialMysticCodeDataId,
   skillStableId: string,
   options: {
     selectedTargetInstanceId?: string;
@@ -185,6 +190,66 @@ describe("Mystic Code skill execution", () => {
         "normal-chaldea-magic-enhancement-attack",
         "normal-chaldea-magic-enhancement-np",
       ]);
+  });
+
+  it("uses common healing and NP actions for Mage Association Uniform with exact targets and CT", () => {
+    const recovery = execute(
+      "mage-association-uniform",
+      "mage-association-full-recovery",
+    );
+    expect(recovery.accepted).toBe(true);
+    if (!recovery.accepted || recovery.execution !== "effects") return;
+    expect(recovery.state.mysticCodeCooldowns).toEqual([12, 0, 0]);
+    expect(findUnitLocation(recovery.state.formation, "ally-a")?.unit.hp)
+      .toBe(7_800);
+    expect(findUnitLocation(recovery.state.formation, "ally-b")?.unit.hp)
+      .toBe(10_000);
+    expect(findUnitLocation(recovery.state.formation, "ally-c")?.unit.hp)
+      .toBe(10_000);
+    expect(findUnitLocation(recovery.state.formation, "ally-d")?.unit.hp)
+      .toBe(7_000);
+    expect(recovery.effects.effects).toEqual([
+      expect.objectContaining({
+        effectStableId: "mage-association-full-recovery-heal",
+        targetInstanceIds: ["ally-a", "ally-b", "ally-c"],
+      }),
+    ]);
+
+    const transfer = execute(
+      "mage-association-uniform",
+      "mage-association-spiritron-transfer",
+      { selectedTargetInstanceId: "ally-b" },
+    );
+    expect(transfer.accepted).toBe(true);
+    if (!transfer.accepted || transfer.execution !== "effects") return;
+    expect(transfer.state.mysticCodeCooldowns).toEqual([0, 15, 0]);
+    expect(findUnitLocation(transfer.state.formation, "ally-a")?.unit.np).toBe(0);
+    expect(findUnitLocation(transfer.state.formation, "ally-b")?.unit.np)
+      .toBe(2_000);
+    expect(findUnitLocation(transfer.state.formation, "ally-d")?.unit.np)
+      .toBe(3_000);
+    expect(transfer.effects.effects).toEqual([
+      expect.objectContaining({
+        effectStableId: "mage-association-spiritron-transfer-np",
+        targetInstanceIds: ["ally-b"],
+      }),
+    ]);
+
+    expect(execute(
+      "mage-association-uniform",
+      "mage-association-spiritron-transfer",
+    )).toMatchObject({
+      accepted: false,
+      reason: "selected_target_required",
+    });
+    expect(execute(
+      "mage-association-uniform",
+      "mage-association-spiritron-transfer",
+      { selectedTargetInstanceId: "ally-d" },
+    )).toMatchObject({
+      accepted: false,
+      reason: "selected_target_invalid",
+    });
   });
 
   it("directly exchanges frontline and reserve without resetting unit state or card deck", () => {
