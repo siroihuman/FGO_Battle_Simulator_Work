@@ -86,7 +86,10 @@ export type EnemyActionSkipReason =
   | "action_attack_data_missing"
   | "action_effects_unresolved"
   | "action_effect_target_required"
-  | "action_effect_target_invalid";
+  | "action_effect_target_invalid"
+  | "enemy_noble_phantasm_context_missing"
+  | "enemy_noble_phantasm_context_invalid"
+  | "enemy_noble_phantasm_data_invalid";
 
 export type EnemyActorExecutionSkipReason = Extract<
   EnemyActionSkipReason,
@@ -111,6 +114,8 @@ export type EnemyActionExecutionResult =
   | (EnemyActionExecutionBase & {
       outcome: "ready";
       action: EnemyActionDefinition;
+      /** Immutable data fixed by the pre-charge action guard. */
+      guardSnapshot?: unknown;
     })
   | (EnemyActionExecutionBase & {
       outcome: "skipped";

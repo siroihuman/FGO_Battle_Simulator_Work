@@ -6,6 +6,10 @@ import {
   type EnemyAttackActionData,
   type EnemyAttackTargetPolicy,
 } from "../core/battle/actionData";
+import {
+  prepareEnemyNoblePhantasmContext,
+  type EnemyNoblePhantasmPreflightSnapshot,
+} from "../core/battle/enemyNoblePhantasmContext";
 import type {
   AttackRngStreams,
 } from "../core/battle/attack";
@@ -56,6 +60,10 @@ import {
 import type {
   EffectRuntimeCounters,
 } from "../effects/types";
+import {
+  declaredActionScalingRequirements,
+  type EnemyNoblePhantasmContext,
+} from "../effects/declarations";
 import type {
   EnemyActionRequest,
   EnemyPrioritySkillRequest,
@@ -85,6 +93,7 @@ export type EnemyAttackDetail =
       targetScope: AttackTargetScope;
       targetInstanceIds: string[];
       calculation: AttackCalculationData;
+      noblePhantasmContext?: Readonly<EnemyNoblePhantasmContext>;
       declaredEffects: DeclaredActionEffectGroupResult[];
       resolution: BattleAttackSequenceResolution;
     }
@@ -179,17 +188,24 @@ function enemyActionEffectGuard(
     ? "skill"
     : "noble_phantasm";
   if (
-    sequence.kind !== expectedKind
-    || hasUnsupportedDeclaredEffects(sequence)
+    hasUnsupportedDeclaredEffects(sequence)
     || (
-      input.request.kind === "noble_phantasm"
-      && sequence.effects.some(({ action }) =>
-        action.kind === "change_np"
-        && typeof action.amount !== "number"
+      input.request.kind === "skill"
+      && (
+        sequence.kind !== expectedKind
+        || Object.values(
+          declaredActionScalingRequirements(sequence.effects),
+        ).some(Boolean)
       )
     )
   ) {
     return "action_effects_unresolved" as const;
+  }
+  if (
+    input.request.kind === "noble_phantasm"
+    && sequence.kind !== expectedKind
+  ) {
+    return "enemy_noble_phantasm_data_invalid" as const;
   }
   if (input.request.kind !== "skill") return null;
   const targetIssue = declaredActionTargetSelectionIssue(
@@ -314,8 +330,8 @@ function enemyAttackDataGuard(
   effectRegistry: BattleActionEffectDataRegistry | undefined,
 ) {
   const effectIssue = enemyActionEffectGuard(input, effectRegistry);
-  if (effectIssue) return effectIssue;
-  if (input.request.kind === "skill") return null;
+  if (effectIssue) return { skipReason: effectIssue };
+  if (input.request.kind === "skill") return { skipReason: null };
   const source = findUnitLocation(
     input.state.formation,
     input.actorInstanceId,
@@ -323,21 +339,46 @@ function enemyAttackDataGuard(
   const combatant = source
     ? combatantAttackData(registry, source)
     : null;
-  if (!source || !combatant) return "source_attack_data_missing" as const;
+  if (!source || !combatant) {
+    return { skipReason: "source_attack_data_missing" as const };
+  }
   const actionStableId = input.request.kind === "normal_attack"
     ? source.enemyAction?.normalAttack?.stableId
     : source.enemyAction?.noblePhantasm?.stableId;
-  if (
-    !actionStableId
-    || !enemyAttackActionData(
-      combatant,
-      actionStableId,
-      input.request.kind,
-    )
-  ) {
-    return "action_attack_data_missing" as const;
+  const action = actionStableId
+    ? enemyAttackActionData(
+        combatant,
+        actionStableId,
+        input.request.kind,
+      )
+    : null;
+  if (!action) {
+    return { skipReason: "action_attack_data_missing" as const };
   }
-  return null;
+  if (input.request.kind === "normal_attack") {
+    return { skipReason: null };
+  }
+  const combatantEffects = effectRegistry
+    ? combatantActionEffectData(effectRegistry, source)
+    : null;
+  const noblePhantasmSequences = combatantEffects?.actions.filter(
+    ({ kind }) => kind === "noble_phantasm",
+  ) ?? [];
+  const effectSequence = noblePhantasmSequences.find(
+    ({ stableId }) => stableId === action.actionStableId,
+  ) ?? null;
+  if (!effectSequence && noblePhantasmSequences.length > 0) {
+    return {
+      skipReason: "enemy_noble_phantasm_data_invalid" as const,
+    };
+  }
+  const prepared = prepareEnemyNoblePhantasmContext(
+    action,
+    effectSequence,
+  );
+  return prepared.outcome === "skipped"
+    ? { skipReason: prepared.reason }
+    : { skipReason: null, snapshot: prepared.snapshot };
 }
 
 function enemyActionDetail(
@@ -465,7 +506,17 @@ function createEnemyAttackBattleLog(
         detail?.outcome === "resolved"
           ? detail.calculation
           : null,
-      overchargeStage: null,
+      ...(detail?.outcome === "resolved"
+          && detail.noblePhantasmContext?.noblePhantasmLevel !== undefined
+        ? {
+            noblePhantasmLevel:
+              detail.noblePhantasmContext.noblePhantasmLevel,
+          }
+        : {}),
+      overchargeStage:
+        detail?.outcome === "resolved"
+          ? detail.noblePhantasmContext?.overchargeStage ?? null
+          : null,
       critical: null,
       declaredEffectGroups:
         detail?.outcome === "resolved"
@@ -604,11 +655,18 @@ export function resolveEnemyAttacks(
               } satisfies EnemyAttackDetail,
             };
           }
-          const action = enemyAttackActionData(
-            combatant,
-            resolverInput.preflight.action.stableId,
-            request.kind,
-          );
+          const guardSnapshot = resolverInput.preflight.guardSnapshot as
+            | EnemyNoblePhantasmPreflightSnapshot
+            | undefined;
+          const noblePhantasmSnapshot = request.kind === "noble_phantasm"
+            ? guardSnapshot ?? null
+            : null;
+          const action = noblePhantasmSnapshot?.action
+            ?? enemyAttackActionData(
+              combatant,
+              resolverInput.preflight.action.stableId,
+              request.kind,
+            );
           if (!action) {
             return {
               state: resolverInput.state,
@@ -652,24 +710,31 @@ export function resolveEnemyAttacks(
             extraCardModifierPermille: 1_000,
             hitWeights: action.hitWeights,
             npDamageMultiplierPermille:
-              action.npDamageMultiplierPermille,
+              noblePhantasmSnapshot?.npDamageMultiplierPermille
+              ?? (typeof action.npDamageMultiplierPermille === "number"
+                ? action.npDamageMultiplierPermille
+                : undefined),
             npSpecialAttackPermille:
               action.npSpecialAttackPermille,
           };
-          const effectSequence =
-            request.kind === "noble_phantasm"
-              ? actionEffectSequence(
-                  resolverInput.state,
-                  input.actionEffectRegistry,
-                  resolverInput.actorInstanceId,
-                  resolverInput.preflight.action.stableId,
-                )
-              : null;
+          const effectSequence = noblePhantasmSnapshot?.effectSequence ?? null;
           const effectPhases = effectSequence
             ? noblePhantasmEffectPhases(effectSequence)
             : null;
           const effectContext = {
             selectedTargetInstanceId: targets[0],
+            ...(noblePhantasmSnapshot?.context?.noblePhantasmLevel === undefined
+              ? {}
+              : {
+                  noblePhantasmLevel:
+                    noblePhantasmSnapshot.context.noblePhantasmLevel,
+                }),
+            ...(noblePhantasmSnapshot?.context?.overchargeStage === undefined
+              ? {}
+              : {
+                  overchargeStage:
+                    noblePhantasmSnapshot.context.overchargeStage,
+                }),
           };
           const declaredEffects: DeclaredActionEffectGroupResult[] = [];
           const resolution = resolveBattleAttackSequence(
@@ -761,6 +826,9 @@ export function resolveEnemyAttacks(
               targetScope: action.targetScope,
               targetInstanceIds: targets,
               calculation,
+              ...(noblePhantasmSnapshot?.context
+                ? { noblePhantasmContext: noblePhantasmSnapshot.context }
+                : {}),
               declaredEffects,
               resolution,
             } satisfies EnemyAttackDetail,

@@ -59,9 +59,34 @@ export interface EnemyActionGuardInput {
   request: EnemyActionRequest;
 }
 
+export interface EnemyActionGuardResult {
+  skipReason: EnemyActionSkipReason | null;
+  snapshot?: unknown;
+}
+
 export type EnemyActionGuard = (
   input: EnemyActionGuardInput,
-) => EnemyActionSkipReason | null;
+) => EnemyActionGuardResult;
+
+function guardedPreflight(
+  state: BattleState,
+  actorInstanceId: string,
+  request: EnemyActionRequest,
+  source: "priority" | "normal",
+  guardResult: EnemyActionGuardResult,
+): EnemyActionExecutionResult {
+  const preflight = beginEnemyActionExecution(
+    state,
+    actorInstanceId,
+    request,
+    source,
+    guardResult.skipReason,
+  );
+  return preflight.outcome === "ready"
+      && guardResult.snapshot !== undefined
+    ? { ...preflight, guardSnapshot: guardResult.snapshot }
+    : preflight;
+}
 
 export interface EnemyNormalActionSelectorInput {
   state: BattleState;
@@ -213,18 +238,18 @@ export function resolveEnemyTurnSequence(
     if (!hasLivingUnit(currentState.formation.ally)) break;
     const actionNumber = actions.length + 1;
     const request = step.request;
-    const additionalSkipReason = actionGuard?.({
+    const guardResult = actionGuard?.({
       state: currentState,
       stage: "priority",
       actorInstanceId: step.actorInstanceId,
       request,
-    }) ?? null;
-    const preflight = beginEnemyActionExecution(
+    }) ?? { skipReason: null };
+    const preflight = guardedPreflight(
       currentState,
       step.actorInstanceId,
       request,
       "priority",
-      additionalSkipReason,
+      guardResult,
     );
     currentState = preflight.state;
     const resolved = resolveReadyAction(
@@ -278,19 +303,19 @@ export function resolveEnemyTurnSequence(
             currentState,
             slot.actorInstanceId,
           );
-      const additionalSkipReason = actionGuard?.({
+      const guardResult = actionGuard?.({
         state: currentState,
         stage: "normal",
         actorInstanceId: slot.actorInstanceId,
         request,
-      }) ?? null;
+      }) ?? { skipReason: null };
       const actionNumber = actions.length + 1;
-      const preflight = beginEnemyActionExecution(
+      const preflight = guardedPreflight(
         currentState,
         slot.actorInstanceId,
         request,
         "normal",
-        additionalSkipReason,
+        guardResult,
       );
       currentState = preflight.state;
       const resolved = resolveReadyAction(

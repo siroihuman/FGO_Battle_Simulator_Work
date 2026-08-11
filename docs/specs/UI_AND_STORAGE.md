@@ -145,6 +145,7 @@
 - 敵宝具の任意の宝具Lv・OC文脈と段階宣言は、戦闘開始前に検査済みの戦闘個体別`attackData`／`actionEffectData`として既存の形式4・データ1.38.0へ保存する。旧固定値敵宝具は文脈項目なしのまま有効とし、欠落を補うのは段階値を使わない場合だけとする。
 - 成立した敵宝具の行動ログは、実際に使用した`noblePhantasmLevel`と`overchargeStage`を存在する軸だけ保存し、攻撃計算へ渡した確定倍率と各宣言効果の`resolvedAmount`を保存する。不発ログは`enemy_noble_phantasm_context_missing`、`enemy_noble_phantasm_context_invalid`、`enemy_noble_phantasm_data_invalid`、既存の`action_effects_unresolved`を保存する。固定値だけの機能未使用ログへ不要な文脈項目を追加しない。
 - 行動ログ形式5は、段階値を使う敵宝具だけ任意の`noblePhantasmLevel`を追加し、既存の`overchargeStage`、攻撃計算の確定倍率、宣言効果の`resolvedAmount`を共用する後方互換拡張とする。ターンログ形式2はこの行動ログを包むだけなので、どちらの形式番号も変更しない。旧ログの欠落項目を読込時に推定しない。
+- 実装は文脈と段階宣言を`saveAttackData`／`saveActionEffectData`の既存JSON経路へ保存し、`restoreBattleSession`は両レジストリと確定ログを直接復元する。`summarizeBattleLogBatch`は保存済み行動ログを詳細値としてそのまま渡し、段階・倍率・効果量を再解決しない。
 - 直接再開は保存済み現在状態、個体別文脈・段階宣言、確定ログ、効果採番、6乱数列位置を直接復元し、現在の敵定義から文脈や値を再選択しない。読込時にチャージ消費、効果、ダメージ、ログを再実行しない。
 - 関数型の敵AI選択器はJSONで表現できないため、中断保存・リプレイの対象外として状態・乱数変更前に拒否する。優先スキル要求などJSON化可能なAI入力だけを操作履歴へ記録する。
 
