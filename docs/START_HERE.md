@@ -4,16 +4,16 @@
 
 ## 現在地点
 
-- フェーズ: 16／敵宝具Lv・OC文脈と段階別宣言値（共通処理実装完了、統合受入待ち）
-- 状態: D-069に従い、形式1の任意文脈、5段階値検査、敵宝具開始前の原子的事前確認、攻撃倍率・攻撃前後効果・ログの同一文脈スナップショット、型付き不発、形式4・データ1.38.0の保存・直接再開・固定シードリプレイ、UI非再計算を共通処理へ実装済み。具体的な敵データは追加していない。
+- フェーズ: 16／敵宝具Lv・OC文脈と段階別宣言値（統合受入合格）
+- 状態: D-069の形式1任意文脈、5段階値、原子的事前不発、同一文脈スナップショット、固定値業火互換、型付き不発ログ、形式4・データ1.38.0の保存・直接再開・固定シードリプレイ、UI非再計算を統合受入済み。具体的な段階別敵宝具コンテンツは未登録。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. 敵固有の宝具Lv・OC文脈と段階別敵宝具宣言値の統合受入検査を実施する（QA担当、推奨モデル: `gpt-5.6-sol`、思考レベル: `high`）。D-069の形式1登録、原子的事前不発、同一文脈スナップショット、固定値互換、形式4・データ1.38.0の直接再開・固定シードリプレイ、確定ログ、UI非再計算を統合確認し、具体的な敵データは追加しない。
+1. ターン終了トリガーによるスター獲得を仕様策定する（システム仕様策定担当、推奨モデル: `gpt-5.6-sol`、思考レベル: `high`）。味方・敵それぞれの終了時発動での保存先、処理順、99個上限、控え停止、複数寄与、乱数、ターンログ、中断保存・直接再開・固定シードリプレイ、UI非再計算を確定する。実装や具体コンテンツ追加には進まない。
 
-今回の受入詳細は[`qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md`](qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md)、魔術協会制服の受入詳細は[`qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md`](qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md)、カード再配布共通処理の受入詳細は[`qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md`](qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md)、v1.0初期範囲の受入詳細は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
+今回の受入詳細は[`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)、スリップダメージ倍加の受入詳細は[`qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md`](qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md)、魔術協会制服の受入詳細は[`qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md`](qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md)、カード再配布共通処理の受入詳細は[`qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md`](qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md)、v1.0初期範囲の受入詳細は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
 
 ## 最初に読むもの
 
