@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "enemy-noble-phantasm-context-implemented",
+  "status": "enemy-noble-phantasm-context-accepted",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -373,7 +373,7 @@
     "enemySkillSingleTargetSource": "ai_request",
     "enemySkillCompletedActionBoundary": true,
     "declaredActionLogUsesExecutionResults": true,
-    "enemyNoblePhantasmScaledDeclaredValues": "implemented_acceptance_pending",
+    "enemyNoblePhantasmScaledDeclaredValues": "accepted",
     "enemyNoblePhantasmContext": {
       "scope": "battle_instance_and_action",
       "authoringSplit": "enemy_definition_values_and_encounter_context",
@@ -446,7 +446,7 @@
         "src/ai/enemyAttack.ts",
         "src/core/battle/log.ts"
       ],
-      "implementationStatus": "implemented_acceptance_pending"
+      "implementationStatus": "accepted"
     },
     "servantPassiveInitializationOrder": "formation_order_including_reserve",
     "allySkillCooldownTiming": "before_skill_effects",

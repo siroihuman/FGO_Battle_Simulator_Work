@@ -649,9 +649,9 @@ if (manifest) {
     "宣言効果ログは実行済み結果から作らなければなりません"
   );
   assert(
-    manifest.status === "enemy-noble-phantasm-context-implemented"
-      && manifest.coreRules.enemyNoblePhantasmScaledDeclaredValues === "implemented_acceptance_pending",
-    "敵宝具の段階文脈は共通処理実装済み・統合受入待ちでなければなりません"
+    manifest.status === "enemy-noble-phantasm-context-accepted"
+      && manifest.coreRules.enemyNoblePhantasmScaledDeclaredValues === "accepted",
+    "敵宝具の段階文脈は統合受入済みでなければなりません"
   );
   const enemyNpContext = manifest.coreRules.enemyNoblePhantasmContext;
   assert(
@@ -707,7 +707,7 @@ if (manifest) {
     "敵宝具Lv・OCの保持、段階選択、不発、保存、リプレイ、UI規則が不正です"
   );
   assert(
-    enemyNpContext.implementationStatus === "implemented_acceptance_pending"
+    enemyNpContext.implementationStatus === "accepted"
       && JSON.stringify(enemyNpContext.implementationSources) === JSON.stringify([
         "src/effects/declarations.ts",
         "src/data/enemies/schema.ts",
@@ -1024,9 +1024,9 @@ assert(startHere.includes("## 現在地点"), "作業開始ページに現在地
 assert(startHere.includes("## 次の作業"), "作業開始ページに次の作業がありません");
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
-  startHere.includes("敵宝具Lv・OC文脈と段階別宣言値（共通処理実装完了、統合受入待ち）")
-    && startHere.includes("統合受入検査を実施する"),
-  "作業開始ページに敵宝具段階文脈の実装完了と次の受入作業がありません"
+  startHere.includes("敵宝具Lv・OC文脈と段階別宣言値（統合受入合格）")
+    && startHere.includes("ターン終了トリガーによるスター獲得を仕様策定する"),
+  "作業開始ページに敵宝具段階文脈の受入完了と次の仕様作業がありません"
 );
 
 const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
@@ -1042,8 +1042,24 @@ const decisionLog = await readText("docs/DECISION_LOG.md");
 assert(
   decisionLog.includes("## D-069 敵宝具の段階文脈を戦闘個体・行動ごとに明示する")
     && decisionLog.includes("## D-070 次の実装対象を敵宝具段階文脈の共通処理とする")
-    && decisionLog.includes("## D-071 次の作業を敵宝具段階文脈の統合受入検査とする"),
-  "決定記録に敵宝具段階文脈、実装、次の受入作業の決定がありません"
+    && decisionLog.includes("## D-071 次の作業を敵宝具段階文脈の統合受入検査とする")
+    && decisionLog.includes("## D-072 次の仕様化対象をターン終了トリガーによるスター獲得とする"),
+  "決定記録に敵宝具段階文脈の受入と次の仕様作業の決定がありません"
+);
+
+const enemyNpAcceptance = await readText(
+  "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
+);
+assert(
+  enemyNpAcceptance.includes("判定: 合格")
+    && enemyNpAcceptance.includes("基準コミット: `cc8334bcae60c3e652217d50bed7575dda9c1892`")
+    && enemyNpAcceptance.includes("保存形式4・データ1.38.0"),
+  "敵宝具段階文脈の統合受入報告が正本と一致しません"
+);
+const docsIndex = await readText("docs/INDEX.md");
+assert(
+  docsIndex.includes("qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"),
+  "文書索引に敵宝具段階文脈の統合受入報告がありません"
 );
 
 const effectsAndTiming = await readText("docs/specs/EFFECTS_AND_TIMING.md");
