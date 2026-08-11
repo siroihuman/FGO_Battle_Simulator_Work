@@ -993,6 +993,90 @@ describe("side turn-end integration", () => {
     expect(findUnitLocation(result.formation, "ally-a")?.unit.effects).toEqual([]);
   });
 
+  it("keeps an activated multiplier snapshot while later slips use the post-removal value", () => {
+    let state = formation();
+    let counters = createEffectRuntimeCounters();
+    for (const template of [
+      slipAmplifier("spread-55", "spread_of_fire", 550),
+      slipRecurring("burn-before-removal", 333, "burn", {
+        trigger: { timing: "turn_end", priority: -10 },
+      }),
+      recurring(
+        "remove-spread-between-slips",
+        {
+          kind: "remove_effects",
+          request: {
+            mode: "all",
+            category: "debuff",
+            classifications: ["spread_of_fire"],
+          },
+        },
+        {
+          remainingTurns: 1,
+          trigger: {
+            timing: "turn_end",
+            priority: 0,
+            actions: [{
+              target: self,
+              action: {
+                kind: "remove_effects",
+                request: {
+                  mode: "all",
+                  category: "debuff",
+                  classifications: ["spread_of_fire"],
+                },
+              },
+            }],
+          },
+        },
+      ),
+      slipRecurring("burn-after-removal", 217, "burn", {
+        trigger: { timing: "turn_end", priority: 10 },
+      }),
+    ]) {
+      const applied = register(
+        state,
+        "ally-a",
+        template,
+        counters,
+        template.category === "debuff" ? "enemy-a" : "ally-a",
+      );
+      state = applied.formation;
+      counters = applied.counters;
+    }
+    const rng = new BattleRng("snapshot-between-slips").stream("effects");
+    const result = resolveSideTurnEnd(state, "ally", counters, rng);
+
+    expect(result.hpSettlements[0]).toMatchObject({
+      slipDamageContributions: [
+        {
+          amount: 333,
+          slipDamageKind: "burn",
+          amplifierPermille: 550,
+          categoryBaseAmount: 550,
+          categoryResolvedDamage: 733,
+        },
+        {
+          amount: 217,
+          slipDamageKind: "burn",
+          amplifierPermille: 0,
+          categoryBaseAmount: 550,
+          categoryResolvedDamage: 733,
+        },
+      ],
+      result: {
+        totalSlipDamage: 733,
+        slipDamageCategories: [{
+          kind: "burn",
+          baseAmount: 550,
+          resolvedDamage: 733,
+        }],
+      },
+    });
+    expect(findUnitLocation(result.formation, "ally-a")?.unit.hp).toBe(9_267);
+    expect(rng.snapshot().drawCount).toBe(0);
+  });
+
   it("freezes slip and amplifier durations together while their owner is in reserve", () => {
     let state = formation();
     let counters = createEffectRuntimeCounters();
