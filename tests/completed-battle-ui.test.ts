@@ -6,15 +6,20 @@ import { listCommandCardChoices } from "../src/core/cards/selection";
 import { resolveBattleSessionTurn } from "../src/core/battle/session";
 import { LIGHT_KOYANSKAYA, LUCIFERA } from "../src/data/servants";
 import {
+  confirmedAttackDamageAmounts,
   confirmedPlaybackNotices,
   confirmedChainNotices,
   confirmedHpTransitions,
+  confirmedNpTransitions,
+  displayedCommandCardCriticalRatePermille,
+  presentNoblePhantasmDetail,
   presentBattleSummary,
   presentBattleTurns,
   selectedChainCriticalBonus,
   toggleSelectedCommandCard,
 } from "../src/ui/battleUi";
 import {
+  effectExpiryLabel,
   effectValueLabel,
   presentCombinedEffects,
   presentUnitEffects,
@@ -63,7 +68,7 @@ describe("completed battle UI selectors", () => {
       .toEqual(["a", "c"]);
   });
 
-  it("labels Quick-start and Mighty normal-card bonuses only after three choices", () => {
+  it("previews Quick-first immediately and removes it when Quick is no longer first", () => {
     const choices = listCommandCardChoices(session().loop.state).map(({ card }) => card);
     const quick = choices.find(({ type }) => type === "quick");
     const arts = choices.find(({ type }) => type === "arts");
@@ -73,8 +78,27 @@ describe("completed battle UI selectors", () => {
       [quick!.cardId, arts!.cardId, buster!.cardId],
       choices,
     )).toBe(true);
-    expect(selectedChainCriticalBonus([quick!.cardId, arts!.cardId], choices))
+    expect(selectedChainCriticalBonus([quick!.cardId], choices)).toBe(true);
+    expect(displayedCommandCardCriticalRatePermille(
+      arts!.cardId,
+      300,
+      [quick!.cardId],
+      choices,
+    )).toBe(500);
+    expect(selectedChainCriticalBonus([arts!.cardId, quick!.cardId], choices))
       .toBe(false);
+    expect(displayedCommandCardCriticalRatePermille(
+      quick!.cardId,
+      300,
+      [arts!.cardId, quick!.cardId],
+      choices,
+    )).toBe(300);
+    expect(displayedCommandCardCriticalRatePermille(
+      arts!.cardId,
+      900,
+      [quick!.cardId],
+      choices,
+    )).toBe(1_000);
   });
 
   it("uses confirmed engine chain facts for every chain notice", () => {
@@ -150,6 +174,10 @@ describe("completed battle UI selectors", () => {
       .toEqual(expect.arrayContaining(["class_skill", "craft_essence"]));
     expect(effectValueLabel({ effectType: "card_performance" }, 500))
       .toBe("50%");
+    expect(effectExpiryLabel({ remainingTurns: 3, remainingUses: 1 }))
+      .toBe("3T・1回");
+    expect(effectExpiryLabel({ remainingTurns: null, remainingUses: null }))
+      .toBeNull();
 
     const lucifera = started.loop.state.formation.ally.frontline[1]!;
     const fixedDamage = presentCombinedEffects(
@@ -179,6 +207,23 @@ describe("completed battle UI selectors", () => {
     expect(effectValueLabel(net.applied, net.totalValue)).toBe("60%");
     expect(net.combinedMembers?.map(({ applied }) => applied.remainingTurns))
       .toEqual(expect.arrayContaining([null, 2]));
+  });
+
+  it("presents every registered noble-phantasm effect on its own detail line", () => {
+    const started = session();
+    const detail = presentNoblePhantasmDetail(
+      started.loop.state.formation.ally.frontline[0],
+    );
+    expect(detail).toMatchObject({
+      title: LIGHT_KOYANSKAYA.noblePhantasm.name,
+      rank: LIGHT_KOYANSKAYA.noblePhantasm.rank,
+      level: 1,
+    });
+    expect(detail?.descriptions).toHaveLength(
+      LIGHT_KOYANSKAYA.noblePhantasm.effects.length,
+    );
+    expect(detail?.descriptions.some((description) => description.includes("8Hit")))
+      .toBe(true);
   });
 
   it("uses explicit quest-special metadata for enemy tabs without guessing", () => {
@@ -249,6 +294,27 @@ describe("completed battle UI selectors", () => {
       hpBefore: departedEnemy.hp,
       hpAfter: 0,
     }));
+    const npUnit = started.loop.state.formation.ally.frontline[0]!;
+    const npAfter = {
+      ...started.loop.state,
+      formation: {
+        ...started.loop.state.formation,
+        ally: {
+          ...started.loop.state.formation.ally,
+          frontline: started.loop.state.formation.ally.frontline.map((unit) =>
+            unit?.instanceId === npUnit.instanceId
+              ? { ...unit, np: unit.np + 250 }
+              : unit
+          ),
+        },
+      },
+    };
+    expect(confirmedNpTransitions(started.loop.state, npAfter))
+      .toContainEqual(expect.objectContaining({
+        instanceId: npUnit.instanceId,
+        npBefore: npUnit.np,
+        npAfter: npUnit.np + 250,
+      }));
     const turns = presentBattleTurns(
       progressed.session.turnLogs,
       progressed.session.inputLogs,
@@ -259,6 +325,31 @@ describe("completed battle UI selectors", () => {
       "敵行動",
       "敵ターン終了",
     ]);
+    const firstAttack = turns[0].sections
+      .flatMap(({ entries }) => entries)
+      .find((entry) => entry.kind === "action" && "attack" in entry.detail && entry.detail.attack);
+    if (!firstAttack || !("attack" in firstAttack.detail) || !firstAttack.detail.attack) {
+      throw new Error("確定攻撃ログがありません");
+    }
+    const loggedDamage = firstAttack.detail.attack.targets[0].totalDamage;
+    expect(confirmedAttackDamageAmounts([firstAttack])[0]?.damage).toBe(loggedDamage);
+    const hpLossMustNotReplaceDamage = {
+      ...firstAttack,
+      actualHpLoss: 1,
+      detail: {
+        ...firstAttack.detail,
+        attack: {
+          ...firstAttack.detail.attack,
+          targets: firstAttack.detail.attack.targets.map((target, index) =>
+            index === 0
+              ? { ...target, totalDamage: loggedDamage + 1_234, actualHpLoss: 1 }
+              : target
+          ),
+        },
+      },
+    };
+    expect(confirmedAttackDamageAmounts([hpLossMustNotReplaceDamage])[0]?.damage)
+      .toBe(loggedDamage + 1_234);
     expect(confirmedPlaybackNotices(progressed.session.turnLogs[0]))
       .toEqual(expect.arrayContaining(["味方ターン終了", "敵ターン終了"]));
   });
@@ -296,9 +387,14 @@ describe("completed battle UI selectors", () => {
       .toBeGreaterThan(markup.indexOf("前衛3"));
     expect(markup.indexOf('aria-label="光のコヤンスカヤ 保有スキル"'))
       .toBeLessThan(markup.indexOf('aria-label="光のコヤンスカヤ 効果分類"'));
-    expect(markup.match(/class=\"command-card/g)).toHaveLength(
+    expect(markup.match(/class=\"command-card (?:quick|arts|buster)/g)).toHaveLength(
       listCommandCardChoices(started.loop.state).length,
     );
+    expect(markup.indexOf("宝具カード"))
+      .toBeLessThan(markup.indexOf("コマンドカード</h3>"));
+    expect(markup).toContain("noble-phantasm-card-grid");
+    expect(markup).toContain("normal-command-card-grid");
+    expect(markup.match(/class=\"card-detail-button\"/g)).toHaveLength(3);
     expect(markup).toContain("今回のシード：<code>completed-ui</code>");
     expect(markup).toContain("戦闘状態要約");
     expect(markup).toContain("src=\"/FGO_Battle_Simulator_Work/assets/skill-icons/skill-np-charge.png\"");

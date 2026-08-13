@@ -4,6 +4,9 @@ import type { BattleLogBatch } from "../core/battle/log";
 import type { BattleTurnLog } from "../core/battle/turnLog";
 import type { CommandCardChainAnalysis } from "../core/cards/chain";
 import type { BattleState } from "../core/battle/state";
+import { CRITICAL_RATE_CAP_PERMILLE } from "../core/cards/critical";
+import { npCap } from "../formulas/np";
+import { INITIAL_SERVANT_DEFINITIONS } from "../data/servants";
 import {
   summarizeBattleInputLogs,
   summarizeBattleTurnLogs,
@@ -27,14 +30,41 @@ export function selectedChainCriticalBonus(
   selectedCardIds: readonly string[],
   cards: readonly SelectedCommandCard[],
 ): boolean {
-  if (selectedCardIds.length !== 3) return false;
   const selected = selectedCardIds.map((cardId) =>
     cards.find((card) => card.cardId === cardId)
   );
-  if (selected.some((card) => !card)) return false;
+  if (selected.length === 0 || selected.some((card) => !card)) return false;
   const types = selected.map((card) => card!.type);
-  return types[0] === "quick"
-    || new Set(types).size === 3;
+  if (types[0] === "quick") return true;
+  return selected.length === 3 && new Set(types).size === 3;
+}
+
+const SELECTION_CRITICAL_BONUS_PERMILLE = 200;
+
+/**
+ * Combines the persisted star allocation with the visible Quick/Mighty
+ * selection bonus. This preview never resolves the actual critical roll.
+ */
+export function displayedCommandCardCriticalRatePermille(
+  cardId: string,
+  persistedRatePermille: number,
+  selectedCardIds: readonly string[],
+  cards: readonly SelectedCommandCard[],
+): number {
+  const selected = selectedCardIds.map((selectedId) =>
+    cards.find((card) => card.cardId === selectedId)
+  );
+  const quickStart = selected[0]?.type === "quick";
+  const mightyChain = selected.length === 3
+    && selected.every((card) => card !== undefined)
+    && new Set(selected.map((card) => card!.type)).size === 3;
+  const receivesSelectionBonus = quickStart
+    || (mightyChain && selectedCardIds.includes(cardId));
+  return Math.min(
+    CRITICAL_RATE_CAP_PERMILLE,
+    persistedRatePermille
+      + (receivesSelectionBonus ? SELECTION_CRITICAL_BONUS_PERMILLE : 0),
+  );
 }
 
 export interface BattleSummary {
@@ -167,6 +197,27 @@ export interface ConfirmedHpTransition {
   maxHp: number;
 }
 
+export interface ConfirmedNpTransition {
+  instanceId: string;
+  name: string;
+  npBefore: number;
+  npAfter: number;
+  maxNp: number;
+}
+
+export interface ConfirmedAttackDamage {
+  instanceId: string;
+  name: string;
+  damage: number;
+}
+
+export interface NoblePhantasmDetailPresentation {
+  title: string;
+  rank: string | null;
+  level: number;
+  descriptions: string[];
+}
+
 function unitsByInstanceId(state: BattleState) {
   return new Map([
     ...state.formation.ally.frontline,
@@ -199,4 +250,78 @@ export function confirmedHpTransitions(
         maxHp: afterUnit?.maxHp ?? beforeUnit.maxHp,
       }];
     });
+}
+
+/** Reads only the saved NP fields of two engine-confirmed snapshots. */
+export function confirmedNpTransitions(
+  before: BattleState,
+  after: BattleState,
+): ConfirmedNpTransition[] {
+  const beforeUnits = unitsByInstanceId(before);
+  const afterUnits = unitsByInstanceId(after);
+  return [...beforeUnits.entries()].flatMap(([instanceId, beforeUnit]) => {
+    const afterUnit = afterUnits.get(instanceId);
+    if (
+      beforeUnit.side !== "ally"
+      || !beforeUnit.noblePhantasm
+      || !afterUnit
+      || beforeUnit.np === afterUnit.np
+    ) return [];
+    return [{
+      instanceId,
+      name: afterUnit.name,
+      npBefore: beforeUnit.np,
+      npAfter: afterUnit.np,
+      maxNp: npCap(afterUnit.noblePhantasm?.level ?? beforeUnit.noblePhantasm.level),
+    }];
+  });
+}
+
+/** Uses the attack log's calculated damage, not an HP-difference surrogate. */
+export function confirmedAttackDamageAmounts(
+  summaries: readonly BattleLogSummary[],
+): ConfirmedAttackDamage[] {
+  const totals = new Map<string, ConfirmedAttackDamage>();
+  for (const summary of summaries) {
+    if (!("attack" in summary.detail) || !summary.detail.attack) continue;
+    for (const target of summary.detail.attack.targets) {
+      const current = totals.get(target.target.instanceId);
+      totals.set(target.target.instanceId, {
+        instanceId: target.target.instanceId,
+        name: target.target.name ?? target.target.instanceId,
+        damage: (current?.damage ?? 0) + target.totalDamage,
+      });
+    }
+  }
+  return [...totals.values()];
+}
+
+/** Presents the registered NP effects in source order without resolving them. */
+export function presentNoblePhantasmDetail(
+  unit: BattleState["formation"]["ally"]["frontline"][number],
+): NoblePhantasmDetailPresentation | null {
+  if (!unit?.noblePhantasm) return null;
+  const definition = INITIAL_SERVANT_DEFINITIONS.find(
+    ({ dataId }) => dataId === unit.dataId,
+  );
+  if (
+    !definition
+    || definition.noblePhantasm.stableId !== unit.noblePhantasm.stableId
+  ) return null;
+  const descriptions = [...definition.noblePhantasm.effects]
+    .sort((left, right) => left.order - right.order)
+    .map((effect) => {
+      if (effect.kind === "effect") return effect.description;
+      const target = effect.targetScope === "all" ? "敵全体" : "敵単体";
+      const specialAttack = effect.specialAttack
+        ? `・${effect.specialAttack.requiredTargetTraits?.map((trait) => `〔${trait}〕`).join("・") ?? "条件付き"}特攻`
+        : "";
+      return `${target}への攻撃（${effect.hitWeights.length}Hit${specialAttack}）`;
+    });
+  return {
+    title: definition.noblePhantasm.name,
+    rank: definition.noblePhantasm.rank,
+    level: unit.noblePhantasm.level,
+    descriptions,
+  };
 }

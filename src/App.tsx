@@ -7,7 +7,10 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { listCommandCardChoices } from "./core/cards/selection";
+import {
+  listCommandCardChoices,
+  type CommandCardChoice,
+} from "./core/cards/selection";
 import {
   parseBattleSuspendSave,
   resolveBattleSessionAllySkill,
@@ -38,16 +41,23 @@ import {
   type BattleLogSummary,
 } from "./ui/battlePresentation";
 import {
+  confirmedAttackDamageAmounts,
   confirmedPlaybackNotices,
   confirmedChainNotices,
   confirmedHpTransitions,
+  confirmedNpTransitions,
+  displayedCommandCardCriticalRatePermille,
+  presentNoblePhantasmDetail,
   presentBattleSummary,
   presentBattleTurns,
   selectedChainCriticalBonus,
   toggleSelectedCommandCard,
+  type ConfirmedAttackDamage,
   type ConfirmedHpTransition,
+  type ConfirmedNpTransition,
 } from "./ui/battleUi";
 import {
+  effectExpiryLabel,
   effectHasDisplayValue,
   effectValueLabel,
   presentCombinedEffects,
@@ -494,7 +504,8 @@ function formatNp(np: number): string {
 
 type DetailContent =
   | { kind: "effect"; effect: PresentedEffect }
-  | { kind: "skill"; title: string; rank: string | null; cooldown: number; descriptions: string[] };
+  | { kind: "skill"; title: string; rank: string | null; cooldown: number; descriptions: string[] }
+  | { kind: "noble_phantasm"; title: string; rank: string | null; level: number; descriptions: string[] };
 
 function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -552,13 +563,15 @@ function Modal({ title, children, onClose }: { title: string; children: ReactNod
 }
 
 function DetailModal({ detail, onClose }: { detail: DetailContent; onClose: () => void }) {
-  if (detail.kind === "skill") {
+  if (detail.kind === "skill" || detail.kind === "noble_phantasm") {
     return (
       <Modal title={detail.title} onClose={onClose}>
         <dl className="detail-list">
           <div><dt>ランク</dt><dd>{detail.rank ?? "—"}</dd></div>
-          <div><dt>使用時CT</dt><dd>{detail.cooldown}</dd></div>
-          <div><dt>登録済み説明</dt><dd>{detail.descriptions.join(" / ") || "登録済み説明なし"}</dd></div>
+          {detail.kind === "skill"
+            ? <div><dt>使用時CT</dt><dd>{detail.cooldown}</dd></div>
+            : <div><dt>宝具Lv</dt><dd>{detail.level}</dd></div>}
+          <div><dt>登録済み説明</dt><dd>{detail.descriptions.length > 0 ? <ul className="action-description-list">{detail.descriptions.map((description, index) => <li key={`${index}:${description}`}>{description}</li>)}</ul> : "登録済み説明なし"}</dd></div>
         </dl>
       </Modal>
     );
@@ -620,14 +633,20 @@ function EffectTabs({ unit, session, onDetail }: { unit: BattleUnitState; sessio
       </div>
       {displayed.length === 0 ? <p className="muted compact">該当する効果なし</p> : (
         <ul className="effect-list">
-          {displayed.map((effect) => (
-            <li key={effect.key}>
-              <button type="button" className={`effect-chip ${effect.combinedMembers ? "combined-effect" : ""}`} aria-label={`${effect.displayName}の詳細を表示`} title={`${effect.displayName}の詳細`} onClick={() => onDetail(effect)}>
-                {effect.iconPath ? <img src={effect.iconPath} alt="" /> : <span className="unspecified-icon">未指定</span>}
-                {effect.combinedMembers && effectHasDisplayValue({ effectType: effect.applied.effectType, value: effect.totalValue }) && <span className="effect-value-badge">{effectValueLabel(effect.applied, effect.totalValue)}</span>}
-              </button>
-            </li>
-          ))}
+          {displayed.map((effect) => {
+            const expiry = activeTab === "active"
+              ? effectExpiryLabel(effect.applied)
+              : null;
+            return (
+              <li key={effect.key}>
+                <button type="button" className={`effect-chip ${effect.combinedMembers ? "combined-effect" : ""}`} aria-label={`${effect.displayName}の詳細を表示`} title={`${effect.displayName}の詳細`} onClick={() => onDetail(effect)}>
+                  {effect.iconPath ? <img src={effect.iconPath} alt="" /> : <span className="unspecified-icon">未指定</span>}
+                  {effect.combinedMembers && effectHasDisplayValue({ effectType: effect.applied.effectType, value: effect.totalValue }) && <span className="effect-value-badge">{effectValueLabel(effect.applied, effect.totalValue)}</span>}
+                  {expiry && <span className="effect-expiry-badge">{expiry}</span>}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -688,6 +707,79 @@ function SkillButton({ skill, onUse, onDetail }: { skill: SkillDescriptor; onUse
       </button>
       <button type="button" className="skill-detail-button" onClick={onDetail}>詳細</button>
       {skill.disabledReason && <span className="disabled-reason">{skill.disabledReason}</span>}
+    </div>
+  );
+}
+
+function CommandCardControl({
+  choice,
+  ownerLabel,
+  selectedIndex,
+  selectionBlocked,
+  starAllocation,
+  displayedCriticalRatePermille,
+  includesSelectionBonus,
+  detailBlocked,
+  onToggle,
+  onDetail,
+}: {
+  choice: CommandCardChoice;
+  ownerLabel: string;
+  selectedIndex: number;
+  selectionBlocked: boolean;
+  starAllocation: { stars: number; criticalRatePermille: number } | null;
+  displayedCriticalRatePermille: number | null;
+  includesSelectionBonus: boolean;
+  detailBlocked: boolean;
+  onToggle: () => void;
+  onDetail?: () => void;
+}) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = useRef(false);
+  const card = choice.card;
+  const label = card.kind === "noble_phantasm"
+    ? card.noblePhantasmName
+    : `${CARD_TYPE_LABELS[card.type]} ${card.cardIndex + 1}`;
+  function startLongPress(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!onDetail || detailBlocked || (event.pointerType === "mouse" && event.button !== 0)) return;
+    longPressed.current = false;
+    timer.current = setTimeout(() => {
+      longPressed.current = true;
+      onDetail();
+    }, 550);
+  }
+  function clearLongPress() {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  }
+  return (
+    <div className={`command-card-control ${selectionBlocked ? "control-disabled" : ""}`}>
+      <button
+        type="button"
+        className={`command-card ${card.type} ${selectedIndex >= 0 ? "selected" : ""}`}
+        aria-disabled={selectionBlocked}
+        aria-pressed={selectedIndex >= 0}
+        title={onDetail ? `${label}（550ms以上の長押しで詳細）` : undefined}
+        onPointerDown={startLongPress}
+        onPointerUp={clearLongPress}
+        onPointerCancel={clearLongPress}
+        onPointerLeave={clearLongPress}
+        onClick={() => {
+          if (longPressed.current) {
+            longPressed.current = false;
+            return;
+          }
+          if (!selectionBlocked) onToggle();
+        }}
+      >
+        <span className="card-order">{selectedIndex >= 0 ? `${selectedIndex + 1}枚目` : "未選択"}</span>
+        <strong>{label}</strong>
+        <small>{ownerLabel}</small>
+        {starAllocation && displayedCriticalRatePermille !== null && <small className="chain-bonus">スター {starAllocation.stars}個・確定表示率 {displayedCriticalRatePermille / 10}%{includesSelectionBonus ? "（+20%込み）" : ""}</small>}
+        {!choice.selectable && <small>{choice.executionRestrictions.join(" / ")}</small>}
+        {selectionBlocked && choice.selectable && selectedIndex < 0 && <small>3枚選択中または演出中</small>}
+      </button>
+      {onDetail && <button type="button" className="card-detail-button" disabled={detailBlocked} onClick={onDetail}>詳細</button>}
     </div>
   );
 }
@@ -910,17 +1002,28 @@ function ResultOverlay({ session, onReturn, onFixedSeed, onCopy }: { session: Ba
   );
 }
 
-function HpTransitionBars({ transitions }: { transitions: ConfirmedHpTransition[] }) {
+function ResourceTransitionBars({
+  hpTransitions,
+  npTransitions,
+  damageAmounts,
+}: {
+  hpTransitions: ConfirmedHpTransition[];
+  npTransitions: ConfirmedNpTransition[];
+  damageAmounts: ConfirmedAttackDamage[];
+}) {
   const [animated, setAnimated] = useState(false);
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => setAnimated(true));
     return () => window.cancelAnimationFrame(animationFrame);
   }, []);
-  if (transitions.length === 0) return null;
+  if (hpTransitions.length === 0 && npTransitions.length === 0) return null;
+  const damageByInstanceId = new Map(
+    damageAmounts.map((damage) => [damage.instanceId, damage.damage]),
+  );
   return (
     <div className="hp-transition-groups">
       {(["ally", "enemy"] as const).map((side) => {
-        const sideTransitions = transitions.filter((transition) => transition.side === side);
+        const sideTransitions = hpTransitions.filter((transition) => transition.side === side);
         if (sideTransitions.length === 0) return null;
         return (
           <section key={side} className="hp-transition-group" aria-label={side === "ally" ? "味方HP増減" : "敵HP増減"}>
@@ -930,10 +1033,10 @@ function HpTransitionBars({ transitions }: { transitions: ConfirmedHpTransition[
               const width = transition.maxHp <= 0
                 ? 0
                 : Math.max(0, Math.min(100, displayedHp / transition.maxHp * 100));
-              const delta = transition.hpAfter - transition.hpBefore;
+              const attackDamage = damageByInstanceId.get(transition.instanceId);
               return (
                 <div key={transition.instanceId} className="hp-transition-row">
-                  <div><strong>{transition.name}</strong><span className={delta < 0 ? "hp-loss" : "hp-gain"}>{delta > 0 ? "+" : ""}{delta.toLocaleString()}</span></div>
+                  <div><strong>{transition.name}</strong>{attackDamage !== undefined && <span className="attack-damage">ダメージ {attackDamage.toLocaleString()}</span>}</div>
                   <div className="animated-hp-track" role="progressbar" aria-label={`${transition.name} HP`} aria-valuemin={0} aria-valuemax={transition.maxHp} aria-valuenow={displayedHp}><span style={{ width: `${width}%` }} /></div>
                   <small>{transition.hpBefore.toLocaleString()} → {transition.hpAfter.toLocaleString()} / {transition.maxHp.toLocaleString()}</small>
                 </div>
@@ -942,11 +1045,30 @@ function HpTransitionBars({ transitions }: { transitions: ConfirmedHpTransition[
           </section>
         );
       })}
+      {npTransitions.length > 0 && (
+        <section className="np-transition-group" aria-label="味方NP増減">
+          <h3>味方NP</h3>
+          {npTransitions.map((transition) => {
+            const displayedNp = animated ? transition.npAfter : transition.npBefore;
+            const width = transition.maxNp <= 0
+              ? 0
+              : Math.max(0, Math.min(100, displayedNp / transition.maxNp * 100));
+            const delta = transition.npAfter - transition.npBefore;
+            return (
+              <div key={transition.instanceId} className="np-transition-row">
+                <div><strong>{transition.name}</strong><span className={delta < 0 ? "np-loss" : "np-gain"}>NP {delta > 0 ? "+" : ""}{formatNp(delta)}</span></div>
+                <div className="animated-np-track" role="progressbar" aria-label={`${transition.name} NP`} aria-valuemin={0} aria-valuemax={transition.maxNp} aria-valuenow={displayedNp}><span style={{ width: `${width}%` }} /></div>
+                <small>{formatNp(transition.npBefore)} → {formatNp(transition.npAfter)}</small>
+              </div>
+            );
+          })}
+        </section>
+      )}
     </div>
   );
 }
 
-function PlaybackOverlay({ notice, summaries, hpTransitions, index, total, onPrevious, onNext }: { notice: string; summaries: BattleLogSummary[]; hpTransitions: ConfirmedHpTransition[]; index: number; total: number; onPrevious: () => void; onNext: () => void }) {
+function PlaybackOverlay({ notice, summaries, hpTransitions, npTransitions, damageAmounts, index, total, onPrevious, onNext }: { notice: string; summaries: BattleLogSummary[]; hpTransitions: ConfirmedHpTransition[]; npTransitions: ConfirmedNpTransition[]; damageAmounts: ConfirmedAttackDamage[]; index: number; total: number; onPrevious: () => void; onNext: () => void }) {
   return (
     <div className="playback-blocker" role="presentation">
       <section className="playback-notice" role="dialog" aria-modal="true" aria-labelledby="playback-heading" onKeyDown={(event) => {
@@ -965,7 +1087,7 @@ function PlaybackOverlay({ notice, summaries, hpTransitions, index, total, onPre
       }}>
         <p className="playback-counter">{index + 1} / {total}</p>
         <strong id="playback-heading" aria-live="polite">{notice}</strong>
-        <HpTransitionBars transitions={hpTransitions} />
+        <ResourceTransitionBars hpTransitions={hpTransitions} npTransitions={npTransitions} damageAmounts={damageAmounts} />
         {summaries.slice(0, 4).map((summary) => <span key={summary.id}>{summary.title}{summary.changes.length ? `：${summary.changes.join(" / ")}` : summary.actualHpLoss !== null ? `：HP -${summary.actualHpLoss.toLocaleString()}` : ""}</span>)}
         <div className="playback-actions"><button type="button" disabled={index === 0} onClick={onPrevious}>前へ</button><button className="primary-button" type="button" autoFocus onClick={onNext}>{index + 1 === total ? "次へ（操作へ戻る）" : "次へ"}</button></div>
       </section>
@@ -998,6 +1120,8 @@ export function BattleScreen({
       state: BattleState;
       summaries: BattleLogSummary[];
       hpTransitions: ConfirmedHpTransition[];
+      npTransitions: ConfirmedNpTransition[];
+      damageAmounts: ConfirmedAttackDamage[];
     }>;
     index: number;
   } | null>(null);
@@ -1032,6 +1156,9 @@ export function BattleScreen({
   ].flatMap((unit) => unit ? [[unit.instanceId, unit] as const] : []));
   const frontlineSlotById = new Map(state.formation.ally.frontline.flatMap((unit, index) => unit ? [[unit.instanceId, index + 1] as const] : []));
   const selectedHasCriticalBonus = selectedChainCriticalBonus(selectedCardIds, choices.map(({ card }) => card));
+  const quickSelectionBonusActive = choices.find(({ card }) => card.cardId === selectedCardIds[0])?.card.type === "quick";
+  const noblePhantasmChoices = choices.filter(({ card }) => card.kind === "noble_phantasm");
+  const normalCommandChoices = choices.filter(({ card }) => card.kind === "normal");
 
   function allySkills(unit: BattleUnitState): SkillDescriptor[] {
     const skills = session.actionEffectRegistry?.byInstanceId[unit.instanceId]?.actions
@@ -1156,7 +1283,7 @@ export function BattleScreen({
     const presented = newLog ? presentBattleTurns([newLog], [])[0] : null;
     const section = (kind: "ally_action" | "ally_turn_end" | "enemy_action" | "enemy_turn_end") =>
       presented?.sections.find((candidate) => candidate.kind === kind)?.entries ?? [];
-    type PlaybackFrame = { notice: string; state: BattleState; summaries: BattleLogSummary[]; hpTransitions: ConfirmedHpTransition[] };
+    type PlaybackFrame = { notice: string; state: BattleState; summaries: BattleLogSummary[]; hpTransitions: ConfirmedHpTransition[]; npTransitions: ConfirmedNpTransition[]; damageAmounts: ConfirmedAttackDamage[] };
     const chainFrames: PlaybackFrame[] = [];
     const hpFrames: PlaybackFrame[] = [];
     const turnEndFrames: PlaybackFrame[] = [];
@@ -1167,18 +1294,21 @@ export function BattleScreen({
       notice: string,
       state: BattleState,
       summaries: BattleLogSummary[] = [],
-    ) => target.push({ notice, state, summaries, hpTransitions: [] });
-    const pushHpChanges = (
+    ) => target.push({ notice, state, summaries, hpTransitions: [], npTransitions: [], damageAmounts: [] });
+    const pushResourceChanges = (
       nextState: BattleState,
       summaries: BattleLogSummary[] = [],
     ) => {
       const hpTransitions = confirmedHpTransitions(previousState, nextState);
-      if (hpTransitions.length > 0) {
+      const npTransitions = confirmedNpTransitions(previousState, nextState);
+      if (hpTransitions.length > 0 || npTransitions.length > 0) {
         hpFrames.push({
-          notice: "敵・味方HP増減",
+          notice: "敵・味方HP・NP増減",
           state: nextState,
           summaries,
           hpTransitions,
+          npTransitions,
+          damageAmounts: confirmedAttackDamageAmounts(summaries),
         });
       }
       previousState = nextState;
@@ -1190,14 +1320,14 @@ export function BattleScreen({
       }
       const allySummaries = section("ally_action");
       sequence.actions.forEach((action, index) => {
-        pushHpChanges(
+        pushResourceChanges(
           action.boundary.state,
           allySummaries[index] ? [allySummaries[index]] : [],
         );
       });
     }
     if (resolution.allyTurnEnd) {
-      pushHpChanges(resolution.allyTurnEnd.state);
+      pushResourceChanges(resolution.allyTurnEnd.state);
       pushNotice(turnEndFrames, "味方ターン終了", result.session.loop.state, section("ally_turn_end"));
       const allyEndRecord = newLog?.records.find((record) => record.recordType === "turn_end" && record.side === "ally");
       if (allyEndRecord?.recordType === "turn_end" && allyEndRecord.checkpoint.waveTransition) {
@@ -1207,14 +1337,14 @@ export function BattleScreen({
     if (resolution.enemyAttacks) {
       const enemySummaries = section("enemy_action");
       resolution.enemyAttacks.sequence.actions.forEach((action, index) => {
-        pushHpChanges(
+        pushResourceChanges(
           action.boundary.state,
           enemySummaries[index] ? [enemySummaries[index]] : [],
         );
       });
     }
     if (resolution.enemyTurnEnd) {
-      pushHpChanges(resolution.enemyTurnEnd.state);
+      pushResourceChanges(resolution.enemyTurnEnd.state);
       pushNotice(turnEndFrames, "敵ターン終了", result.session.loop.state, section("enemy_turn_end"));
       const enemyEndRecord = newLog?.records.find((record) => record.recordType === "turn_end" && record.side === "enemy");
       if (enemyEndRecord?.recordType === "turn_end" && enemyEndRecord.checkpoint.waveTransition) {
@@ -1233,9 +1363,51 @@ export function BattleScreen({
         state: result.session.loop.state,
         summaries: [],
         hpTransitions: [],
+        npTransitions: [],
+        damageAmounts: [],
       });
     }
     setPlayback({ finalSession: result.session, frames, index: 0 });
+  }
+
+  function renderCommandCard(choice: CommandCardChoice) {
+    const card = choice.card;
+    const owner = unitsById.get(card.ownerInstanceId);
+    const selectedIndex = selectedCardIds.indexOf(card.cardId);
+    const unselectedLock = threeSelected && selectedIndex < 0;
+    const starAllocation = card.kind === "normal"
+      ? commandState.commandStarDistribution?.cards.find(({ cardId }) => cardId === card.cardId) ?? null
+      : null;
+    const includesSelectionBonus = Boolean(
+      starAllocation
+      && (quickSelectionBonusActive || (selectedHasCriticalBonus && selectedIndex >= 0)),
+    );
+    const displayedCriticalRate = starAllocation
+      ? displayedCommandCardCriticalRatePermille(
+          card.cardId,
+          starAllocation.criticalRatePermille,
+          selectedCardIds,
+          choices.map(({ card: candidate }) => candidate),
+        )
+      : null;
+    const noblePhantasmDetail = card.kind === "noble_phantasm"
+      ? presentNoblePhantasmDetail(owner ?? null)
+      : null;
+    return (
+      <CommandCardControl
+        key={card.cardId}
+        choice={choice}
+        ownerLabel={`前衛${frontlineSlotById.get(card.ownerInstanceId) ?? "—"}・${owner?.name ?? card.ownerInstanceId}`}
+        selectedIndex={selectedIndex}
+        selectionBlocked={!choice.selectable || unselectedLock || Boolean(playback)}
+        starAllocation={starAllocation}
+        displayedCriticalRatePermille={displayedCriticalRate}
+        includesSelectionBonus={includesSelectionBonus}
+        detailBlocked={threeSelected || Boolean(playback)}
+        onToggle={() => setSelectedCardIds((current) => toggleSelectedCommandCard(current, card.cardId))}
+        {...(noblePhantasmDetail ? { onDetail: () => setDetail({ kind: "noble_phantasm", ...noblePhantasmDetail }) } : {})}
+      />
+    );
   }
 
   return (
@@ -1261,15 +1433,7 @@ export function BattleScreen({
 
       <section className="panel command-panel" aria-labelledby="command-heading">
         <div className="section-heading"><div><p className="section-kicker">COMMAND</p><h2 id="command-heading">コマンドカード・実行</h2></div><span className="badge">選択 {selectedCardIds.length} / 3枚</span></div>
-        {state.outcome === "ongoing" ? <><p className="muted">3枚選択中は、未選択カード・対象変更・スキル・保存・設定復帰をロックします。</p><div className="card-grid">{choices.map((choice) => {
-          const card = choice.card;
-          const owner = unitsById.get(card.ownerInstanceId);
-          const selectedIndex = selectedCardIds.indexOf(card.cardId);
-          const unselectedLock = threeSelected && selectedIndex < 0;
-          const starAllocation = card.kind === "normal" ? commandState.commandStarDistribution?.cards.find(({ cardId }) => cardId === card.cardId) ?? null : null;
-          const label = card.kind === "noble_phantasm" ? card.noblePhantasmName : `${CARD_TYPE_LABELS[card.type]} ${card.cardIndex + 1}`;
-          return <button key={card.cardId} type="button" className={`command-card ${card.type} ${selectedIndex >= 0 ? "selected" : ""}`} disabled={!choice.selectable || unselectedLock || Boolean(playback)} onClick={() => setSelectedCardIds((current) => toggleSelectedCommandCard(current, card.cardId))} aria-pressed={selectedIndex >= 0}><span className="card-order">{selectedIndex >= 0 ? `${selectedIndex + 1}枚目` : "未選択"}</span><strong>{label}</strong><small>前衛{frontlineSlotById.get(card.ownerInstanceId) ?? "—"}・{owner?.name ?? card.ownerInstanceId}</small>{starAllocation && <small>スター {starAllocation.stars}個・確定表示率 {starAllocation.criticalRatePermille / 10}%</small>}{selectedHasCriticalBonus && selectedIndex >= 0 && card.kind === "normal" && <small className="chain-bonus">クリティカル率 +20%</small>}{!choice.selectable && <small>{choice.executionRestrictions.join(" / ")}</small>}{unselectedLock && <small>3枚選択中</small>}</button>;
-        })}</div><div className="sticky-actions battle-actions"><button type="button" disabled={selectedCardIds.length === 0 || Boolean(playback)} onClick={() => setSelectedCardIds([])}>カード選択を解除</button><button className="primary-button" type="button" disabled={selectedCardIds.length !== 3 || Boolean(playback)} onClick={executeTurn}>選択カードで1ターン実行</button></div></> : <p className="muted">戦闘は終了しました。確定した戦闘画面を保持しています。</p>}
+        {state.outcome === "ongoing" ? <><p className="muted">3枚選択中は、未選択カード・対象変更・スキル・保存・設定復帰をロックします。宝具カードは550ms以上の長押しまたは詳細ボタンで登録済み効果を確認できます。</p>{noblePhantasmChoices.length > 0 && <section className="card-row" aria-labelledby="noble-card-heading"><h3 id="noble-card-heading">宝具カード</h3><div className="card-grid noble-phantasm-card-grid">{noblePhantasmChoices.map(renderCommandCard)}</div></section>}<section className="card-row" aria-labelledby="normal-card-heading"><h3 id="normal-card-heading">コマンドカード</h3><div className="card-grid normal-command-card-grid">{normalCommandChoices.map(renderCommandCard)}</div></section><div className="sticky-actions battle-actions"><button type="button" disabled={selectedCardIds.length === 0 || Boolean(playback)} onClick={() => setSelectedCardIds([])}>カード選択を解除</button><button className="primary-button" type="button" disabled={selectedCardIds.length !== 3 || Boolean(playback)} onClick={executeTurn}>選択カードで1ターン実行</button></div></> : <p className="muted">戦闘は終了しました。確定した戦闘画面を保持しています。</p>}
         {operationMessage && <p className="operation-message" aria-live="polite">{operationMessage}</p>}
       </section>
 
@@ -1279,7 +1443,7 @@ export function BattleScreen({
 
       {detail && <DetailModal detail={detail} onClose={() => setDetail(null)} />}
       {pendingSkill && <SkillTargetModal pending={pendingSkill} session={session} onConfirm={(targetId, orderChange) => resolveSkill(pendingSkill.skill, targetId, orderChange)} onClose={() => setPendingSkill(null)} />}
-      {playbackFrame && playback && <PlaybackOverlay key={playback.index} notice={playbackFrame.notice} summaries={playbackFrame.summaries} hpTransitions={playbackFrame.hpTransitions} index={playback.index} total={playback.frames.length} onPrevious={showPreviousPlaybackFrame} onNext={showNextPlaybackFrame} />}
+      {playbackFrame && playback && <PlaybackOverlay key={playback.index} notice={playbackFrame.notice} summaries={playbackFrame.summaries} hpTransitions={playbackFrame.hpTransitions} npTransitions={playbackFrame.npTransitions} damageAmounts={playbackFrame.damageAmounts} index={playback.index} total={playback.frames.length} onPrevious={showPreviousPlaybackFrame} onNext={showNextPlaybackFrame} />}
       {state.outcome !== "ongoing" && !playback && <ResultOverlay session={session} onReturn={onReturnToSetup} onFixedSeed={() => onFixedSeedToSetup(session.loop.rng.seed)} onCopy={() => copySeed(session.loop.rng.seed, setOperationMessage)} />}
     </main>
   );

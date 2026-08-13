@@ -604,7 +604,7 @@ if (manifest) {
   assert(
     manifest.status === "completed-ui-spec-implemented"
       && completedUi.decisionRange === "D-077-D-085"
-      && completedUi.acceptanceRevision === "D-086"
+      && completedUi.acceptanceRevision === "D-087"
       && completedUi.defaultSeedMode === "random"
       && completedUi.randomBlankSeedResolvedBeforeBattleRng === true
       && JSON.stringify(completedUi.allyEffectTabs) === JSON.stringify(["class_skill", "craft_essence", "other", "combined"])
@@ -616,6 +616,12 @@ if (manifest) {
       && completedUi.publicAssetUrlSource === "vite_base_url"
       && completedUi.mysticCodeSkillPosition === "frontline_tab_bottom"
       && completedUi.commandCardSelectionMaximum === 3
+      && JSON.stringify(completedUi.commandCardRows) === JSON.stringify(["noble_phantasm", "normal_command"])
+      && completedUi.otherEffectBadge === "remaining_turns_and_uses"
+      && completedUi.quickFirstPreviewTiming === "immediately_after_first_quick_selection_including_unselected_normal_candidates"
+      && completedUi.hpAttackNumberSource === "confirmed_action_log_target_total_damage"
+      && completedUi.hpDifferenceUsedAsAttackDamage === false
+      && completedUi.allyNpChangePresentation === "animated_bars_from_confirmed_before_and_after_np"
       && completedUi.confirmedLogPlaybackOnly === true
       && completedUi.playbackNavigation === "manual_previous_next"
       && completedUi.playbackAutomaticAdvance === false
@@ -1097,7 +1103,7 @@ const uiAcceptance = await readText(
 );
 assert(
   uiAcceptance.includes("判定: 条件付き合格")
-    && uiAcceptance.includes("51ファイル・523テスト")
+    && uiAcceptance.includes("51ファイル・524テスト")
     && uiAcceptance.includes("ユーザー実画面再確認待ち"),
   "UI完成仕様の受入報告が正本と一致しません"
 );
@@ -1154,7 +1160,8 @@ assert(
     && decisionLog.includes("## D-083 確定ログだけを再生し、再生中入力を遮断する")
     && decisionLog.includes("## D-084 リザルトを確定戦闘画面へ重ねる")
     && decisionLog.includes("## D-085 保存・再開を要約付き・非破壊にする")
-    && decisionLog.includes("## D-086 UI実画面受入の状態表示と確定結果演出を追補する"),
+    && decisionLog.includes("## D-086 UI実画面受入の状態表示と確定結果演出を追補する")
+    && decisionLog.includes("## D-087 UI実画面受入の資源・状態・カード表示を追補する"),
   "決定記録にUI完成仕様D-077～D-085がありません"
 );
 
@@ -1242,25 +1249,43 @@ assert(
   "UI・保存仕様にD-086の状態表示・合算・手動HP演出がありません"
 );
 assert(
+  uiAndStorage.includes("実画面受入の資源・状態・カード表示追補（D-087）")
+    && uiAndStorage.includes("対象別`totalDamage`")
+    && uiAndStorage.includes("味方NPバー")
+    && uiAndStorage.includes("後続未選択カードにも直ちに表示")
+    && uiAndStorage.includes("宝具カードを上段、通常カードを下段"),
+  "UI・保存仕様にD-087のダメージ・NP・状態期限・カード表示がありません"
+);
+assert(
   /button\s*\{[\s\S]*?min-height:\s*3\.5rem/.test(uiStyles)
     && /@media \(max-width: 43\.99rem\)[\s\S]*?\.unit-grid,[\s\S]*?overflow-x:\s*auto/.test(uiStyles)
     && /@media \(min-width: 44rem\)[\s\S]*?\.slot-grid,[\s\S]*?\.unit-grid\s*\{\s*grid-template-columns:\s*repeat\(3/.test(uiStyles)
-    && /@media \(min-width: 44rem\)[\s\S]*?\.card-grid\s*\{\s*grid-template-columns:\s*repeat\(5/.test(uiStyles)
+    && /@media \(min-width: 44rem\)[\s\S]*?\.normal-command-card-grid\s*\{\s*grid-template-columns:\s*repeat\(5/.test(uiStyles)
     && /\.modal-backdrop,[\s\S]*?position:\s*fixed/.test(uiStyles)
     && /\.playback-blocker\s*\{[\s\S]*?z-index:\s*120/.test(uiStyles)
-    && /\.animated-hp-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles),
+    && /\.animated-hp-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles)
+    && /\.animated-np-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles)
+    && uiStyles.includes(".effect-expiry-badge")
+    && uiStyles.includes(".noble-phantasm-card-grid"),
   "UIのPC・スマートフォン・56px・モーダル・再生遮断CSSが一致しません"
 );
 assert(
   appSource.includes("前へ")
     && appSource.includes("次へ（操作へ戻る）")
     && appSource.includes("confirmedHpTransitions")
+    && appSource.includes("confirmedNpTransitions")
+    && appSource.includes("confirmedAttackDamageAmounts")
+    && appSource.includes("noble-phantasm-card-grid")
+    && appSource.includes("action-description-list")
     && appSource.includes("魔術礼装スキルの操作は「前衛」タブの最下部")
     && effectPresentation.includes("presentCombinedEffects")
     && effectPresentation.includes("value / 10")
     && iconRegistry.includes("import.meta.env.BASE_URL")
-    && battleUi.includes("confirmedHpTransitions"),
-  "UI実装にD-086の画像パス・合算・百分率・手動HP演出がありません"
+    && battleUi.includes("confirmedHpTransitions")
+    && battleUi.includes("displayedCommandCardCriticalRatePermille")
+    && battleUi.includes("presentNoblePhantasmDetail")
+    && effectPresentation.includes("effectExpiryLabel"),
+  "UI実装にD-086～D-087の画像・状態・カード・確定資源演出がありません"
 );
 const battlePresentation = await readText("src/ui/battlePresentation.ts");
 assert(

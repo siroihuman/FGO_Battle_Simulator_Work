@@ -84,6 +84,17 @@ export function effectHasDisplayValue(
   return RATE_EFFECT_TYPES.has(effect.effectType) || effect.value !== 0;
 }
 
+/** Compact remaining-duration label for the icon list. */
+export function effectExpiryLabel(
+  effect: Pick<AppliedEffect, "remainingTurns" | "remainingUses">,
+): string | null {
+  const parts = [
+    effect.remainingTurns === null ? null : `${effect.remainingTurns}T`,
+    effect.remainingUses === null ? null : `${effect.remainingUses}回`,
+  ].filter((part): part is string => part !== null);
+  return parts.length > 0 ? parts.join("・") : null;
+}
+
 interface EffectSourceMetadata {
   sourceInstanceId: string;
   sourceStableId: string;

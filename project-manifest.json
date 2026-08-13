@@ -214,7 +214,7 @@
     "initialBattleUiRecalculatesBattleValues": false,
     "completedUiSpecification": {
       "decisionRange": "D-077-D-085",
-      "acceptanceRevision": "D-086",
+      "acceptanceRevision": "D-087",
       "implementationStatus": "implemented_pending_user_screen_acceptance",
       "setupTabs": [
         "ally_formation",
@@ -250,6 +250,8 @@
       ],
       "enemyEffectDefaultTab": "normal",
       "effectListPresentation": "icon_only_with_combined_value_badge",
+      "otherEffectBadge": "remaining_turns_and_uses",
+      "effectImageSize": "reduced_inside_56px_pointer_target",
       "combinedEffectDisplay": "sum_same_type_classification_and_conditions_across_sources_durations_and_uses",
       "combinedEffectMutatesBattleState": false,
       "rateDisplayUnit": "percent_from_permille_divided_by_10",
@@ -259,15 +261,31 @@
       "servantSkillPosition": "above_status_display",
       "mysticCodeSkillPosition": "frontline_tab_bottom",
       "commandCardSelectionMaximum": 3,
+      "commandCardRows": [
+        "noble_phantasm",
+        "normal_command"
+      ],
+      "commandCardVisualDensity": "compact_preserving_56px_pointer_targets",
+      "criticalRateDisplay": "persisted_star_rate_plus_visible_quick_or_mighty_bonus_capped_at_100_percent",
+      "quickFirstPreviewTiming": "immediately_after_first_quick_selection_including_unselected_normal_candidates",
+      "quickFirstPreviewRemovedOn": [
+        "first_card_deselection",
+        "first_card_change"
+      ],
+      "noblePhantasmDetail": "550ms_long_press_or_detail_button_registered_effect_lines",
+      "skillAndNoblePhantasmDescriptions": "one_registered_effect_per_line",
       "confirmedLogPlaybackOnly": true,
       "playbackNavigation": "manual_previous_next",
       "playbackStageOrder": [
         "chain",
-        "confirmed_ally_and_enemy_hp_changes",
+        "confirmed_ally_and_enemy_hp_and_ally_np_changes",
         "turn_end",
         "wave_transition"
       ],
       "hpChangePresentation": "animated_bars_from_confirmed_before_and_after_hp",
+      "hpAttackNumberSource": "confirmed_action_log_target_total_damage",
+      "hpDifferenceUsedAsAttackDamage": false,
+      "allyNpChangePresentation": "animated_bars_from_confirmed_before_and_after_np",
       "playbackAutomaticAdvance": false,
       "playbackStateSaved": false,
       "resultPresentation": "overlay_on_confirmed_battle_screen",
