@@ -214,6 +214,7 @@
     "initialBattleUiRecalculatesBattleValues": false,
     "completedUiSpecification": {
       "decisionRange": "D-077-D-085",
+      "acceptanceRevision": "D-086",
       "implementationStatus": "implemented_pending_user_screen_acceptance",
       "setupTabs": [
         "ally_formation",
@@ -235,10 +236,39 @@
       "desktopCardColumns": 5,
       "minimumPointerTargetPx": 56,
       "effectSourcesSeparated": true,
+      "allyEffectTabs": [
+        "class_skill",
+        "craft_essence",
+        "other",
+        "combined"
+      ],
+      "allyEffectDefaultTab": "other",
+      "enemyEffectTabs": [
+        "normal",
+        "special",
+        "combined"
+      ],
+      "enemyEffectDefaultTab": "normal",
+      "effectListPresentation": "icon_only_with_combined_value_badge",
+      "combinedEffectDisplay": "sum_same_type_classification_and_conditions_across_sources_durations_and_uses",
+      "combinedEffectMutatesBattleState": false,
+      "rateDisplayUnit": "percent_from_permille_divided_by_10",
       "explicitUploadedAssetMappingsOnly": true,
+      "publicAssetUrlSource": "vite_base_url",
       "unspecifiedIconFallback": "text_only",
+      "servantSkillPosition": "above_status_display",
+      "mysticCodeSkillPosition": "frontline_tab_bottom",
       "commandCardSelectionMaximum": 3,
       "confirmedLogPlaybackOnly": true,
+      "playbackNavigation": "manual_previous_next",
+      "playbackStageOrder": [
+        "chain",
+        "confirmed_ally_and_enemy_hp_changes",
+        "turn_end",
+        "wave_transition"
+      ],
+      "hpChangePresentation": "animated_bars_from_confirmed_before_and_after_hp",
+      "playbackAutomaticAdvance": false,
       "playbackStateSaved": false,
       "resultPresentation": "overlay_on_confirmed_battle_screen",
       "loadFailureMutation": "none",

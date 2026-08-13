@@ -40,12 +40,17 @@ import {
 import {
   confirmedPlaybackNotices,
   confirmedChainNotices,
+  confirmedHpTransitions,
   presentBattleSummary,
   presentBattleTurns,
   selectedChainCriticalBonus,
   toggleSelectedCommandCard,
+  type ConfirmedHpTransition,
 } from "./ui/battleUi";
 import {
+  effectHasDisplayValue,
+  effectValueLabel,
+  presentCombinedEffects,
   presentUnitEffects,
   type PresentedEffect,
 } from "./ui/effectPresentation";
@@ -559,13 +564,25 @@ function DetailModal({ detail, onClose }: { detail: DetailContent; onClose: () =
     );
   }
   const { effect } = detail;
+  if (effect.combinedMembers) {
+    return (
+      <Modal title={`${effect.displayName}（合算）`} onClose={onClose}>
+        <dl className="detail-list">
+          <div><dt>合算値</dt><dd>{effectValueLabel(effect.applied, effect.totalValue)}</dd></div>
+          <div><dt>合算方法</dt><dd>発生元、残りターン、残り回数が異なる付与中の同種効果を合算しています。</dd></div>
+          <div><dt>内訳</dt><dd><ul className="combined-detail-list">{effect.combinedMembers.map((member) => <li key={member.key}><strong>{member.sourceName}</strong>：{member.applied.name} {effectValueLabel(member.applied, member.applied.value)}（{member.applied.remainingTurns === null ? "ターン制限なし" : `${member.applied.remainingTurns}T`} / {member.applied.remainingUses === null ? "回数制限なし" : `${member.applied.remainingUses}回`}）</li>)}</ul></dd></div>
+          <div><dt>注意</dt><dd>合算は表示専用です。戦闘計算、各状態の期限・回数・解除可否は変更しません。</dd></div>
+        </dl>
+      </Modal>
+    );
+  }
   return (
-    <Modal title={effect.applied.name} onClose={onClose}>
+    <Modal title={effect.displayName} onClose={onClose}>
       <dl className="detail-list">
         <div><dt>発生元</dt><dd>{effect.sourceName}</dd></div>
         <div><dt>名称・ランク</dt><dd>{effect.applied.name} / {effect.sourceRank ?? "—"}</dd></div>
         <div><dt>登録済み説明</dt><dd>{effect.description}</dd></div>
-        <div><dt>効果量（登録値）</dt><dd>{effect.applied.value.toLocaleString()}（同種合計 {effect.totalValue.toLocaleString()}）</dd></div>
+        <div><dt>効果量</dt><dd>{effectValueLabel(effect.applied, effect.applied.value)}（同一発生元の同種合計 {effectValueLabel(effect.applied, effect.totalValue)}）</dd></div>
         <div><dt>残り</dt><dd>{effect.applied.remainingTurns === null ? "ターン制限なし" : `${effect.applied.remainingTurns}T`} / {effect.applied.remainingUses === null ? "回数制限なし" : `${effect.applied.remainingUses}回`}</dd></div>
         <div><dt>解除可否</dt><dd>{effect.applied.removalPolicy === "removable" ? "解除可能" : effect.applied.removalPolicy === "unremovable" ? "解除不可" : "ID指定時のみ"}</dd></div>
       </dl>
@@ -575,18 +592,27 @@ function DetailModal({ detail, onClose }: { detail: DetailContent; onClose: () =
 
 function EffectTabs({ unit, session, onDetail }: { unit: BattleUnitState; session: BattleSession; onDetail: (effect: PresentedEffect) => void }) {
   const effects = useMemo(() => presentUnitEffects(session, unit), [session, unit]);
+  const combinedEffects = useMemo(() => presentCombinedEffects(effects), [effects]);
   const allyTabs = [
     ["class_skill", "クラススキル"],
     ["craft_essence", "概念礼装"],
-    ["active", "保有スキル・宝具"],
+    ["active", "その他"],
+    ["combined", "合算"],
   ] as const;
   const enemyTabs = [
-    ["enemy_action", "敵スキル・宝具"],
-    ["other", "その他の状態"],
+    ["normal", "通常"],
+    ["special", "特殊"],
+    ["combined", "合算"],
   ] as const;
   const tabs = unit.side === "ally" ? allyTabs : enemyTabs;
-  const [activeTab, setActiveTab] = useState<string>(tabs[0][0]);
-  const displayed = effects.filter((effect) => unit.side === "ally" ? effect.allyTab === activeTab : effect.enemyTab === activeTab);
+  const [activeTab, setActiveTab] = useState<string>(
+    unit.side === "ally" ? "active" : "normal",
+  );
+  const displayed = activeTab === "combined"
+    ? combinedEffects
+    : effects.filter((effect) => unit.side === "ally"
+      ? effect.allyTab === activeTab
+      : effect.enemyTab === activeTab);
   return (
     <div className="effect-area">
       <div className="tab-list effect-tabs" role="tablist" aria-label={`${unit.name} 効果分類`}>
@@ -596,9 +622,9 @@ function EffectTabs({ unit, session, onDetail }: { unit: BattleUnitState; sessio
         <ul className="effect-list">
           {displayed.map((effect) => (
             <li key={effect.key}>
-              <button type="button" className="effect-chip" onClick={() => onDetail(effect)}>
+              <button type="button" className={`effect-chip ${effect.combinedMembers ? "combined-effect" : ""}`} aria-label={`${effect.displayName}の詳細を表示`} title={`${effect.displayName}の詳細`} onClick={() => onDetail(effect)}>
                 {effect.iconPath ? <img src={effect.iconPath} alt="" /> : <span className="unspecified-icon">未指定</span>}
-                <span><strong>{effect.applied.name}</strong><small>{effect.categoryLabel} · {effect.applied.remainingTurns === null ? "—T" : `${effect.applied.remainingTurns}T`} · {effect.applied.remainingUses === null ? "—回" : `${effect.applied.remainingUses}回`} · 合計 {effect.totalValue.toLocaleString()}</small></span>
+                {effect.combinedMembers && effectHasDisplayValue({ effectType: effect.applied.effectType, value: effect.totalValue }) && <span className="effect-value-badge">{effectValueLabel(effect.applied, effect.totalValue)}</span>}
               </button>
             </li>
           ))}
@@ -693,12 +719,12 @@ function UnitPanel({
       </dl>
       <progress value={unit.hp} max={unit.maxHp} aria-label={`${unit.name} HP`} />
       {unit.side === "ally" && <p className="equipment-line">概念礼装：{craftEssence?.name ?? "未選択"}</p>}
-      <EffectTabs unit={unit} session={session} onDetail={(effect) => onDetail({ kind: "effect", effect })} />
       {skills.length > 0 && (
         <div className="unit-skill-row" aria-label={`${unit.name} 保有スキル`}>
           {skills.map((skill) => <SkillButton key={skill.stableId} skill={skill} onUse={() => onSkill?.(skill)} onDetail={() => onDetail({ kind: "skill", title: skill.name, rank: skill.rank, cooldown: skill.cooldownAtMax, descriptions: skill.descriptions })} />)}
         </div>
       )}
+      <EffectTabs unit={unit} session={session} onDetail={(effect) => onDetail({ kind: "effect", effect })} />
     </article>
   );
 }
@@ -884,10 +910,65 @@ function ResultOverlay({ session, onReturn, onFixedSeed, onCopy }: { session: Ba
   );
 }
 
-function PlaybackOverlay({ notice, summaries }: { notice: string; summaries: BattleLogSummary[] }) {
+function HpTransitionBars({ transitions }: { transitions: ConfirmedHpTransition[] }) {
+  const [animated, setAnimated] = useState(false);
+  useEffect(() => {
+    const animationFrame = window.requestAnimationFrame(() => setAnimated(true));
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, []);
+  if (transitions.length === 0) return null;
   return (
-    <div className="playback-blocker" role="alert" aria-live="assertive" aria-busy="true">
-      <div className="playback-notice"><strong>{notice}</strong>{summaries.slice(0, 4).map((summary) => <span key={summary.id}>{summary.title}{summary.changes.length ? `：${summary.changes.join(" / ")}` : summary.actualHpLoss !== null ? `：HP -${summary.actualHpLoss.toLocaleString()}` : ""}</span>)}</div>
+    <div className="hp-transition-groups">
+      {(["ally", "enemy"] as const).map((side) => {
+        const sideTransitions = transitions.filter((transition) => transition.side === side);
+        if (sideTransitions.length === 0) return null;
+        return (
+          <section key={side} className="hp-transition-group" aria-label={side === "ally" ? "味方HP増減" : "敵HP増減"}>
+            <h3>{side === "ally" ? "味方" : "敵"}</h3>
+            {sideTransitions.map((transition) => {
+              const displayedHp = animated ? transition.hpAfter : transition.hpBefore;
+              const width = transition.maxHp <= 0
+                ? 0
+                : Math.max(0, Math.min(100, displayedHp / transition.maxHp * 100));
+              const delta = transition.hpAfter - transition.hpBefore;
+              return (
+                <div key={transition.instanceId} className="hp-transition-row">
+                  <div><strong>{transition.name}</strong><span className={delta < 0 ? "hp-loss" : "hp-gain"}>{delta > 0 ? "+" : ""}{delta.toLocaleString()}</span></div>
+                  <div className="animated-hp-track" role="progressbar" aria-label={`${transition.name} HP`} aria-valuemin={0} aria-valuemax={transition.maxHp} aria-valuenow={displayedHp}><span style={{ width: `${width}%` }} /></div>
+                  <small>{transition.hpBefore.toLocaleString()} → {transition.hpAfter.toLocaleString()} / {transition.maxHp.toLocaleString()}</small>
+                </div>
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function PlaybackOverlay({ notice, summaries, hpTransitions, index, total, onPrevious, onNext }: { notice: string; summaries: BattleLogSummary[]; hpTransitions: ConfirmedHpTransition[]; index: number; total: number; onPrevious: () => void; onNext: () => void }) {
+  return (
+    <div className="playback-blocker" role="presentation">
+      <section className="playback-notice" role="dialog" aria-modal="true" aria-labelledby="playback-heading" onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not([disabled])")];
+        if (buttons.length === 0) return;
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }}>
+        <p className="playback-counter">{index + 1} / {total}</p>
+        <strong id="playback-heading" aria-live="polite">{notice}</strong>
+        <HpTransitionBars transitions={hpTransitions} />
+        {summaries.slice(0, 4).map((summary) => <span key={summary.id}>{summary.title}{summary.changes.length ? `：${summary.changes.join(" / ")}` : summary.actualHpLoss !== null ? `：HP -${summary.actualHpLoss.toLocaleString()}` : ""}</span>)}
+        <div className="playback-actions"><button type="button" disabled={index === 0} onClick={onPrevious}>前へ</button><button className="primary-button" type="button" autoFocus onClick={onNext}>{index + 1 === total ? "次へ（操作へ戻る）" : "次へ"}</button></div>
+      </section>
     </div>
   );
 }
@@ -916,6 +997,7 @@ export function BattleScreen({
       notice: string;
       state: BattleState;
       summaries: BattleLogSummary[];
+      hpTransitions: ConfirmedHpTransition[];
     }>;
     index: number;
   } | null>(null);
@@ -931,23 +1013,10 @@ export function BattleScreen({
 
   useEffect(() => {
     if (!playback) return;
-    const timer = window.setTimeout(() => {
-      if (playback.index + 1 < playback.frames.length) {
-        setPlayback({ ...playback, index: playback.index + 1 });
+    const blockKeyboardInput = (event: KeyboardEvent) => {
+      if (event.target instanceof Element && event.target.closest(".playback-notice")) {
         return;
       }
-      onSessionChange(playback.finalSession);
-      setSelectedCardIds([]);
-      setTargetInstanceId(firstLivingEnemyId(playback.finalSession));
-      setOperationMessage("確定ログの再生が完了しました。");
-      setPlayback(null);
-    }, 950);
-    return () => window.clearTimeout(timer);
-  }, [playback, onSessionChange]);
-
-  useEffect(() => {
-    if (!playback) return;
-    const blockKeyboardInput = (event: KeyboardEvent) => {
       event.preventDefault();
       event.stopImmediatePropagation();
     };
@@ -1054,6 +1123,24 @@ export function BattleScreen({
     else setPendingSkill({ skill });
   }
 
+  function showPreviousPlaybackFrame() {
+    if (!playback || playback.index === 0) return;
+    setPlayback({ ...playback, index: playback.index - 1 });
+  }
+
+  function showNextPlaybackFrame() {
+    if (!playback) return;
+    if (playback.index + 1 < playback.frames.length) {
+      setPlayback({ ...playback, index: playback.index + 1 });
+      return;
+    }
+    onSessionChange(playback.finalSession);
+    setSelectedCardIds([]);
+    setTargetInstanceId(firstLivingEnemyId(playback.finalSession));
+    setOperationMessage("確定結果の確認が完了しました。");
+    setPlayback(null);
+  }
+
   function executeTurn() {
     if (playback) return;
     const result = resolveBattleSessionTurn(session, {
@@ -1069,50 +1156,83 @@ export function BattleScreen({
     const presented = newLog ? presentBattleTurns([newLog], [])[0] : null;
     const section = (kind: "ally_action" | "ally_turn_end" | "enemy_action" | "enemy_turn_end") =>
       presented?.sections.find((candidate) => candidate.kind === kind)?.entries ?? [];
-    const frames: Array<{ notice: string; state: BattleState; summaries: BattleLogSummary[] }> = [];
+    type PlaybackFrame = { notice: string; state: BattleState; summaries: BattleLogSummary[]; hpTransitions: ConfirmedHpTransition[] };
+    const chainFrames: PlaybackFrame[] = [];
+    const hpFrames: PlaybackFrame[] = [];
+    const turnEndFrames: PlaybackFrame[] = [];
+    const waveFrames: PlaybackFrame[] = [];
+    let previousState = canonicalState;
+    const pushNotice = (
+      target: PlaybackFrame[],
+      notice: string,
+      state: BattleState,
+      summaries: BattleLogSummary[] = [],
+    ) => target.push({ notice, state, summaries, hpTransitions: [] });
+    const pushHpChanges = (
+      nextState: BattleState,
+      summaries: BattleLogSummary[] = [],
+    ) => {
+      const hpTransitions = confirmedHpTransitions(previousState, nextState);
+      if (hpTransitions.length > 0) {
+        hpFrames.push({
+          notice: "敵・味方HP増減",
+          state: nextState,
+          summaries,
+          hpTransitions,
+        });
+      }
+      previousState = nextState;
+    };
     if (resolution.allyAttacks.sequence.accepted) {
       const sequence = resolution.allyAttacks.sequence.result;
       for (const notice of confirmedChainNotices(sequence.chain)) {
-        frames.push({ notice, state: canonicalState, summaries: [] });
+        pushNotice(chainFrames, notice, canonicalState);
       }
       const allySummaries = section("ally_action");
       sequence.actions.forEach((action, index) => {
-        frames.push({
-          notice: "スキル・味方行動",
-          state: action.boundary.state,
-          summaries: allySummaries[index] ? [allySummaries[index]] : [],
-        });
+        pushHpChanges(
+          action.boundary.state,
+          allySummaries[index] ? [allySummaries[index]] : [],
+        );
       });
     }
     if (resolution.allyTurnEnd) {
-      frames.push({ notice: "味方ターン終了", state: resolution.allyTurnEnd.state, summaries: section("ally_turn_end") });
+      pushHpChanges(resolution.allyTurnEnd.state);
+      pushNotice(turnEndFrames, "味方ターン終了", result.session.loop.state, section("ally_turn_end"));
       const allyEndRecord = newLog?.records.find((record) => record.recordType === "turn_end" && record.side === "ally");
       if (allyEndRecord?.recordType === "turn_end" && allyEndRecord.checkpoint.waveTransition) {
-        frames.push({ notice: "Wave突破", state: resolution.allyTurnEnd.state, summaries: section("ally_turn_end") });
+        pushNotice(waveFrames, "Wave突破", result.session.loop.state, section("ally_turn_end"));
       }
     }
     if (resolution.enemyAttacks) {
       const enemySummaries = section("enemy_action");
       resolution.enemyAttacks.sequence.actions.forEach((action, index) => {
-        frames.push({
-          notice: "敵行動",
-          state: action.boundary.state,
-          summaries: enemySummaries[index] ? [enemySummaries[index]] : [],
-        });
+        pushHpChanges(
+          action.boundary.state,
+          enemySummaries[index] ? [enemySummaries[index]] : [],
+        );
       });
     }
     if (resolution.enemyTurnEnd) {
-      frames.push({ notice: "敵ターン終了", state: resolution.enemyTurnEnd.state, summaries: section("enemy_turn_end") });
+      pushHpChanges(resolution.enemyTurnEnd.state);
+      pushNotice(turnEndFrames, "敵ターン終了", result.session.loop.state, section("enemy_turn_end"));
       const enemyEndRecord = newLog?.records.find((record) => record.recordType === "turn_end" && record.side === "enemy");
       if (enemyEndRecord?.recordType === "turn_end" && enemyEndRecord.checkpoint.waveTransition) {
-        frames.push({ notice: "Wave突破", state: resolution.enemyTurnEnd.state, summaries: section("enemy_turn_end") });
+        pushNotice(waveFrames, "Wave突破", result.session.loop.state, section("enemy_turn_end"));
       }
     }
+    const frames = [
+      ...chainFrames,
+      ...hpFrames,
+      ...turnEndFrames,
+      ...waveFrames,
+    ];
     if (frames.length === 0) {
       frames.push({
         notice: newLog ? confirmedPlaybackNotices(newLog)[0] ?? "確定結果を再生中" : "確定結果を再生中",
         state: result.session.loop.state,
         summaries: [],
+        hpTransitions: [],
       });
     }
     setPlayback({ finalSession: result.session, frames, index: 0 });
@@ -1134,9 +1254,9 @@ export function BattleScreen({
       <section className="panel" aria-labelledby="ally-heading">
         <div className="section-heading"><div><p className="section-kicker">ALLY</p><h2 id="ally-heading">味方前衛・控え・魔術礼装</h2></div><span className="badge">スター {state.commandStars}</span></div>
         <div className="tab-list ally-tabs" role="tablist" aria-label="味方領域">{(["frontline", "reserve", "mystic"] as const).map((tab, index) => <button key={tab} type="button" role="tab" aria-selected={allyTab === tab} onClick={() => setAllyTab(tab)}>{["前衛", "控え", "魔術礼装"][index]}</button>)}</div>
-        {allyTab === "frontline" && <div className="unit-grid">{state.formation.ally.frontline.map((unit, index) => unit ? <UnitPanel key={unit.instanceId} unit={unit} session={session} slotLabel={`前衛${index + 1}`} skills={state.outcome === "ongoing" ? allySkills(unit) : []} onSkill={beginSkill} onDetail={setDetail} /> : <div key={`empty-ally-${index}`} className="empty-slot">前衛{index + 1}：空き</div>)}</div>}
-        {allyTab === "reserve" && <><div className="unit-grid">{state.formation.ally.reserve.length ? state.formation.ally.reserve.map((unit, index) => <UnitPanel key={unit.instanceId} unit={unit} session={session} slotLabel={`控え${index + 1}`} onDetail={setDetail} />) : <div className="empty-slot">控えなし</div>}</div>{state.outcome === "ongoing" && mysticSkills.length > 0 && <article className="mystic-skills"><h3>魔術礼装スキル</h3><div className="unit-skill-row">{mysticSkills.map((skill) => <SkillButton key={skill.stableId} skill={skill} onUse={() => beginSkill(skill)} onDetail={() => setDetail({ kind: "skill", title: skill.name, rank: null, cooldown: skill.cooldownAtMax, descriptions: skill.descriptions })} />)}</div></article>}</>}
-        {allyTab === "mystic" && <article className="mystic-overview"><h3>{state.loadout.mysticCode?.name ?? "未選択"}</h3><p>スキルLv最大</p><p>現在CT：{state.mysticCodeCooldowns.join(" / ") || "—"}</p><p className="muted">魔術礼装スキルの操作は「控え」タブの下に表示します。</p></article>}
+        {allyTab === "frontline" && <><div className="unit-grid">{state.formation.ally.frontline.map((unit, index) => unit ? <UnitPanel key={unit.instanceId} unit={unit} session={session} slotLabel={`前衛${index + 1}`} skills={state.outcome === "ongoing" ? allySkills(unit) : []} onSkill={beginSkill} onDetail={setDetail} /> : <div key={`empty-ally-${index}`} className="empty-slot">前衛{index + 1}：空き</div>)}</div>{state.outcome === "ongoing" && mysticSkills.length > 0 && <article className="mystic-skills"><h3>魔術礼装スキル</h3><div className="unit-skill-row">{mysticSkills.map((skill) => <SkillButton key={skill.stableId} skill={skill} onUse={() => beginSkill(skill)} onDetail={() => setDetail({ kind: "skill", title: skill.name, rank: null, cooldown: skill.cooldownAtMax, descriptions: skill.descriptions })} />)}</div></article>}</>}
+        {allyTab === "reserve" && <div className="unit-grid">{state.formation.ally.reserve.length ? state.formation.ally.reserve.map((unit, index) => <UnitPanel key={unit.instanceId} unit={unit} session={session} slotLabel={`控え${index + 1}`} onDetail={setDetail} />) : <div className="empty-slot">控えなし</div>}</div>}
+        {allyTab === "mystic" && <article className="mystic-overview"><h3>{state.loadout.mysticCode?.name ?? "未選択"}</h3><p>スキルLv最大</p><p>現在CT：{state.mysticCodeCooldowns.join(" / ") || "—"}</p><p className="muted">魔術礼装スキルの操作は「前衛」タブの最下部に表示します。</p></article>}
       </section>
 
       <section className="panel command-panel" aria-labelledby="command-heading">
@@ -1159,7 +1279,7 @@ export function BattleScreen({
 
       {detail && <DetailModal detail={detail} onClose={() => setDetail(null)} />}
       {pendingSkill && <SkillTargetModal pending={pendingSkill} session={session} onConfirm={(targetId, orderChange) => resolveSkill(pendingSkill.skill, targetId, orderChange)} onClose={() => setPendingSkill(null)} />}
-      {playbackFrame && <PlaybackOverlay notice={playbackFrame.notice} summaries={playbackFrame.summaries} />}
+      {playbackFrame && playback && <PlaybackOverlay key={playback.index} notice={playbackFrame.notice} summaries={playbackFrame.summaries} hpTransitions={playbackFrame.hpTransitions} index={playback.index} total={playback.frames.length} onPrevious={showPreviousPlaybackFrame} onNext={showNextPlaybackFrame} />}
       {state.outcome !== "ongoing" && !playback && <ResultOverlay session={session} onReturn={onReturnToSetup} onFixedSeed={() => onFixedSeedToSetup(session.loop.rng.seed)} onCopy={() => copySeed(session.loop.rng.seed, setOperationMessage)} />}
     </main>
   );

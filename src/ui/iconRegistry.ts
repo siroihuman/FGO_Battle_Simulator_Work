@@ -28,9 +28,16 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "与ダメージプラス": "Powerup",
 };
 
+function publicAssetPath(path: string): string {
+  const base = import.meta.env.BASE_URL.endsWith("/")
+    ? import.meta.env.BASE_URL
+    : `${import.meta.env.BASE_URL}/`;
+  return `${base}${path.replace(/^\/+/, "")}`;
+}
+
 export function registeredSkillIconPath(name: string): string | null {
   const id = SKILL_ICON_IDS[name];
-  return id ? `/assets/skill-icons/${id}.png` : null;
+  return id ? publicAssetPath(`assets/skill-icons/${id}.png`) : null;
 }
 
 function statusIconId(effect: AppliedEffect): string | null {
@@ -92,7 +99,7 @@ function statusIconId(effect: AppliedEffect): string | null {
 
 export function registeredStatusIconPath(effect: AppliedEffect): string | null {
   const id = statusIconId(effect);
-  return id ? `/assets/status-icons/${id}.webp` : null;
+  return id ? publicAssetPath(`assets/status-icons/${id}.webp`) : null;
 }
 
 export function unspecifiedEffectNames(

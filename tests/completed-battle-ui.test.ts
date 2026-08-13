@@ -8,12 +8,17 @@ import { LIGHT_KOYANSKAYA, LUCIFERA } from "../src/data/servants";
 import {
   confirmedPlaybackNotices,
   confirmedChainNotices,
+  confirmedHpTransitions,
   presentBattleSummary,
   presentBattleTurns,
   selectedChainCriticalBonus,
   toggleSelectedCommandCard,
 } from "../src/ui/battleUi";
-import { presentUnitEffects } from "../src/ui/effectPresentation";
+import {
+  effectValueLabel,
+  presentCombinedEffects,
+  presentUnitEffects,
+} from "../src/ui/effectPresentation";
 import {
   registeredSkillIconPath,
   registeredStatusIconPath,
@@ -92,13 +97,13 @@ describe("completed battle UI selectors", () => {
     const unit = started.loop.state.formation.ally.frontline[0]!;
     const effects = presentUnitEffects(started, unit);
     expect(registeredSkillIconPath("イノベイター・バニー"))
-      .toBe("/assets/skill-icons/skill-np-charge.png");
+      .toBe("/FGO_Battle_Simulator_Work/assets/skill-icons/skill-np-charge.png");
     const noblePower = effects.find(({ applied }) =>
       applied.name === "宝具威力アップ"
     );
     expect(noblePower).toBeDefined();
     expect(registeredStatusIconPath(noblePower!.applied))
-      .toBe("/assets/status-icons/Nppowerup.webp");
+      .toBe("/FGO_Battle_Simulator_Work/assets/status-icons/Nppowerup.webp");
     const recurring = effects.find(({ applied }) =>
       applied.name === "毎ターンHP減少"
     );
@@ -108,13 +113,13 @@ describe("completed battle UI selectors", () => {
       unit.effects.map((effect) => [effect.name, effect]),
     );
     expect(registeredStatusIconPath(effectByName.get("Artsカード性能アップ")!))
-      .toBe("/assets/status-icons/Artsupstatus.webp");
+      .toBe("/FGO_Battle_Simulator_Work/assets/status-icons/Artsupstatus.webp");
     expect(registeredStatusIconPath(effectByName.get("Quickカード性能アップ")!))
-      .toBe("/assets/status-icons/Quickupstatus.webp");
+      .toBe("/FGO_Battle_Simulator_Work/assets/status-icons/Quickupstatus.webp");
     expect(registeredStatusIconPath(effectByName.get("スター発生率アップ")!))
-      .toBe("/assets/status-icons/Stargainup.webp");
+      .toBe("/FGO_Battle_Simulator_Work/assets/status-icons/Stargainup.webp");
     expect(registeredStatusIconPath(effectByName.get("精神異常耐性アップ")!))
-      .toBe("/assets/status-icons/Resistanceup.webp");
+      .toBe("/FGO_Battle_Simulator_Work/assets/status-icons/Resistanceup.webp");
     expect(unspecifiedEffectNames(unit.effects)).toEqual([]);
 
     const lucifera = started.loop.state.formation.ally.frontline[1]!;
@@ -123,8 +128,82 @@ describe("completed battle UI selectors", () => {
     );
     expect(fixedDamage).toBeDefined();
     expect(registeredStatusIconPath(fixedDamage!))
-      .toBe("/assets/status-icons/Powerup.webp");
+      .toBe("/FGO_Battle_Simulator_Work/assets/status-icons/Powerup.webp");
     expect(unspecifiedEffectNames(lucifera.effects)).toEqual([]);
+  });
+
+  it("formats rate values as percent and combines matching effects across every source", () => {
+    const started = session();
+    const koyanskaya = started.loop.state.formation.ally.frontline[0]!;
+    const combined = presentCombinedEffects(
+      presentUnitEffects(started, koyanskaya),
+    );
+    const noblePhantasmDamage = combined.find(({ displayName }) =>
+      displayName === "宝具威力"
+    );
+    expect(noblePhantasmDamage?.totalValue).toBe(1_000);
+    expect(effectValueLabel(
+      noblePhantasmDamage!.applied,
+      noblePhantasmDamage!.totalValue,
+    )).toBe("100%");
+    expect(noblePhantasmDamage?.combinedMembers?.map(({ sourceKind }) => sourceKind))
+      .toEqual(expect.arrayContaining(["class_skill", "craft_essence"]));
+    expect(effectValueLabel({ effectType: "card_performance" }, 500))
+      .toBe("50%");
+
+    const lucifera = started.loop.state.formation.ally.frontline[1]!;
+    const fixedDamage = presentCombinedEffects(
+      presentUnitEffects(started, lucifera),
+    ).find(({ applied }) => applied.effectType === "fixed_damage");
+    expect(effectValueLabel(fixedDamage!.applied, fixedDamage!.totalValue))
+      .toBe("175");
+
+    const nobleMembers = presentUnitEffects(started, koyanskaya).filter(
+      ({ applied }) => applied.effectType === "noble_phantasm_damage",
+    );
+    const down = {
+      ...nobleMembers[0],
+      key: "np-down",
+      sourceKind: "active_skill" as const,
+      sourceName: "テスト用宝具",
+      applied: {
+        ...nobleMembers[0].applied,
+        instanceId: "effect-np-down",
+        name: "宝具威力ダウン",
+        value: -400,
+        remainingTurns: 2,
+      },
+    };
+    const net = presentCombinedEffects([...nobleMembers, down])[0];
+    expect(net.totalValue).toBe(600);
+    expect(effectValueLabel(net.applied, net.totalValue)).toBe("60%");
+    expect(net.combinedMembers?.map(({ applied }) => applied.remainingTurns))
+      .toEqual(expect.arrayContaining([null, 2]));
+  });
+
+  it("uses explicit quest-special metadata for enemy tabs without guessing", () => {
+    const started = session();
+    const allyEffect = started.loop.state.formation.ally.frontline[0]!.effects[0];
+    const enemy = started.loop.state.formation.enemy.frontline[0]!;
+    const presented = presentUnitEffects(started, {
+      ...enemy,
+      effects: [
+        {
+          ...allyEffect,
+          instanceId: "enemy-normal-effect",
+          targetInstanceId: enemy.instanceId,
+        },
+        {
+          ...allyEffect,
+          instanceId: "enemy-special-effect",
+          stableId: "quest-special-effect",
+          targetInstanceId: enemy.instanceId,
+          flags: { ...allyEffect.flags, questSpecial: true },
+        },
+      ],
+    });
+    expect(presented.map(({ enemyTab }) => enemyTab))
+      .toEqual(["normal", "special"]);
   });
 
   it("presents save summaries and four saved-log sections without re-running battle rules", () => {
@@ -144,6 +223,32 @@ describe("completed battle UI selectors", () => {
       ally: { requestedTargetInstanceId: "enemy-w1-1" },
     });
     expect(progressed.result.accepted).toBe(true);
+    const hpTransitions = confirmedHpTransitions(
+      started.loop.state,
+      progressed.session.loop.state,
+    );
+    expect(hpTransitions.length).toBeGreaterThan(0);
+    expect(hpTransitions.every(({ hpBefore, hpAfter }) => hpBefore !== hpAfter))
+      .toBe(true);
+    const departedEnemy = started.loop.state.formation.enemy.frontline[0]!;
+    const departed = confirmedHpTransitions(started.loop.state, {
+      ...started.loop.state,
+      formation: {
+        ...started.loop.state.formation,
+        enemy: {
+          ...started.loop.state.formation.enemy,
+          frontline: [
+            null,
+            ...started.loop.state.formation.enemy.frontline.slice(1),
+          ],
+        },
+      },
+    });
+    expect(departed).toContainEqual(expect.objectContaining({
+      instanceId: departedEnemy.instanceId,
+      hpBefore: departedEnemy.hp,
+      hpAfter: 0,
+    }));
     const turns = presentBattleTurns(
       progressed.session.turnLogs,
       progressed.session.inputLogs,
@@ -181,15 +286,22 @@ describe("completed battle UI selectors", () => {
     }, -1);
     expect(markup).toContain("クラススキル");
     expect(markup).toContain("概念礼装");
-    expect(markup).toContain("保有スキル・宝具");
-    expect(markup).toContain("敵スキル・宝具");
-    expect(markup).toContain("その他の状態");
+    expect(markup).toContain("その他");
+    expect(markup).toContain("通常");
+    expect(markup).toContain("特殊");
+    expect(markup).toContain("合算");
+    expect(markup).toContain('aria-selected="true">その他</button>');
+    expect(markup).toContain('aria-selected="true">通常</button>');
+    expect(markup.indexOf("魔術礼装スキル"))
+      .toBeGreaterThan(markup.indexOf("前衛3"));
+    expect(markup.indexOf('aria-label="光のコヤンスカヤ 保有スキル"'))
+      .toBeLessThan(markup.indexOf('aria-label="光のコヤンスカヤ 効果分類"'));
     expect(markup.match(/class=\"command-card/g)).toHaveLength(
       listCommandCardChoices(started.loop.state).length,
     );
     expect(markup).toContain("今回のシード：<code>completed-ui</code>");
     expect(markup).toContain("戦闘状態要約");
-    expect(markup).toContain("src=\"/assets/skill-icons/skill-np-charge.png\"");
+    expect(markup).toContain("src=\"/FGO_Battle_Simulator_Work/assets/skill-icons/skill-np-charge.png\"");
   });
 
 });

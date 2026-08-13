@@ -604,10 +604,21 @@ if (manifest) {
   assert(
     manifest.status === "completed-ui-spec-implemented"
       && completedUi.decisionRange === "D-077-D-085"
+      && completedUi.acceptanceRevision === "D-086"
       && completedUi.defaultSeedMode === "random"
       && completedUi.randomBlankSeedResolvedBeforeBattleRng === true
+      && JSON.stringify(completedUi.allyEffectTabs) === JSON.stringify(["class_skill", "craft_essence", "other", "combined"])
+      && completedUi.allyEffectDefaultTab === "other"
+      && JSON.stringify(completedUi.enemyEffectTabs) === JSON.stringify(["normal", "special", "combined"])
+      && completedUi.enemyEffectDefaultTab === "normal"
+      && completedUi.combinedEffectMutatesBattleState === false
+      && completedUi.rateDisplayUnit === "percent_from_permille_divided_by_10"
+      && completedUi.publicAssetUrlSource === "vite_base_url"
+      && completedUi.mysticCodeSkillPosition === "frontline_tab_bottom"
       && completedUi.commandCardSelectionMaximum === 3
       && completedUi.confirmedLogPlaybackOnly === true
+      && completedUi.playbackNavigation === "manual_previous_next"
+      && completedUi.playbackAutomaticAdvance === false
       && completedUi.playbackStateSaved === false
       && completedUi.battleSuspendSchemaChange === false
       && completedUi.dataSchemaChange === false,
@@ -1086,8 +1097,8 @@ const uiAcceptance = await readText(
 );
 assert(
   uiAcceptance.includes("判定: 条件付き合格")
-    && uiAcceptance.includes("51ファイル・521テスト")
-    && uiAcceptance.includes("ユーザー実画面確認待ち"),
+    && uiAcceptance.includes("51ファイル・523テスト")
+    && uiAcceptance.includes("ユーザー実画面再確認待ち"),
   "UI完成仕様の受入報告が正本と一致しません"
 );
 
@@ -1142,7 +1153,8 @@ assert(
     && decisionLog.includes("## D-082 3枚選択時の入力ロックとカード識別を固定する")
     && decisionLog.includes("## D-083 確定ログだけを再生し、再生中入力を遮断する")
     && decisionLog.includes("## D-084 リザルトを確定戦闘画面へ重ねる")
-    && decisionLog.includes("## D-085 保存・再開を要約付き・非破壊にする"),
+    && decisionLog.includes("## D-085 保存・再開を要約付き・非破壊にする")
+    && decisionLog.includes("## D-086 UI実画面受入の状態表示と確定結果演出を追補する"),
   "決定記録にUI完成仕様D-077～D-085がありません"
 );
 
@@ -1206,6 +1218,10 @@ assert(
 
 const uiAndStorage = await readText("docs/specs/UI_AND_STORAGE.md");
 const uiStyles = await readText("src/styles.css");
+const appSource = await readText("src/App.tsx");
+const effectPresentation = await readText("src/ui/effectPresentation.ts");
+const iconRegistry = await readText("src/ui/iconRegistry.ts");
+const battleUi = await readText("src/ui/battleUi.ts");
 assert(
   uiAndStorage.includes("敵宝具の任意の宝具Lv・OC文脈")
     && uiAndStorage.includes("UIは段階選択、配列参照、文脈補完"),
@@ -1218,13 +1234,33 @@ assert(
   "UI・保存仕様にターン終了スターの確定ログと版維持規則がありません"
 );
 assert(
+  uiAndStorage.includes("味方効果はクラススキル／概念礼装／その他／合算")
+    && uiAndStorage.includes("敵効果は通常／特殊／合算")
+    && uiAndStorage.includes("倍率として登録されるpermille値は表示時だけ10で割って百分率")
+    && uiAndStorage.includes("時間による自動送りは行わない")
+    && uiAndStorage.includes("敵・味方のHPバー"),
+  "UI・保存仕様にD-086の状態表示・合算・手動HP演出がありません"
+);
+assert(
   /button\s*\{[\s\S]*?min-height:\s*3\.5rem/.test(uiStyles)
     && /@media \(max-width: 43\.99rem\)[\s\S]*?\.unit-grid,[\s\S]*?overflow-x:\s*auto/.test(uiStyles)
     && /@media \(min-width: 44rem\)[\s\S]*?\.slot-grid,[\s\S]*?\.unit-grid\s*\{\s*grid-template-columns:\s*repeat\(3/.test(uiStyles)
     && /@media \(min-width: 44rem\)[\s\S]*?\.card-grid\s*\{\s*grid-template-columns:\s*repeat\(5/.test(uiStyles)
     && /\.modal-backdrop,[\s\S]*?position:\s*fixed/.test(uiStyles)
-    && /\.playback-blocker\s*\{[\s\S]*?z-index:\s*120/.test(uiStyles),
+    && /\.playback-blocker\s*\{[\s\S]*?z-index:\s*120/.test(uiStyles)
+    && /\.animated-hp-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles),
   "UIのPC・スマートフォン・56px・モーダル・再生遮断CSSが一致しません"
+);
+assert(
+  appSource.includes("前へ")
+    && appSource.includes("次へ（操作へ戻る）")
+    && appSource.includes("confirmedHpTransitions")
+    && appSource.includes("魔術礼装スキルの操作は「前衛」タブの最下部")
+    && effectPresentation.includes("presentCombinedEffects")
+    && effectPresentation.includes("value / 10")
+    && iconRegistry.includes("import.meta.env.BASE_URL")
+    && battleUi.includes("confirmedHpTransitions"),
+  "UI実装にD-086の画像パス・合算・百分率・手動HP演出がありません"
 );
 const battlePresentation = await readText("src/ui/battlePresentation.ts");
 assert(

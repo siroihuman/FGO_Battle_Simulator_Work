@@ -2,6 +2,7 @@ import type { BattleSession } from "../core/battle/session";
 import type { BattleUnitState } from "../core/battle/types";
 import type { DeclaredActionEffect } from "../effects/declarations";
 import type { AppliedEffect, EffectTemplate } from "../effects/types";
+import { COMMON_EFFECT_TYPES } from "../effects/modifiers";
 import { INITIAL_SERVANT_DEFINITIONS } from "../data/servants";
 import { registeredStatusIconPath } from "./iconRegistry";
 
@@ -13,8 +14,12 @@ export type EffectSourceKind =
   | "enemy_action"
   | "other";
 
-export type AllyEffectTab = "class_skill" | "craft_essence" | "active";
-export type EnemyEffectTab = "enemy_action" | "other";
+export type AllyEffectTab =
+  | "class_skill"
+  | "craft_essence"
+  | "active"
+  | "combined";
+export type EnemyEffectTab = "normal" | "special" | "combined";
 
 export interface PresentedEffect {
   key: string;
@@ -23,11 +28,60 @@ export interface PresentedEffect {
   sourceName: string;
   sourceRank: string | null;
   description: string;
+  displayName: string;
   totalValue: number;
   iconPath: string | null;
   categoryLabel: "強化" | "弱体" | "状態";
   allyTab: AllyEffectTab;
   enemyTab: EnemyEffectTab;
+  combinedMembers: readonly PresentedEffect[] | null;
+}
+
+const RATE_EFFECT_TYPES = new Set<string>([
+  COMMON_EFFECT_TYPES.attack,
+  COMMON_EFFECT_TYPES.buffRemovalResistance,
+  COMMON_EFFECT_TYPES.buffSuccess,
+  COMMON_EFFECT_TYPES.cardPerformance,
+  COMMON_EFFECT_TYPES.cardResistance,
+  COMMON_EFFECT_TYPES.criticalDamage,
+  COMMON_EFFECT_TYPES.debuffRemovalResistance,
+  COMMON_EFFECT_TYPES.debuffResistance,
+  COMMON_EFFECT_TYPES.debuffSuccess,
+  COMMON_EFFECT_TYPES.defense,
+  COMMON_EFFECT_TYPES.givenHpRecovery,
+  COMMON_EFFECT_TYPES.instantDeathResistance,
+  COMMON_EFFECT_TYPES.instantDeathSuccess,
+  COMMON_EFFECT_TYPES.noblePhantasmDamage,
+  COMMON_EFFECT_TYPES.npGain,
+  COMMON_EFFECT_TYPES.power,
+  COMMON_EFFECT_TYPES.receivedBuffSuccess,
+  COMMON_EFFECT_TYPES.receivedHpRecovery,
+  COMMON_EFFECT_TYPES.receivedNpGain,
+  COMMON_EFFECT_TYPES.specialDefense,
+  COMMON_EFFECT_TYPES.starFocus,
+  COMMON_EFFECT_TYPES.starGeneration,
+  COMMON_EFFECT_TYPES.targetDamage,
+  COMMON_EFFECT_TYPES.targetStarGeneration,
+]);
+
+function formattedNumber(value: number): string {
+  return value.toLocaleString("ja-JP", { maximumFractionDigits: 1 });
+}
+
+/** Converts only registered permille rate fields to their displayed percent. */
+export function effectValueLabel(
+  effect: Pick<AppliedEffect, "effectType">,
+  value: number,
+): string {
+  return RATE_EFFECT_TYPES.has(effect.effectType)
+    ? `${formattedNumber(value / 10)}%`
+    : formattedNumber(value);
+}
+
+export function effectHasDisplayValue(
+  effect: Pick<AppliedEffect, "effectType" | "value">,
+): boolean {
+  return RATE_EFFECT_TYPES.has(effect.effectType) || effect.value !== 0;
 }
 
 interface EffectSourceMetadata {
@@ -158,6 +212,29 @@ function categoryLabel(
   return "状態";
 }
 
+function enemyTabForEffect(
+  effect: AppliedEffect,
+): EnemyEffectTab {
+  return effect.flags.questSpecial === true ? "special" : "normal";
+}
+
+function combinedDisplayName(effect: AppliedEffect): string {
+  return effect.name.replace(/(?:アップ|ダウン)$/u, "");
+}
+
+function combinedEffectKey(effect: AppliedEffect): string {
+  const flags = Object.entries(effect.flags)
+    .filter(([name]) => name !== "questSpecial")
+    .sort(([left], [right]) => left.localeCompare(right));
+  return JSON.stringify({
+    effectType: effect.effectType,
+    classifications: [...effect.classifications].sort(),
+    flags,
+    trigger: effect.trigger ?? null,
+    slipDamageAmplifierKind: effect.slipDamageAmplifierKind ?? null,
+  });
+}
+
 /** Builds display-only effect rows from applied state and registered declarations. */
 export function presentUnitEffects(
   session: BattleSession,
@@ -166,12 +243,17 @@ export function presentUnitEffects(
   const index = metadataIndex(session);
   return unit.effects.map((effect) => {
     const source = metadataForEffect(index, effect);
+    const sourceIdentity = source
+      ? `${source.sourceInstanceId}:${source.sourceStableId}`
+      : `${effect.sourceInstanceId ?? "no-source"}:${effect.stableId}`;
     const sameSourceValues = unit.effects.filter((candidate) => {
       const candidateSource = metadataForEffect(index, candidate);
+      const candidateSourceIdentity = candidateSource
+        ? `${candidateSource.sourceInstanceId}:${candidateSource.sourceStableId}`
+        : `${candidate.sourceInstanceId ?? "no-source"}:${candidate.stableId}`;
       return candidate.name === effect.name
         && candidate.effectType === effect.effectType
-        && candidateSource?.sourceInstanceId === source?.sourceInstanceId
-        && candidateSource?.sourceStableId === source?.sourceStableId;
+        && candidateSourceIdentity === sourceIdentity;
     }).reduce((total, candidate) => total + candidate.value, 0);
     const sourceKind = source?.sourceKind ?? "other";
     return {
@@ -181,13 +263,58 @@ export function presentUnitEffects(
       sourceName: source?.sourceName ?? "登録外の状態",
       sourceRank: source?.sourceRank ?? null,
       description: source?.description ?? "登録済み説明なし",
+      displayName: effect.name,
       totalValue: sameSourceValues,
       iconPath: registeredStatusIconPath(effect),
       categoryLabel: categoryLabel(effect.category),
       allyTab: sourceKind === "class_skill"
         ? "class_skill"
         : sourceKind === "craft_essence" ? "craft_essence" : "active",
-      enemyTab: sourceKind === "enemy_action" ? "enemy_action" : "other",
+      enemyTab: enemyTabForEffect(effect),
+      combinedMembers: null,
+    };
+  });
+}
+
+/**
+ * Nets every currently applied effect with the same mechanical kind and
+ * conditions. Remaining turns, uses, and sources do not split the display
+ * group, but stay available in combinedMembers for the detail dialog.
+ */
+export function presentCombinedEffects(
+  effects: readonly PresentedEffect[],
+): PresentedEffect[] {
+  const groups = new Map<string, PresentedEffect[]>();
+  for (const effect of effects) {
+    const key = combinedEffectKey(effect.applied);
+    const group = groups.get(key);
+    if (group) group.push(effect);
+    else groups.set(key, [effect]);
+  }
+  return [...groups.entries()].map(([aggregationKey, members]) => {
+    const totalValue = members.reduce(
+      (total, member) => total + member.applied.value,
+      0,
+    );
+    const totalSign = Math.sign(totalValue);
+    const representative = members.find((member) =>
+      member.iconPath && (
+        totalSign === 0 || Math.sign(member.applied.value) === totalSign
+      )
+    ) ?? members.find(({ iconPath }) => iconPath) ?? members[0];
+    return {
+      ...representative,
+      key: `combined:${aggregationKey}`,
+      sourceKind: "other",
+      sourceName: "全発生元の合算",
+      sourceRank: null,
+      description: "現在付与されている同種効果を、発生元・残りターン・残り回数にかかわらず合算した表示です。",
+      displayName: combinedDisplayName(representative.applied),
+      totalValue,
+      categoryLabel: "状態",
+      allyTab: "combined",
+      enemyTab: "combined",
+      combinedMembers: members,
     };
   });
 }

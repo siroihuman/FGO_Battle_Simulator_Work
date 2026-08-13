@@ -3,6 +3,7 @@ import type { BattleSession } from "../core/battle/session";
 import type { BattleLogBatch } from "../core/battle/log";
 import type { BattleTurnLog } from "../core/battle/turnLog";
 import type { CommandCardChainAnalysis } from "../core/cards/chain";
+import type { BattleState } from "../core/battle/state";
 import {
   summarizeBattleInputLogs,
   summarizeBattleTurnLogs,
@@ -155,4 +156,47 @@ export function confirmedChainNotices(
   if (chain.mightyChain) notices.push("Mighty Chain成立");
   if (chain.braveChain) notices.push("Brave Chain成立");
   return notices;
+}
+
+export interface ConfirmedHpTransition {
+  instanceId: string;
+  name: string;
+  side: "ally" | "enemy";
+  hpBefore: number;
+  hpAfter: number;
+  maxHp: number;
+}
+
+function unitsByInstanceId(state: BattleState) {
+  return new Map([
+    ...state.formation.ally.frontline,
+    ...state.formation.ally.reserve,
+    ...state.formation.enemy.frontline,
+    ...state.formation.enemy.reserve,
+  ].flatMap((unit) => unit ? [[unit.instanceId, unit] as const] : []));
+}
+
+/** Reads two engine-confirmed snapshots and exposes only their saved HP values. */
+export function confirmedHpTransitions(
+  before: BattleState,
+  after: BattleState,
+): ConfirmedHpTransition[] {
+  const beforeUnits = unitsByInstanceId(before);
+  const afterUnits = unitsByInstanceId(after);
+  return [...new Set([...beforeUnits.keys(), ...afterUnits.keys()])]
+    .flatMap((instanceId) => {
+      const beforeUnit = beforeUnits.get(instanceId);
+      const afterUnit = afterUnits.get(instanceId);
+      if (!beforeUnit) return [];
+      const hpAfter = afterUnit?.hp ?? 0;
+      if (beforeUnit.hp === hpAfter) return [];
+      return [{
+        instanceId,
+        name: afterUnit?.name ?? beforeUnit.name,
+        side: afterUnit?.side ?? beforeUnit.side,
+        hpBefore: beforeUnit.hp,
+        hpAfter,
+        maxHp: afterUnit?.maxHp ?? beforeUnit.maxHp,
+      }];
+    });
 }

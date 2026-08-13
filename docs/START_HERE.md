@@ -5,13 +5,13 @@
 ## 現在地点
 
 - フェーズ: 18／UI完成仕様（D-077～D-085実装・受入確認）
-- 状態: 4タブ設定、確定シード、固定領域順、発生元別効果、指定画像限定、スキル詳細・対象モーダル、3枚入力ロック、4区分ログ・確定結果再生、重ねリザルト、要約付き保存・非破壊再開を実装。BattleSessionと既存保存・直接再開・リプレイ・カード再配布を維持し、具体コンテンツは未追加。
+- 状態: 4タブ設定、確定シード、固定領域順、指定画像限定、味方・敵の発生元別／合算状態タブ、アイコン中心表示、表示倍率の百分率化、スキル詳細・対象モーダル、3枚入力ロック、4区分ログ、前後ボタン式の確定結果・HPバー演出、重ねリザルト、要約付き保存・非破壊再開を実装。BattleSessionと既存保存・直接再開・リプレイ・カード再配布を維持し、具体コンテンツは未追加。D-086追補後のユーザー実画面再確認待ち。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. UI完成PRの実画面を確認し、追加確認点を解消する。UI完成確認まではサーヴァント・敵・概念礼装等の具体コンテンツを追加しない。
+1. UI完成PRのD-086追補を実画面で再確認し、追加確認点を解消する。UI完成確認まではサーヴァント・敵・概念礼装等の具体コンテンツを追加しない。
 2. UI完成確認後に限り、初期範囲外の具体コンテンツ追加対象を1件だけ選定する。
 
 ターン終了スター獲得の受入詳細は[`qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md`](qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md)、敵宝具段階文脈は[`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)、スリップダメージ倍加は[`qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md`](qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md)、魔術協会制服は[`qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md`](qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md)、カード再配布共通処理は[`qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md`](qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md)、従来のv1.0初期範囲は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
