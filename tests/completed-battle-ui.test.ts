@@ -104,12 +104,27 @@ describe("completed battle UI selectors", () => {
     );
     expect(recurring?.sourceKind).toBe("craft_essence");
     expect(recurring?.description).toContain("毎ターンHP500減少");
-    expect(unspecifiedEffectNames(unit.effects)).toEqual([
-      "Artsカード性能アップ",
-      "Quickカード性能アップ",
-      "スター発生率アップ",
-      "精神異常耐性アップ",
-    ]);
+    const effectByName = new Map(
+      unit.effects.map((effect) => [effect.name, effect]),
+    );
+    expect(registeredStatusIconPath(effectByName.get("Artsカード性能アップ")!))
+      .toBe("/assets/status-icons/Artsupstatus.webp");
+    expect(registeredStatusIconPath(effectByName.get("Quickカード性能アップ")!))
+      .toBe("/assets/status-icons/Quickupstatus.webp");
+    expect(registeredStatusIconPath(effectByName.get("スター発生率アップ")!))
+      .toBe("/assets/status-icons/Stargainup.webp");
+    expect(registeredStatusIconPath(effectByName.get("精神異常耐性アップ")!))
+      .toBe("/assets/status-icons/Resistanceup.webp");
+    expect(unspecifiedEffectNames(unit.effects)).toEqual([]);
+
+    const lucifera = started.loop.state.formation.ally.frontline[1]!;
+    const fixedDamage = lucifera.effects.find((effect) =>
+      effect.name === "与ダメージプラス"
+    );
+    expect(fixedDamage).toBeDefined();
+    expect(registeredStatusIconPath(fixedDamage!))
+      .toBe("/assets/status-icons/Powerup.webp");
+    expect(unspecifiedEffectNames(lucifera.effects)).toEqual([]);
   });
 
   it("presents save summaries and four saved-log sections without re-running battle rules", () => {

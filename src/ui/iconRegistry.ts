@@ -20,12 +20,22 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "コマンドシャッフル": "skill-unique-command-shuffle",
 };
 
+const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
+  "Artsカード性能アップ": "Artsupstatus",
+  "Quickカード性能アップ": "Quickupstatus",
+  "スター発生率アップ": "Stargainup",
+  "精神異常耐性アップ": "Resistanceup",
+  "与ダメージプラス": "Powerup",
+};
+
 export function registeredSkillIconPath(name: string): string | null {
   const id = SKILL_ICON_IDS[name];
   return id ? `/assets/skill-icons/${id}.png` : null;
 }
 
 function statusIconId(effect: AppliedEffect): string | null {
+  const explicitId = STATUS_ICON_IDS[effect.name];
+  if (explicitId) return explicitId;
   if (effect.effectType === COMMON_EFFECT_TYPES.power) return "Powerup";
   if (effect.effectType === COMMON_EFFECT_TYPES.attack) {
     return effect.value < 0 ? "Attackdown" : "Attackup";

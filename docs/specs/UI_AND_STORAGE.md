@@ -243,6 +243,7 @@
 ### アイコン（D-080）
 
 - ユーザー指定のスキル・状態対応だけを`public/assets/skill-icons`と`public/assets/status-icons`へ接続する。未指定は文字表示し、必要な名称を受入報告へ列挙する。
+- 初期登録状態の追加指定は、Artsカード性能アップ=`Artsupstatus`、Quickカード性能アップ=`Quickupstatus`、スター発生率アップ=`Stargainup`、精神異常耐性アップ=`Resistanceup`、与ダメージプラス=`Powerup`とする。
 
 ### スキルと対象モーダル（D-081）
 

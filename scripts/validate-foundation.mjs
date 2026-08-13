@@ -1099,12 +1099,12 @@ const requiredUiAssets = [
     "skill-unique-command-shuffle", "skill-unique-order-change",
   ].map((name) => `public/assets/skill-icons/${name}.png`),
   ...[
-    "Attackdown", "Attackup", "Buffatk", "Busterupstatus", "Critabsup",
-    "Critdmgup", "Debuffatk", "Debuffregen", "DelayedBuff",
+    "Artsupstatus", "Attackdown", "Attackup", "Buffatk", "Busterupstatus",
+    "Critabsup", "Critdmgup", "Debuffatk", "Debuffregen", "DelayedBuff",
     "DelayedDebuff", "Dragontrait", "Invincible", "Npcardtypechange",
     "Nppowerdown", "Nppowerup", "Powerup", "Removalresistdown",
-    "Removalresistup", "Resistancedown", "Resistanceup",
-    "Starabsoprtdown", "Statusdown", "Statusup",
+    "Removalresistup", "Resistancedown", "Resistanceup", "Quickupstatus",
+    "Starabsoprtdown", "Stargainup", "Statusdown", "Statusup",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
