@@ -562,8 +562,7 @@ if (manifest) {
   );
   const turnEndStarGain = manifest.coreRules.turnEndTriggerStarGain;
   assert(
-    manifest.status === "turn-end-trigger-star-gain-implemented"
-      && turnEndStarGain.status === "accepted"
+    turnEndStarGain.status === "accepted"
       && turnEndStarGain.v1InitialScope === true
       && JSON.stringify(turnEndStarGain.endingSides) === JSON.stringify([
         "ally",
@@ -600,6 +599,19 @@ if (manifest) {
       && turnEndStarGain.uiRecalculates === false
       && turnEndStarGain.implementationStatus === "implemented_and_accepted",
     "ターン終了トリガーのスター獲得仕様が一致しません"
+  );
+  const completedUi = manifest.coreRules.completedUiSpecification;
+  assert(
+    manifest.status === "completed-ui-spec-implemented"
+      && completedUi.decisionRange === "D-077-D-085"
+      && completedUi.defaultSeedMode === "random"
+      && completedUi.randomBlankSeedResolvedBeforeBattleRng === true
+      && completedUi.commandCardSelectionMaximum === 3
+      && completedUi.confirmedLogPlaybackOnly === true
+      && completedUi.playbackStateSaved === false
+      && completedUi.battleSuspendSchemaChange === false
+      && completedUi.dataSchemaChange === false,
+    "UI完成仕様の実装状態が一致しません"
   );
   assert(
     manifest.coreRules.noblePhantasmCardTypeChangeCategory === "buff",
@@ -1026,6 +1038,7 @@ const mandatoryFiles = [
   "docs/NEW_CHAT_GUIDE.md",
   "docs/HANDOFF_TEMPLATE.md",
   "docs/qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md",
+  "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md",
   "docs/archive/README.md",
   "docs/archive/2026-08-04/PROJECT_RULES_v1.0.0.md",
   "docs/archive/2026-08-04/IMPLEMENTATION_STATUS_v1.0.0.md",
@@ -1035,6 +1048,8 @@ const mandatoryFiles = [
   "docs/roles/CRAFT_ESSENCE.md",
   "docs/roles/MYSTIC_CODE.md",
   "docs/roles/ENEMY.md",
+  "docs/roles/UI.md",
+  "docs/specs/INITIAL_DATA.md",
   "docs/templates/SERVANT_ADDITION.md",
   "docs/templates/CRAFT_ESSENCE_ADDITION.md",
   "docs/templates/MYSTIC_CODE_ADDITION.md",
@@ -1062,21 +1077,48 @@ assert(startHere.includes("## 現在地点"), "作業開始ページに現在地
 assert(startHere.includes("## 次の作業"), "作業開始ページに次の作業がありません");
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
-  startHere.includes("ターン終了トリガーによるスター獲得（共通処理・統合受入完了）")
-    && startHere.includes("同範囲の未実装は0件")
-    && startHere.includes("具体コンテンツ追加へ進む前に"),
-  "作業開始ページにターン終了スターの受入結果と次作業がありません"
+  startHere.includes("フェーズ: 18／UI完成仕様（D-077～D-085実装・受入確認）")
+    && startHere.includes("UI完成確認まではサーヴァント・敵・概念礼装等の具体コンテンツを追加しない"),
+  "作業開始ページにUI完成実装と次作業がありません"
 );
+const uiAcceptance = await readText(
+  "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
+);
+assert(
+  uiAcceptance.includes("判定: 条件付き合格")
+    && uiAcceptance.includes("51ファイル・521テスト")
+    && uiAcceptance.includes("ユーザー実画面確認待ち"),
+  "UI完成仕様の受入報告が正本と一致しません"
+);
+
+const requiredUiAssets = [
+  ...[
+    "skill-attack-up", "skill-card-buster-up", "skill-clear-debuff",
+    "skill-cooldown", "skill-damage-up", "skill-hp-heal",
+    "skill-immune-invincibility", "skill-np-charge",
+    "skill-unique-command-shuffle", "skill-unique-order-change",
+  ].map((name) => `public/assets/skill-icons/${name}.png`),
+  ...[
+    "Attackdown", "Attackup", "Buffatk", "Busterupstatus", "Critabsup",
+    "Critdmgup", "Debuffatk", "Debuffregen", "DelayedBuff",
+    "DelayedDebuff", "Dragontrait", "Invincible", "Npcardtypechange",
+    "Nppowerdown", "Nppowerup", "Powerup", "Removalresistdown",
+    "Removalresistup", "Resistancedown", "Resistanceup",
+    "Starabsoprtdown", "Statusdown", "Statusup",
+  ].map((name) => `public/assets/status-icons/${name}.webp`),
+];
+for (const path of requiredUiAssets) {
+  if (!(await exists(path))) errors.push(`指定済みUI画像がありません: ${path}`);
+}
 
 const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
 assert(implementationStatus.includes("## 現在地点"), "実装状況に現在地点がありません");
 assert(implementationStatus.includes("## 次の実装"), "実装状況に次の実装がありません");
 assert(
-  implementationStatus.includes("D-073")
-    && implementationStatus.includes("D-074")
+  implementationStatus.includes("D-077～D-085のUI完成仕様")
     && implementationStatus.includes("v1.0初期完成範囲へ追加")
     && implementationStatus.includes("形式4・データ1.38.0・敵データ形式1・行動ログ形式5"),
-  "実装状況にターン終了スターの受入結果と版判定がありません"
+  "実装状況にUI完成範囲と既存形式の維持記録がありません"
 );
 
 const decisionLog = await readText("docs/DECISION_LOG.md");
@@ -1091,6 +1133,18 @@ assert(
     && decisionLog.includes("## D-076 次の作業を初期範囲外の具体コンテンツ追加対象の選定とする"),
   "決定記録にターン終了スターの実装・初期範囲・次作業がありません"
 );
+assert(
+  decisionLog.includes("## D-077 初期設定と確定シードを4タブへ固定する")
+    && decisionLog.includes("## D-078 戦闘画面の領域順と操作可能寸法を固定する")
+    && decisionLog.includes("## D-079 効果表示を発生元別にし、登録・適用済み値だけを使う")
+    && decisionLog.includes("## D-080 アイコンをアップロード済み明示対応だけへ限定する")
+    && decisionLog.includes("## D-081 スキル短押し・詳細・対象確定を分離する")
+    && decisionLog.includes("## D-082 3枚選択時の入力ロックとカード識別を固定する")
+    && decisionLog.includes("## D-083 確定ログだけを再生し、再生中入力を遮断する")
+    && decisionLog.includes("## D-084 リザルトを確定戦闘画面へ重ねる")
+    && decisionLog.includes("## D-085 保存・再開を要約付き・非破壊にする"),
+  "決定記録にUI完成仕様D-077～D-085がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1104,7 +1158,8 @@ assert(
 const docsIndex = await readText("docs/INDEX.md");
 assert(
   docsIndex.includes("qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md")
-    && docsIndex.includes("qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md"),
+    && docsIndex.includes("qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md")
+    && docsIndex.includes("qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"),
   "文書索引に最新の統合受入報告がありません"
 );
 
@@ -1150,6 +1205,7 @@ assert(
 );
 
 const uiAndStorage = await readText("docs/specs/UI_AND_STORAGE.md");
+const uiStyles = await readText("src/styles.css");
 assert(
   uiAndStorage.includes("敵宝具の任意の宝具Lv・OC文脈")
     && uiAndStorage.includes("UIは段階選択、配列参照、文脈補完"),
@@ -1160,6 +1216,15 @@ assert(
     && uiAndStorage.includes("中断保存形式4・データ1.38.0・行動ログ形式5・ターンログ形式2を維持")
     && uiAndStorage.includes("終了時効果、99個上限、次回用繰上げを再実行しない"),
   "UI・保存仕様にターン終了スターの確定ログと版維持規則がありません"
+);
+assert(
+  /button\s*\{[\s\S]*?min-height:\s*3\.5rem/.test(uiStyles)
+    && /@media \(max-width: 43\.99rem\)[\s\S]*?\.unit-grid,[\s\S]*?overflow-x:\s*auto/.test(uiStyles)
+    && /@media \(min-width: 44rem\)[\s\S]*?\.slot-grid,[\s\S]*?\.unit-grid\s*\{\s*grid-template-columns:\s*repeat\(3/.test(uiStyles)
+    && /@media \(min-width: 44rem\)[\s\S]*?\.card-grid\s*\{\s*grid-template-columns:\s*repeat\(5/.test(uiStyles)
+    && /\.modal-backdrop,[\s\S]*?position:\s*fixed/.test(uiStyles)
+    && /\.playback-blocker\s*\{[\s\S]*?z-index:\s*120/.test(uiStyles),
+  "UIのPC・スマートフォン・56px・モーダル・再生遮断CSSが一致しません"
 );
 const battlePresentation = await readText("src/ui/battlePresentation.ts");
 assert(

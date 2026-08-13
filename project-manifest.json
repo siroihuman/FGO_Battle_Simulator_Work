@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "turn-end-trigger-star-gain-implemented",
+  "status": "completed-ui-spec-implemented",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -212,6 +212,39 @@
     "initialBattleUiLogSource": "saved_input_action_logs_and_battle_turn_logs",
     "initialBattleUiSuspendFlow": "serialize_parse_and_direct_restore",
     "initialBattleUiRecalculatesBattleValues": false,
+    "completedUiSpecification": {
+      "decisionRange": "D-077-D-085",
+      "implementationStatus": "implemented_pending_user_screen_acceptance",
+      "setupTabs": [
+        "ally_formation",
+        "wave_enemy",
+        "battle_settings",
+        "final_confirmation"
+      ],
+      "defaultSeedMode": "random",
+      "randomBlankSeedResolvedBeforeBattleRng": true,
+      "battleSectionOrder": [
+        "battle_status",
+        "enemy_frontline",
+        "ally_frontline_reserve_mystic_code",
+        "command_cards_execute",
+        "battle_log",
+        "suspend_resume"
+      ],
+      "desktopUnitColumns": 3,
+      "desktopCardColumns": 5,
+      "minimumPointerTargetPx": 56,
+      "effectSourcesSeparated": true,
+      "explicitUploadedAssetMappingsOnly": true,
+      "unspecifiedIconFallback": "text_only",
+      "commandCardSelectionMaximum": 3,
+      "confirmedLogPlaybackOnly": true,
+      "playbackStateSaved": false,
+      "resultPresentation": "overlay_on_confirmed_battle_screen",
+      "loadFailureMutation": "none",
+      "battleSuspendSchemaChange": false,
+      "dataSchemaChange": false
+    },
     "activeSkillUiRecalculatesEffectsTargetsOrCooldowns": false,
     "allySkillOperationsSavedAndReplayed": true,
     "inputActionLogBatchKind": "ally_input",

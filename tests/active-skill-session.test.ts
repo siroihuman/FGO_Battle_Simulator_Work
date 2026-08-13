@@ -1,8 +1,5 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
-  SkillControls,
   mysticCodeSkillUsesSelectedUnitInput,
 } from "../src/App";
 import { findUnitLocation } from "../src/core/battle/formation";
@@ -487,41 +484,29 @@ describe("active skill BattleSession integration", () => {
     );
   });
 
-  it("renders explicit mobile-safe Servant, Mystic Code, target, and Order Change controls", () => {
+  it("keeps registered Servant and Mystic Code skill data available to the modal UI", () => {
     const session = createInitialBattleSession(setup("skill-ui-controls"));
-    const markup = renderToStaticMarkup(createElement(SkillControls, {
-      session,
-      onSessionChange: () => undefined,
-      onMessage: () => undefined,
-    }));
-
-    expect(markup).toContain("スキル操作");
-    expect(markup).toContain("味方単体の選択対象");
-    expect(markup).toContain("罪源業車");
-    expect(markup).toContain("応急支援");
-    expect(markup).toContain("交換する前衛");
-    expect(markup).toContain("交換する控え");
-    expect(markup).toContain("オーダーチェンジ");
+    expect(session.actionEffectRegistry?.byInstanceId["ally-frontline-1"].actions
+      .some(({ name }) => name === "罪源業車")).toBe(true);
+    expect(session.mysticCodeRegistry?.byDataId["normal-chaldea-uniform"].skills
+      .map(({ name }) => name)).toEqual([
+        "応急支援",
+        "魔力強化",
+        "オーダーチェンジ",
+      ]);
   });
 
-  it("renders Mage Association skills and CT values from registered format 2 data", () => {
+  it("keeps Mage Association skill names and CT values in registered format 2 data", () => {
     const session = createInitialBattleSession(setup(
       "mage-association-ui",
       "mage-association-uniform",
     ));
-    const markup = renderToStaticMarkup(createElement(SkillControls, {
-      session,
-      onSessionChange: () => undefined,
-      onMessage: () => undefined,
-    }));
-
-    expect(markup).toContain("魔術礼装：魔術協会制服");
-    expect(markup).toContain("スキル1：全体回復");
-    expect(markup).toContain("現在CT 0／使用時CT 12");
-    expect(markup).toContain("スキル2：霊子譲渡");
-    expect(markup).toContain("現在CT 0／使用時CT 15");
-    expect(markup).toContain("スキル3：コマンドシャッフル");
-    expect(markup).not.toContain("交換する控え");
+    expect(session.mysticCodeRegistry?.byDataId["mage-association-uniform"].skills)
+      .toMatchObject([
+        { name: "全体回復", slot: 1, cooldownAtMax: 12 },
+        { name: "霊子譲渡", slot: 2, cooldownAtMax: 15 },
+        { name: "コマンドシャッフル", slot: 3 },
+      ]);
     expect(MAGE_ASSOCIATION_UNIFORM.skills.map(
       mysticCodeSkillUsesSelectedUnitInput,
     )).toEqual([false, true, false]);

@@ -1,8 +1,11 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 import { listCommandCardChoices } from "./core/cards/selection";
 import {
@@ -15,12 +18,11 @@ import {
   type BattleSession,
 } from "./core/battle/session";
 import type { BattleUnitState } from "./core/battle/types";
-import {
-  EMBER_GATHERING_SABER_EXTREME,
-} from "./data/enemies";
-import {
-  INITIAL_CRAFT_ESSENCE_DEFINITIONS,
-} from "./data/craftEssences";
+import type { BattleState } from "./core/battle/state";
+import type { BattleActionEffectSequence } from "./effects/actionData";
+import { isActionDisabled } from "./effects/classification";
+import { EMBER_GATHERING_SABER_EXTREME } from "./data/enemies";
+import { INITIAL_CRAFT_ESSENCE_DEFINITIONS } from "./data/craftEssences";
 import {
   INITIAL_MYSTIC_CODE_DEFINITIONS,
   type MysticCodeSkillDefinition,
@@ -33,14 +35,27 @@ import {
 import type { NoblePhantasmLevel } from "./formulas/np";
 import {
   presentBattleStatus,
-  summarizeBattleInputLogs,
-  summarizeBattleTurnLogs,
+  type BattleLogSummary,
 } from "./ui/battlePresentation";
+import {
+  confirmedPlaybackNotices,
+  confirmedChainNotices,
+  presentBattleSummary,
+  presentBattleTurns,
+  selectedChainCriticalBonus,
+  toggleSelectedCommandCard,
+} from "./ui/battleUi";
+import {
+  presentUnitEffects,
+  type PresentedEffect,
+} from "./ui/effectPresentation";
+import { registeredSkillIconPath } from "./ui/iconRegistry";
 import {
   INITIAL_SERVANT_REGISTRY,
   createEmptyInitialBattleSetup,
   createInitialBattleSession,
   emptyInitialAllySlot,
+  initialAllySelectionForServant,
   validateInitialBattleSetup,
   type InitialAllySlotSelection,
   type InitialBattleSetup,
@@ -65,6 +80,7 @@ const SELECTION_REASON_LABELS = {
 const ALLY_SKILL_REASON_LABELS = {
   invalid_phase: "現在はサーヴァントスキルを使用できません。",
   source_unavailable: "使用者が生存する前衛ではありません。",
+  source_action_disabled: "使用者が行動不能です。",
   action_data_missing: "スキルの実行データが見つかりません。",
   not_a_skill: "選択した行動はサーヴァントスキルではありません。",
   skill_on_cooldown: "スキルのCTが残っています。",
@@ -104,52 +120,55 @@ export function selectedCardsAfterCommandRedistribution(
   return redistributed ? [] : [...selectedCardIds];
 }
 
-/** Returns whether the UI must supply one unit ID; validity stays engine-owned. */
 export function mysticCodeSkillUsesSelectedUnitInput(
   skill: MysticCodeSkillDefinition,
 ): boolean {
   return skill.execution === "effects" && skill.effects.some(
-    ({ target }) =>
-      target.relation !== "self" && target.selection === "single",
+    ({ target }) => target.relation !== "self" && target.selection === "single",
   );
 }
 
-function isInitialBattleSetup(value: unknown): value is InitialBattleSetup {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+function normalizeStoredSetup(value: unknown): InitialBattleSetup | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const candidate = value as Partial<InitialBattleSetup>;
   const isSlot = (slot: unknown): slot is InitialAllySlotSelection => {
     if (!slot || typeof slot !== "object" || Array.isArray(slot)) return false;
     const current = slot as Partial<InitialAllySlotSelection>;
     return (current.servantDataId === null || typeof current.servantDataId === "string")
       && (current.level === null || typeof current.level === "number")
-      && (current.noblePhantasmLevel === null
-        || typeof current.noblePhantasmLevel === "number")
-      && (current.craftEssenceDataId === null
-        || typeof current.craftEssenceDataId === "string");
+      && (current.noblePhantasmLevel === null || typeof current.noblePhantasmLevel === "number")
+      && (current.craftEssenceDataId === null || typeof current.craftEssenceDataId === "string");
   };
-  return Array.isArray(candidate.frontline)
-    && candidate.frontline.length === 3
-    && candidate.frontline.every(isSlot)
-    && Array.isArray(candidate.reserve)
-    && candidate.reserve.length === 3
-    && candidate.reserve.every(isSlot)
-    && (candidate.mysticCodeDataId === null
-      || typeof candidate.mysticCodeDataId === "string")
-    && typeof candidate.enemyEncounterDataId === "string"
-    && typeof candidate.seed === "string";
+  if (
+    !Array.isArray(candidate.frontline)
+    || candidate.frontline.length !== 3
+    || !candidate.frontline.every(isSlot)
+    || !Array.isArray(candidate.reserve)
+    || candidate.reserve.length !== 3
+    || !candidate.reserve.every(isSlot)
+    || (candidate.mysticCodeDataId !== null && typeof candidate.mysticCodeDataId !== "string")
+    || typeof candidate.enemyEncounterDataId !== "string"
+    || typeof candidate.seed !== "string"
+  ) return null;
+  return {
+    frontline: candidate.frontline,
+    reserve: candidate.reserve,
+    mysticCodeDataId: candidate.mysticCodeDataId ?? null,
+    enemyEncounterDataId: candidate.enemyEncounterDataId,
+    seedMode: candidate.seedMode === "random" || candidate.seedMode === "fixed"
+      ? candidate.seedMode
+      : candidate.seed.trim() ? "fixed" : "random",
+    seed: candidate.seed,
+  };
 }
 
 function storedSetup(): InitialBattleSetup {
-  if (typeof localStorage === "undefined") {
-    return createEmptyInitialBattleSetup();
-  }
+  if (typeof localStorage === "undefined") return createEmptyInitialBattleSetup();
   try {
     const serialized = localStorage.getItem(SETUP_STORAGE_KEY);
     if (!serialized) return createEmptyInitialBattleSetup();
-    const parsed: unknown = JSON.parse(serialized);
-    return isInitialBattleSetup(parsed)
-      ? parsed
-      : createEmptyInitialBattleSetup();
+    return normalizeStoredSetup(JSON.parse(serialized))
+      ?? createEmptyInitialBattleSetup();
   } catch {
     return createEmptyInitialBattleSetup();
   }
@@ -157,6 +176,13 @@ function storedSetup(): InitialBattleSetup {
 
 function optionNumber(value: string): number | null {
   return value === "" ? null : Number(value);
+}
+
+function allyName(selection: InitialAllySlotSelection): string {
+  return selection.servantDataId
+    ? servantDefinition(INITIAL_SERVANT_REGISTRY, selection.servantDataId)?.name
+      ?? selection.servantDataId
+    : "未選択";
 }
 
 function AllySlotEditor({
@@ -173,7 +199,6 @@ function AllySlotEditor({
   const definition = selection.servantDataId
     ? servantDefinition(INITIAL_SERVANT_REGISTRY, selection.servantDataId)
     : null;
-
   return (
     <fieldset className="setup-slot">
       <legend>{label}{required ? "（必須）" : "（任意）"}</legend>
@@ -185,12 +210,7 @@ function AllySlotEditor({
           onChange={(event) => {
             const servantDataId = event.target.value || null;
             onChange(servantDataId
-              ? {
-                  ...selection,
-                  servantDataId,
-                  level: null,
-                  noblePhantasmLevel: null,
-                }
+              ? initialAllySelectionForServant(servantDataId)
               : emptyInitialAllySlot());
           }}
         >
@@ -214,7 +234,6 @@ function AllySlotEditor({
               level: optionNumber(event.target.value) as ServantLevel | null,
             })}
           >
-            <option value="">選択</option>
             {definition?.levelStats.map(({ level }) => (
               <option key={level} value={level}>{level}</option>
             ))}
@@ -228,11 +247,9 @@ function AllySlotEditor({
             value={selection.noblePhantasmLevel ?? ""}
             onChange={(event) => onChange({
               ...selection,
-              noblePhantasmLevel: optionNumber(event.target.value) as
-                NoblePhantasmLevel | null,
+              noblePhantasmLevel: optionNumber(event.target.value) as NoblePhantasmLevel | null,
             })}
           >
-            <option value="">選択</option>
             {[1, 2, 3, 4, 5].map((level) => (
               <option key={level} value={level}>{level}</option>
             ))}
@@ -262,6 +279,93 @@ function AllySlotEditor({
   );
 }
 
+function BattleSummaryView({ session }: { session: BattleSession }) {
+  const summary = presentBattleSummary(session);
+  return (
+    <div className="save-summary" aria-label="戦闘状態要約">
+      <dl>
+        <div><dt>Wave</dt><dd>{summary.wave}</dd></div>
+        <div><dt>ターン</dt><dd>{summary.turn}</dd></div>
+        <div><dt>シード</dt><dd>{summary.seed}</dd></div>
+      </dl>
+      <ul>
+        {summary.frontline.map((unit) => (
+          <li key={unit.slot}>前衛{unit.slot} {unit.name}：HP {unit.hp.toLocaleString()} / {unit.maxHp.toLocaleString()}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ResumeFromJson({ onRestore }: { onRestore: (session: BattleSession) => void }) {
+  const [resumeJson, setResumeJson] = useState("");
+  const [preview, setPreview] = useState<BattleSession | null>(null);
+  const [message, setMessage] = useState("");
+  const [failed, setFailed] = useState(false);
+
+  function inspectSave() {
+    try {
+      setPreview(restoreBattleSession(parseBattleSuspendSave(resumeJson)));
+      setMessage("保存内容を確認しました。要約を確認して再開してください。");
+      setFailed(false);
+    } catch (error) {
+      setPreview(null);
+      setMessage(error instanceof Error ? error.message : "再開データを確認できませんでした。");
+      setFailed(true);
+    }
+  }
+
+  async function readResumeFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setResumeJson(await file.text());
+    setPreview(null);
+    setMessage("ファイルを読み込みました。内容を確認してください。");
+    setFailed(false);
+  }
+
+  return (
+    <details className="suspend-panel">
+      <summary>中断保存JSONから再開</summary>
+      <p className="muted">失敗したJSONは自動削除・自動上書きしません。</p>
+      <label>
+        JSONファイルを読み込む
+        <input type="file" accept="application/json,.json" onChange={readResumeFile} />
+      </label>
+      <label>
+        中断保存JSON
+        <textarea
+          rows={8}
+          value={resumeJson}
+          onChange={(event) => {
+            setResumeJson(event.target.value);
+            setPreview(null);
+          }}
+          placeholder="ここへ中断保存JSONを貼り付けてください"
+        />
+      </label>
+      <div className="button-row">
+        <button type="button" onClick={inspectSave}>保存内容を確認する</button>
+        {preview && (
+          <button className="primary-button" type="button" onClick={() => onRestore(preview)}>
+            この保存から再開する
+          </button>
+        )}
+        {failed && (
+          <button type="button" onClick={() => {
+            setMessage("");
+            setFailed(false);
+          }}>戻る</button>
+        )}
+      </div>
+      {preview && <BattleSummaryView session={preview} />}
+      {message && <p className="operation-message" aria-live="polite">{message}</p>}
+    </details>
+  );
+}
+
+const SETUP_TABS = ["味方編成", "Wave・敵設定", "戦闘設定", "最終確認"] as const;
+
 function SetupScreen({
   setup,
   onSetupChange,
@@ -274,14 +378,8 @@ function SetupScreen({
   onRestore: (session: BattleSession) => void;
 }) {
   const validation = validateInitialBattleSetup(setup);
-  const [resumeJson, setResumeJson] = useState("");
-  const [resumeMessage, setResumeMessage] = useState("");
-
-  function updateSlot(
-    area: "frontline" | "reserve",
-    index: number,
-    selection: InitialAllySlotSelection,
-  ) {
+  const [activeTab, setActiveTab] = useState(0);
+  function updateSlot(area: "frontline" | "reserve", index: number, selection: InitialAllySlotSelection) {
     onSetupChange({
       ...setup,
       [area]: setup[area].map((current, currentIndex) =>
@@ -289,151 +387,97 @@ function SetupScreen({
       ),
     });
   }
-
-  function restoreFromSetup() {
-    try {
-      onRestore(restoreBattleSession(parseBattleSuspendSave(resumeJson)));
-      setResumeMessage("保存済み状態を直接再開しました。");
-    } catch (error) {
-      setResumeMessage(error instanceof Error ? error.message : "再開に失敗しました。");
-    }
-  }
-
-  async function readResumeFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setResumeJson(await file.text());
-    setResumeMessage("ファイルを読み込みました。内容を確認して再開してください。");
-  }
-
   return (
-    <main className="app-shell">
+    <main className="app-shell setup-shell">
       <header className="hero">
         <p className="eyebrow">FGO Battle Simulator Work</p>
         <h1>初期戦闘設定</h1>
-        <p>
-          登録済みデータだけを使い、固定シードで極級3 Waveを開始します。
-          同じサーヴァントや概念礼装も個体ごとに独立して選択できます。
-        </p>
+        <p>4つのタブを順に確認します。ランダムシードは空欄のまま開始でき、開始前に再現可能な文字列へ確定します。</p>
       </header>
-
-      <section className="panel" aria-labelledby="frontline-heading">
-        <div className="section-heading">
-          <div>
-            <p className="section-kicker">ALLY</p>
-            <h2 id="frontline-heading">味方編成</h2>
-          </div>
-          <span className="badge">前衛3騎必須</span>
-        </div>
-        <div className="slot-grid">
-          {setup.frontline.map((selection, index) => (
-            <AllySlotEditor
-              key={`frontline-${index + 1}`}
-              label={`前衛${index + 1}`}
-              required
-              selection={selection}
-              onChange={(next) => updateSlot("frontline", index, next)}
-            />
-          ))}
-        </div>
-        <h3>控え（0～3騎）</h3>
-        <div className="slot-grid">
-          {setup.reserve.map((selection, index) => (
-            <AllySlotEditor
-              key={`reserve-${index + 1}`}
-              label={`控え${index + 1}`}
-              required={false}
-              selection={selection}
-              onChange={(next) => updateSlot("reserve", index, next)}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="panel setup-options" aria-labelledby="battle-options-heading">
-        <div className="section-heading">
-          <div>
-            <p className="section-kicker">BATTLE</p>
-            <h2 id="battle-options-heading">戦闘設定</h2>
-          </div>
-          <span className="badge">固定シード</span>
-        </div>
-        <label>
-          魔術礼装（Lv最大）
-          <select
-            value={setup.mysticCodeDataId ?? ""}
-            onChange={(event) => onSetupChange({
-              ...setup,
-              mysticCodeDataId: event.target.value || null,
-            })}
+      <nav className="tab-list setup-tabs" role="tablist" aria-label="初期戦闘設定">
+        {SETUP_TABS.map((label, index) => (
+          <button
+            key={label}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === index}
+            aria-controls={`setup-panel-${index}`}
+            onClick={() => setActiveTab(index)}
           >
-            <option value="">選択してください</option>
-            {INITIAL_MYSTIC_CODE_DEFINITIONS.map((mysticCode) => (
-              <option key={mysticCode.dataId} value={mysticCode.dataId}>
-                {mysticCode.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          敵設定
-          <input value={EMBER_GATHERING_SABER_EXTREME.name} readOnly />
-        </label>
-        <label>
-          固定シード
-          <input
-            value={setup.seed}
-            placeholder="例: initial-battle-001"
-            onChange={(event) => onSetupChange({
-              ...setup,
-              seed: event.target.value,
-            })}
-          />
-        </label>
-      </section>
+            <span>{index + 1}</span>{label}
+          </button>
+        ))}
+      </nav>
 
-      {!validation.valid && (
-        <section className="validation-box" aria-live="polite">
-          <h2>開始前に確認してください</h2>
-          <ul>
-            {validation.errors.map((error) => <li key={error}>{error}</li>)}
-          </ul>
-        </section>
-      )}
-      <details className="panel suspend-panel">
-        <summary>中断保存JSONから再開</summary>
-        <p className="muted">
-          新しい戦闘を開始せず、保存済みの現在状態と乱数位置を直接復元します。
-        </p>
-        <label>
-          JSONファイルを読み込む
-          <input type="file" accept="application/json,.json" onChange={readResumeFile} />
-        </label>
-        <label>
-          中断保存JSON
-          <textarea
-            rows={8}
-            value={resumeJson}
-            onChange={(event) => setResumeJson(event.target.value)}
-            placeholder="ここへ中断保存JSONを貼り付けてください"
-          />
-        </label>
-        <button type="button" onClick={restoreFromSetup}>
-          このJSONから直接再開する
-        </button>
-        {resumeMessage && (
-          <p className="operation-message" aria-live="polite">{resumeMessage}</p>
+      <section className="panel setup-tab-panel" role="tabpanel" id={`setup-panel-${activeTab}`}>
+        {activeTab === 0 && (
+          <>
+            <div className="section-heading"><div><p className="section-kicker">ALLY</p><h2>味方編成</h2></div><span className="badge">前衛3騎必須</span></div>
+            <div className="slot-grid">
+              {setup.frontline.map((selection, index) => (
+                <AllySlotEditor key={`frontline-${index}`} label={`前衛${index + 1}`} required selection={selection} onChange={(next) => updateSlot("frontline", index, next)} />
+              ))}
+            </div>
+            <h3>控え（0～3騎）</h3>
+            <div className="slot-grid">
+              {setup.reserve.map((selection, index) => (
+                <AllySlotEditor key={`reserve-${index}`} label={`控え${index + 1}`} required={false} selection={selection} onChange={(next) => updateSlot("reserve", index, next)} />
+              ))}
+            </div>
+          </>
         )}
-      </details>
-      <div className="sticky-actions">
-        <button
-          className="primary-button"
-          type="button"
-          disabled={!validation.valid}
-          onClick={onStart}
-        >
-          戦闘を開始する
-        </button>
+        {activeTab === 1 && (
+          <>
+            <div className="section-heading"><div><p className="section-kicker">WAVE</p><h2>Wave・敵設定</h2></div><span className="badge">登録済み3 Wave</span></div>
+            <label>敵設定<input value={EMBER_GATHERING_SABER_EXTREME.name} readOnly /></label>
+            <p className="muted">今回のUI完成確認では、登録済みの初期敵データのみを使用します。</p>
+          </>
+        )}
+        {activeTab === 2 && (
+          <div className="setup-options">
+            <div className="section-heading"><div><p className="section-kicker">BATTLE</p><h2>戦闘設定</h2></div><span className="badge">スキルLv最大</span></div>
+            <label>
+              魔術礼装（Lv最大）
+              <select value={setup.mysticCodeDataId ?? ""} onChange={(event) => onSetupChange({ ...setup, mysticCodeDataId: event.target.value || null })}>
+                <option value="">選択してください</option>
+                {INITIAL_MYSTIC_CODE_DEFINITIONS.map((mysticCode) => <option key={mysticCode.dataId} value={mysticCode.dataId}>{mysticCode.name}</option>)}
+              </select>
+            </label>
+            <fieldset className="seed-fieldset">
+              <legend>シード</legend>
+              <label className="radio-control"><input type="radio" name="seed-mode" checked={setup.seedMode === "random"} onChange={() => onSetupChange({ ...setup, seedMode: "random" })} />ランダム</label>
+              <label className="radio-control"><input type="radio" name="seed-mode" checked={setup.seedMode === "fixed"} onChange={() => onSetupChange({ ...setup, seedMode: "fixed" })} />固定シード</label>
+              <label>
+                シード文字列
+                <input value={setup.seed} disabled={setup.seedMode === "random"} placeholder={setup.seedMode === "random" ? "空欄で開始できます" : "固定シードを入力"} onChange={(event) => onSetupChange({ ...setup, seed: event.target.value })} />
+              </label>
+            </fieldset>
+          </div>
+        )}
+        {activeTab === 3 && (
+          <>
+            <div className="section-heading"><div><p className="section-kicker">CONFIRM</p><h2>最終確認</h2></div><span className="badge">開始前入力</span></div>
+            <dl className="confirmation-grid">
+              <div><dt>前衛</dt><dd>{setup.frontline.map(allyName).join(" / ")}</dd></div>
+              <div><dt>控え</dt><dd>{setup.reserve.filter(({ servantDataId }) => servantDataId).map(allyName).join(" / ") || "なし"}</dd></div>
+              <div><dt>敵</dt><dd>{EMBER_GATHERING_SABER_EXTREME.name}</dd></div>
+              <div><dt>魔術礼装</dt><dd>{INITIAL_MYSTIC_CODE_DEFINITIONS.find(({ dataId }) => dataId === setup.mysticCodeDataId)?.name ?? "未選択"}</dd></div>
+              <div><dt>シード</dt><dd>{setup.seedMode === "random" ? "ランダム（開始時に確定）" : setup.seed || "未入力"}</dd></div>
+            </dl>
+            {!validation.valid && (
+              <div className="validation-box" aria-live="polite"><h2>開始前に確認してください</h2><ul>{validation.errors.map((error) => <li key={error}>{error}</li>)}</ul></div>
+            )}
+            <ResumeFromJson onRestore={onRestore} />
+          </>
+        )}
+      </section>
+      <div className="sticky-actions setup-actions">
+        <button type="button" disabled={activeTab === 0} onClick={() => setActiveTab((tab) => Math.max(0, tab - 1))}>前へ</button>
+        {activeTab < 3 ? (
+          <button className="primary-button" type="button" onClick={() => setActiveTab((tab) => Math.min(3, tab + 1))}>次へ</button>
+        ) : (
+          <button className="primary-button" type="button" disabled={!validation.valid} onClick={onStart}>戦闘を開始する</button>
+        )}
       </div>
     </main>
   );
@@ -443,742 +487,680 @@ function formatNp(np: number): string {
   return `${(np / 100).toFixed(2)}%`;
 }
 
-function EffectList({ unit }: { unit: BattleUnitState }) {
-  if (unit.effects.length === 0) {
-    return <p className="muted compact">状態なし</p>;
-  }
+type DetailContent =
+  | { kind: "effect"; effect: PresentedEffect }
+  | { kind: "skill"; title: string; rank: string | null; cooldown: number; descriptions: string[] };
+
+function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const modalRef = useRef<HTMLElement>(null);
+  const closeHandler = useRef(onClose);
+  closeHandler.current = onClose;
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    closeRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeHandler.current();
+        return;
+      }
+      if (event.key !== "Tab" || !modalRef.current) return;
+      const focusable = [...modalRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      )].filter((element) => !element.hasAttribute("aria-hidden"));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      previousFocus?.focus();
+    };
+  }, []);
   return (
-    <ul className="effect-list">
-      {unit.effects.map((effect) => (
-        <li key={effect.instanceId}>
-          {effect.name}
-          {effect.remainingTurns !== null ? ` ${effect.remainingTurns}T` : ""}
-          {effect.remainingUses !== null ? ` ${effect.remainingUses}回` : ""}
-        </li>
-      ))}
-    </ul>
+    <div className="modal-backdrop" onClick={(event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.currentTarget === event.target) closeHandler.current();
+    }}>
+      <section ref={modalRef} className="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={(event) => event.stopPropagation()}>
+        <div className="section-heading"><h2 id="modal-title">{title}</h2><button ref={closeRef} type="button" onClick={onClose}>閉じる</button></div>
+        {children}
+      </section>
+    </div>
+  );
+}
+
+function DetailModal({ detail, onClose }: { detail: DetailContent; onClose: () => void }) {
+  if (detail.kind === "skill") {
+    return (
+      <Modal title={detail.title} onClose={onClose}>
+        <dl className="detail-list">
+          <div><dt>ランク</dt><dd>{detail.rank ?? "—"}</dd></div>
+          <div><dt>使用時CT</dt><dd>{detail.cooldown}</dd></div>
+          <div><dt>登録済み説明</dt><dd>{detail.descriptions.join(" / ") || "登録済み説明なし"}</dd></div>
+        </dl>
+      </Modal>
+    );
+  }
+  const { effect } = detail;
+  return (
+    <Modal title={effect.applied.name} onClose={onClose}>
+      <dl className="detail-list">
+        <div><dt>発生元</dt><dd>{effect.sourceName}</dd></div>
+        <div><dt>名称・ランク</dt><dd>{effect.applied.name} / {effect.sourceRank ?? "—"}</dd></div>
+        <div><dt>登録済み説明</dt><dd>{effect.description}</dd></div>
+        <div><dt>効果量（登録値）</dt><dd>{effect.applied.value.toLocaleString()}（同種合計 {effect.totalValue.toLocaleString()}）</dd></div>
+        <div><dt>残り</dt><dd>{effect.applied.remainingTurns === null ? "ターン制限なし" : `${effect.applied.remainingTurns}T`} / {effect.applied.remainingUses === null ? "回数制限なし" : `${effect.applied.remainingUses}回`}</dd></div>
+        <div><dt>解除可否</dt><dd>{effect.applied.removalPolicy === "removable" ? "解除可能" : effect.applied.removalPolicy === "unremovable" ? "解除不可" : "ID指定時のみ"}</dd></div>
+      </dl>
+    </Modal>
+  );
+}
+
+function EffectTabs({ unit, session, onDetail }: { unit: BattleUnitState; session: BattleSession; onDetail: (effect: PresentedEffect) => void }) {
+  const effects = useMemo(() => presentUnitEffects(session, unit), [session, unit]);
+  const allyTabs = [
+    ["class_skill", "クラススキル"],
+    ["craft_essence", "概念礼装"],
+    ["active", "保有スキル・宝具"],
+  ] as const;
+  const enemyTabs = [
+    ["enemy_action", "敵スキル・宝具"],
+    ["other", "その他の状態"],
+  ] as const;
+  const tabs = unit.side === "ally" ? allyTabs : enemyTabs;
+  const [activeTab, setActiveTab] = useState<string>(tabs[0][0]);
+  const displayed = effects.filter((effect) => unit.side === "ally" ? effect.allyTab === activeTab : effect.enemyTab === activeTab);
+  return (
+    <div className="effect-area">
+      <div className="tab-list effect-tabs" role="tablist" aria-label={`${unit.name} 効果分類`}>
+        {tabs.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={activeTab === id} onClick={() => setActiveTab(id)}>{label}</button>)}
+      </div>
+      {displayed.length === 0 ? <p className="muted compact">該当する効果なし</p> : (
+        <ul className="effect-list">
+          {displayed.map((effect) => (
+            <li key={effect.key}>
+              <button type="button" className="effect-chip" onClick={() => onDetail(effect)}>
+                {effect.iconPath ? <img src={effect.iconPath} alt="" /> : <span className="unspecified-icon">未指定</span>}
+                <span><strong>{effect.applied.name}</strong><small>{effect.categoryLabel} · {effect.applied.remainingTurns === null ? "—T" : `${effect.applied.remainingTurns}T`} · {effect.applied.remainingUses === null ? "—回" : `${effect.applied.remainingUses}回`} · 合計 {effect.totalValue.toLocaleString()}</small></span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+interface SkillDescriptor {
+  kind: "ally" | "mystic";
+  sourceInstanceId?: string;
+  stableId: string;
+  name: string;
+  rank: string | null;
+  slot: number;
+  currentCooldown: number;
+  cooldownAtMax: number;
+  descriptions: string[];
+  targetMode: "none" | "ally" | "order_change";
+  disabledReason: string | null;
+}
+
+function SkillButton({ skill, onUse, onDetail }: { skill: SkillDescriptor; onUse: () => void; onDetail: () => void }) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = useRef(false);
+  function startLongPress(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    longPressed.current = false;
+    timer.current = setTimeout(() => {
+      longPressed.current = true;
+      onDetail();
+    }, 550);
+  }
+  function clearLongPress() {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  }
+  const icon = registeredSkillIconPath(skill.name);
+  return (
+    <div className={`skill-control ${skill.disabledReason ? "control-disabled" : ""}`}>
+      <button
+        type="button"
+        className="skill-icon-button"
+        aria-disabled={Boolean(skill.disabledReason)}
+        onPointerDown={startLongPress}
+        onPointerUp={clearLongPress}
+        onPointerCancel={clearLongPress}
+        onPointerLeave={clearLongPress}
+        onClick={() => {
+          if (longPressed.current) {
+            longPressed.current = false;
+            return;
+          }
+          if (!skill.disabledReason) onUse();
+        }}
+      >
+        {icon ? <img src={icon} alt="" /> : <span className="unspecified-icon">未指定</span>}
+        <strong>{skill.name}</strong>
+        <small>CT {skill.currentCooldown} / 使用時 {skill.cooldownAtMax}</small>
+      </button>
+      <button type="button" className="skill-detail-button" onClick={onDetail}>詳細</button>
+      {skill.disabledReason && <span className="disabled-reason">{skill.disabledReason}</span>}
+    </div>
   );
 }
 
 function UnitPanel({
   unit,
   session,
-  reserve = false,
+  slotLabel,
+  skills = [],
+  onSkill,
+  onDetail,
 }: {
   unit: BattleUnitState;
   session: BattleSession;
-  reserve?: boolean;
+  slotLabel: string;
+  skills?: SkillDescriptor[];
+  onSkill?: (skill: SkillDescriptor) => void;
+  onDetail: (detail: DetailContent) => void;
 }) {
   const attackData = session.registry.byInstanceId[unit.instanceId];
-  const craftEssence =
-    session.loop.state.loadout.craftEssencesByInstanceId[unit.instanceId];
+  const craftEssence = session.loop.state.loadout.craftEssencesByInstanceId[unit.instanceId];
   return (
     <article className={`unit-card ${unit.alive ? "" : "unit-defeated"}`}>
-      <div className="unit-title">
-        <div>
-          <p className="unit-meta">
-            {reserve ? "控え" : "前衛"} · {attackData?.classKey ?? "class未設定"}
-          </p>
-          <h3>{unit.name}</h3>
-        </div>
-        <span className={`status-pill ${unit.alive ? "alive" : "defeated"}`}>
-          {unit.alive ? "生存" : "退場"}
-        </span>
-      </div>
+      <div className="unit-title"><div><p className="unit-meta">{slotLabel} · {attackData?.classKey ?? "class未設定"}</p><h3>{unit.name}</h3></div><span className={`status-pill ${unit.alive ? "alive" : "defeated"}`}>{unit.alive ? "生存" : "退場"}</span></div>
       <dl className="stat-list">
         <div><dt>HP</dt><dd>{unit.hp.toLocaleString()} / {unit.maxHp.toLocaleString()}</dd></div>
         <div><dt>ATK</dt><dd>{attackData?.attack.toLocaleString() ?? "—"}</dd></div>
-        {unit.side === "ally" ? (
-          <div><dt>NP</dt><dd>{formatNp(unit.np)}</dd></div>
-        ) : (
-          <div>
-            <dt>チャージ</dt>
-            <dd>{unit.enemyAction?.charge ?? 0} / {unit.enemyAction?.chargeMax ?? 0}</dd>
-          </div>
-        )}
+        {unit.side === "ally" ? <div><dt>NP</dt><dd>{formatNp(unit.np)}</dd></div> : <div><dt>チャージ</dt><dd>{unit.enemyAction?.charge ?? 0} / {unit.enemyAction?.chargeMax ?? 0}</dd></div>}
       </dl>
       <progress value={unit.hp} max={unit.maxHp} aria-label={`${unit.name} HP`} />
-      {unit.side === "ally" && (
-        <p className="equipment-line">
-          概念礼装：{craftEssence?.name ?? "未選択"}
-        </p>
+      {unit.side === "ally" && <p className="equipment-line">概念礼装：{craftEssence?.name ?? "未選択"}</p>}
+      <EffectTabs unit={unit} session={session} onDetail={(effect) => onDetail({ kind: "effect", effect })} />
+      {skills.length > 0 && (
+        <div className="unit-skill-row" aria-label={`${unit.name} 保有スキル`}>
+          {skills.map((skill) => <SkillButton key={skill.stableId} skill={skill} onUse={() => onSkill?.(skill)} onDetail={() => onDetail({ kind: "skill", title: skill.name, rank: skill.rank, cooldown: skill.cooldownAtMax, descriptions: skill.descriptions })} />)}
+        </div>
       )}
-      {unit.skillCooldowns.length > 0 && (
-        <p className="muted compact">CT: {unit.skillCooldowns.join(" / ")}</p>
-      )}
-      <EffectList unit={unit} />
     </article>
   );
 }
 
-export function SkillControls({
-  session,
-  onSessionChange,
-  onMessage,
-  onCommandCardsRedistributed,
-}: {
-  session: BattleSession;
-  onSessionChange: (session: BattleSession) => void;
-  onMessage: (message: string) => void;
-  onCommandCardsRedistributed?: () => void;
-}) {
-  const ally = session.loop.state.formation.ally;
-  const livingFrontline = ally.frontline.flatMap((unit) =>
-    unit?.alive ? [unit] : []
-  );
-  const livingReserve = ally.reserve.filter((unit) => unit.alive);
-  const [selectedTargetInstanceId, setSelectedTargetInstanceId] = useState(
-    () => livingFrontline[0]?.instanceId ?? "",
-  );
-  const [orderChangeFrontlineId, setOrderChangeFrontlineId] = useState(
-    () => livingFrontline[0]?.instanceId ?? "",
-  );
-  const [orderChangeReserveId, setOrderChangeReserveId] = useState(
-    () => livingReserve[0]?.instanceId ?? "",
-  );
+function servantSkillRank(dataId: string, stableId: string): string | null {
+  return INITIAL_SERVANT_DEFINITIONS.find(({ dataId: current }) => current === dataId)
+    ?.activeSkills.find((skill) => skill.stableId === stableId)?.rank ?? null;
+}
 
-  useEffect(() => {
-    const frontlineIds = livingFrontline.map(({ instanceId }) => instanceId);
-    const reserveIds = livingReserve.map(({ instanceId }) => instanceId);
-    if (!frontlineIds.includes(selectedTargetInstanceId)) {
-      setSelectedTargetInstanceId(frontlineIds[0] ?? "");
-    }
-    if (!frontlineIds.includes(orderChangeFrontlineId)) {
-      setOrderChangeFrontlineId(frontlineIds[0] ?? "");
-    }
-    if (!reserveIds.includes(orderChangeReserveId)) {
-      setOrderChangeReserveId(reserveIds[0] ?? "");
-    }
-  }, [
-    livingFrontline,
-    livingReserve,
-    selectedTargetInstanceId,
-    orderChangeFrontlineId,
-    orderChangeReserveId,
-  ]);
-
-  function useAllySkill(
-    sourceInstanceId: string,
-    skillStableId: string,
-    skillName: string,
-  ) {
-    const resolved = resolveBattleSessionAllySkill(session, {
-      kind: "ally_skill",
-      sourceInstanceId,
-      skillStableId,
-      ...(selectedTargetInstanceId
-        ? { selectedTargetInstanceId }
-        : {}),
-    });
-    onSessionChange(resolved.session);
-    if (
-      resolved.result.accepted
-      && effectsRedistributedCommandCards(resolved.result.effects)
-    ) {
-      onCommandCardsRedistributed?.();
-    }
-    onMessage(resolved.result.accepted
-      ? `${skillName}が成立しました。`
-      : ALLY_SKILL_REASON_LABELS[resolved.result.reason]);
-  }
-
-  function useMysticCodeSkill(
-    skillStableId: string,
-    skillName: string,
-    execution: "effects" | "order_change",
-    usesSelectedUnitInput: boolean,
-  ) {
-    const resolved = resolveBattleSessionMysticCodeSkill(session, {
-      kind: "mystic_code_skill",
-      skillStableId,
-      ...(execution === "effects"
-        && usesSelectedUnitInput
-        && selectedTargetInstanceId
-        ? { selectedTargetInstanceId }
-        : {}),
-      ...(execution === "order_change"
-        && orderChangeFrontlineId
-        && orderChangeReserveId
-        ? {
-            orderChange: {
-              frontlineInstanceId: orderChangeFrontlineId,
-              reserveInstanceId: orderChangeReserveId,
-            },
-          }
-        : {}),
-    });
-    onSessionChange(resolved.session);
-    if (
-      resolved.result.accepted
-      && resolved.result.execution === "effects"
-      && effectsRedistributedCommandCards(resolved.result.effects)
-    ) {
-      onCommandCardsRedistributed?.();
-    }
-    onMessage(resolved.result.accepted
-      ? `${skillName}が成立しました。`
-      : MYSTIC_CODE_REASON_LABELS[resolved.result.reason]);
-  }
-
-  const mysticCode = session.loop.state.loadout.mysticCode;
-  const mysticCodeDefinition = mysticCode
-    ? session.mysticCodeRegistry?.byDataId[mysticCode.dataId] ?? null
-    : null;
-
-  return (
-    <section className="panel skill-panel" aria-labelledby="skill-heading">
-      <div className="section-heading">
-        <div>
-          <p className="section-kicker">SKILL</p>
-          <h2 id="skill-heading">スキル操作</h2>
-        </div>
-        <span className="badge">カード行動を消費しません</span>
-      </div>
-      <p className="muted">
-        使用可否、対象、CT、効果はBattleSessionが判定します。
-        一度成立したスキルは取り消せません。
-      </p>
-      <label className="skill-target-field">
-        味方単体の選択対象
-        <select
-          aria-label="スキル対象"
-          value={selectedTargetInstanceId}
-          onChange={(event) => setSelectedTargetInstanceId(event.target.value)}
-        >
-          <option value="">対象未選択</option>
-          {livingFrontline.map((unit, index) => (
-            <option key={unit.instanceId} value={unit.instanceId}>
-              前衛{index + 1}：{unit.name}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className="skill-groups">
-        {livingFrontline.map((unit, frontlineIndex) => {
-          const actionData = session.actionEffectRegistry
-            ?.byInstanceId[unit.instanceId];
-          const skills = actionData?.actions
-            .filter((action) => action.kind === "skill")
-            .sort((left, right) =>
-              (left.skillSlot ?? 0) - (right.skillSlot ?? 0)
-            ) ?? [];
-          return (
-            <article className="skill-group" key={unit.instanceId}>
-              <h3>前衛{frontlineIndex + 1}：{unit.name}</h3>
-              <div className="skill-button-list">
-                {skills.map((skill) => {
-                  const slot = skill.skillSlot ?? 1;
-                  const currentCooldown = unit.skillCooldowns[slot - 1] ?? 0;
-                  return (
-                    <button
-                      type="button"
-                      key={skill.stableId}
-                      onClick={() => useAllySkill(
-                        unit.instanceId,
-                        skill.stableId,
-                        skill.name,
-                      )}
-                    >
-                      <strong>スキル{slot}：{skill.name}</strong>
-                      <span>現在CT {currentCooldown}／使用時CT {skill.cooldownAtMax ?? 0}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </article>
-          );
-        })}
-
-        {mysticCodeDefinition && (
-          <article className="skill-group mystic-skill-group">
-            <h3>魔術礼装：{mysticCodeDefinition.name}</h3>
-            {mysticCodeDefinition.skills.some(
-              ({ execution }) => execution === "order_change",
-            ) && (
-              <div className="order-change-fields">
-                <label>
-                  交換する前衛
-                  <select
-                    value={orderChangeFrontlineId}
-                    onChange={(event) => setOrderChangeFrontlineId(event.target.value)}
-                  >
-                    <option value="">前衛未選択</option>
-                    {livingFrontline.map((unit, index) => (
-                      <option key={unit.instanceId} value={unit.instanceId}>
-                        前衛{index + 1}：{unit.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  交換する控え
-                  <select
-                    value={orderChangeReserveId}
-                    onChange={(event) => setOrderChangeReserveId(event.target.value)}
-                  >
-                    <option value="">控え未選択</option>
-                    {livingReserve.map((unit, index) => (
-                      <option key={unit.instanceId} value={unit.instanceId}>
-                        控え{index + 1}：{unit.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            )}
-            <div className="skill-button-list">
-              {mysticCodeDefinition.skills.map((skill) => {
-                const currentCooldown = session.loop.state
-                  .mysticCodeCooldowns[skill.slot - 1] ?? 0;
-                return (
-                  <button
-                    type="button"
-                    key={skill.stableId}
-                    onClick={() => useMysticCodeSkill(
-                      skill.stableId,
-                      skill.name,
-                      skill.execution,
-                      mysticCodeSkillUsesSelectedUnitInput(skill),
-                    )}
-                  >
-                    <strong>スキル{skill.slot}：{skill.name}</strong>
-                    <span>現在CT {currentCooldown}／使用時CT {skill.cooldownAtMax}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </article>
-        )}
-      </div>
-    </section>
-  );
+function actionUsesSingleTarget(action: BattleActionEffectSequence): boolean {
+  return action.effects.some(({ target }) => target.relation !== "self" && target.selection === "single");
 }
 
 function firstLivingEnemyId(session: BattleSession): string {
-  return session.loop.state.formation.enemy.frontline.find(
-    (unit) => unit?.alive,
-  )?.instanceId ?? "";
+  return session.loop.state.formation.enemy.frontline.find((unit) => unit?.alive)?.instanceId ?? "";
+}
+
+function LogEntry({ summary }: { summary: BattleLogSummary }) {
+  return (
+    <details className="log-entry">
+      <summary><span><strong>{summary.title}</strong><small>{summary.status}</small></span><span className="log-facts">{summary.targetNames.length ? `対象: ${summary.targetNames.join("、")}` : "対象なし"}{summary.actualHpLoss !== null ? ` · 実HP減少 ${summary.actualHpLoss.toLocaleString()}` : ""}{summary.critical !== null ? ` · ${summary.critical ? "クリティカル" : "非クリティカル"}` : ""}</span>{summary.changes.length > 0 && <span className="log-changes">{summary.changes.join(" / ")}</span>}</summary>
+      <div className="log-detail"><p>保存済み確定結果（詳細）</p><pre>{JSON.stringify(summary.detail, null, 2)}</pre></div>
+    </details>
+  );
 }
 
 function BattleLogs({ session }: { session: BattleSession }) {
   const [newestFirst, setNewestFirst] = useState(true);
-  const turnSummaries = useMemo(
-    () => summarizeBattleTurnLogs(session.turnLogs),
-    [session.turnLogs],
-  );
-  const inputSummaries = useMemo(
-    () => summarizeBattleInputLogs(session.inputLogs),
-    [session.inputLogs],
-  );
-  const displayedTurns = newestFirst
-    ? [...turnSummaries].reverse()
-    : turnSummaries;
-  const displayedInputs = newestFirst
-    ? [...inputSummaries].reverse()
-    : inputSummaries;
-
-  function logEntries(
-    summaries: ReturnType<typeof summarizeBattleTurnLogs>,
-    emptyMessage: string,
-  ) {
-    if (summaries.length === 0) {
-      return <p className="muted">{emptyMessage}</p>;
-    }
-    return (
-      <div className="log-list">
-        {summaries.map((summary) => (
-          <details key={summary.id} className="log-entry">
-            <summary>
-              <span>
-                <strong>{summary.title}</strong>
-                <small>{summary.status}</small>
-              </span>
-              <span className="log-facts">
-                {summary.targetNames.length > 0
-                  ? `対象: ${summary.targetNames.join("、")}`
-                  : "対象なし"}
-                {summary.actualHpLoss !== null
-                  ? ` · 実HP減少 ${summary.actualHpLoss.toLocaleString()}`
-                  : ""}
-                {summary.critical !== null
-                  ? ` · ${summary.critical ? "クリティカル" : "非クリティカル"}`
-                  : ""}
-              </span>
-              {summary.changes.length > 0 && (
-                <span className="log-changes">{summary.changes.join(" / ")}</span>
-              )}
-            </summary>
-            <div className="log-detail">
-              <p>保存済み確定結果（詳細）</p>
-              <pre>{JSON.stringify(summary.detail, null, 2)}</pre>
-            </div>
-          </details>
-        ))}
-      </div>
-    );
-  }
-
+  const turns = useMemo(() => presentBattleTurns(session.turnLogs, session.inputLogs), [session.turnLogs, session.inputLogs]);
+  const displayed = newestFirst ? [...turns].reverse() : turns;
   return (
     <section className="panel" aria-labelledby="battle-log-heading">
-      <div className="section-heading">
-        <div>
-          <p className="section-kicker">LOG</p>
-          <h2 id="battle-log-heading">戦闘ログ</h2>
-        </div>
-        <label className="switch-label">
-          <input
-            type="checkbox"
-            checked={newestFirst}
-            onChange={(event) => setNewestFirst(event.target.checked)}
-          />
-          新しい順
-        </label>
-      </div>
-      <div className="log-section">
-        <h3>スキル操作ログ</h3>
-        {!session.inputLogsComplete && (
-          <p className="legacy-log-note">
-            旧形式3から移行した保存には、移行前のスキル確定ログがありません。
-          </p>
-        )}
-        {logEntries(displayedInputs, "スキル操作ログはまだありません。")}
-      </div>
-      <div className="log-section">
-        <h3>戦闘ターンログ</h3>
-        {logEntries(displayedTurns, "成立したターンのログはまだありません。")}
-      </div>
+      <div className="section-heading"><div><p className="section-kicker">LOG</p><h2 id="battle-log-heading">戦闘ログ</h2><p className="log-seed">今回のシード：<code>{session.loop.rng.seed}</code></p></div><label className="switch-label"><input type="checkbox" checked={newestFirst} onChange={(event) => setNewestFirst(event.target.checked)} />新しい順</label></div>
+      {!session.inputLogsComplete && <p className="legacy-log-note">旧形式3から移行した保存には、移行前のスキル確定ログがありません。</p>}
+      {displayed.length === 0 ? <p className="muted">成立したターンのログはまだありません。</p> : displayed.map((turn) => (
+        <article className="turn-log" key={turn.id}>
+          <h3>Wave {turn.waveNumber}・戦闘ターン {turn.battleTurn}</h3>
+          {turn.sections.map((section) => (
+            <details key={section.kind} className="turn-log-section" open={section.kind === "ally_action"}>
+              <summary>{section.label}<span>{section.entries.length}件</span></summary>
+              {section.entries.length ? <div className="log-list">{section.entries.map((entry) => <LogEntry key={entry.id} summary={entry} />)}</div> : <p className="muted compact">確定ログなし</p>}
+            </details>
+          ))}
+        </article>
+      ))}
     </section>
   );
 }
 
 function SuspendControls({
   session,
-  saveJson,
-  onSaveJsonChange,
+  lockedReason,
   onRestore,
 }: {
   session: BattleSession;
-  saveJson: string;
-  onSaveJsonChange: (value: string) => void;
+  lockedReason: string | null;
   onRestore: (session: BattleSession) => void;
 }) {
+  const [saveJson, setSaveJson] = useState("");
+  const [preview, setPreview] = useState<BattleSession | null>(null);
   const [message, setMessage] = useState("");
-
-  function generateSave() {
-    try {
-      onSaveJsonChange(serializeBattleSuspendSave(session));
-      setMessage("現在の入力境界をJSONへ書き出しました。");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "保存に失敗しました。");
-    }
-  }
-
-  function downloadSave() {
+  const [failed, setFailed] = useState(false);
+  function generateSave(download: boolean) {
+    if (lockedReason) return;
     try {
       const serialized = serializeBattleSuspendSave(session);
-      onSaveJsonChange(serialized);
-      const url = URL.createObjectURL(
-        new Blob([serialized], { type: "application/json" }),
-      );
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `fgo-battle-suspend-${session.loop.rng.seed}.json`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-      setMessage("中断保存ファイルを書き出しました。");
+      setSaveJson(serialized);
+      if (download) {
+        const url = URL.createObjectURL(new Blob([serialized], { type: "application/json" }));
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `fgo-battle-suspend-${session.loop.rng.seed}.json`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+      }
+      setMessage(download ? "中断保存ファイルを書き出しました。" : "現在の入力境界をJSONへ書き出しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "保存に失敗しました。");
     }
   }
-
-  function restoreSave() {
+  function inspectSave() {
+    if (lockedReason) return;
     try {
-      const restored = restoreBattleSession(parseBattleSuspendSave(saveJson));
-      onRestore(restored);
-      setMessage("保存済み状態を直接再開しました。");
+      setPreview(restoreBattleSession(parseBattleSuspendSave(saveJson)));
+      setMessage("保存内容を確認しました。要約を確認して再開してください。");
+      setFailed(false);
     } catch (error) {
+      setPreview(null);
       setMessage(error instanceof Error ? error.message : "再開に失敗しました。");
+      setFailed(true);
     }
   }
-
   async function readFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    onSaveJsonChange(await file.text());
-    setMessage("ファイルを読み込みました。内容を確認して再開してください。");
+    setSaveJson(await file.text());
+    setPreview(null);
+    setMessage("ファイルを読み込みました。内容を確認してください。");
   }
-
   return (
-    <details className="panel suspend-panel">
-      <summary>中断保存／再開</summary>
-      <p className="muted">
-        保存済みのHP・NP・状態・敵チャージ・乱数位置を直接復元します。
-      </p>
-      <div className="button-row">
-        <button type="button" onClick={generateSave}>JSONを生成</button>
-        <button type="button" onClick={downloadSave}>JSONファイルを書き出す</button>
-      </div>
-      <label>
-        JSONファイルを読み込む
-        <input type="file" accept="application/json,.json" onChange={readFile} />
-      </label>
-      <label>
-        中断保存JSON
-        <textarea
-          rows={10}
-          value={saveJson}
-          onChange={(event) => onSaveJsonChange(event.target.value)}
-          placeholder="ここへ中断保存JSONを貼り付けてください"
-        />
-      </label>
-      <button type="button" onClick={restoreSave}>このJSONから直接再開する</button>
+    <section className="panel suspend-panel" aria-labelledby="suspend-heading">
+      <div className="section-heading"><div><p className="section-kicker">SAVE</p><h2 id="suspend-heading">保存・再開</h2></div></div>
+      <BattleSummaryView session={session} />
+      {lockedReason && <p className="disabled-notice">保存不可：{lockedReason}</p>}
+      <div className="button-row"><button type="button" disabled={Boolean(lockedReason)} onClick={() => generateSave(false)}>JSONを生成</button><button type="button" disabled={Boolean(lockedReason)} onClick={() => generateSave(true)}>JSONファイルを書き出す</button></div>
+      <label>JSONファイルを読み込む<input type="file" accept="application/json,.json" disabled={Boolean(lockedReason)} onChange={readFile} /></label>
+      <label>中断保存JSON<textarea rows={9} value={saveJson} disabled={Boolean(lockedReason)} onChange={(event) => { setSaveJson(event.target.value); setPreview(null); }} placeholder="ここへ中断保存JSONを貼り付けてください" /></label>
+      <div className="button-row"><button type="button" disabled={Boolean(lockedReason)} onClick={inspectSave}>保存内容を確認する</button>{preview && <button className="primary-button" type="button" onClick={() => onRestore(preview)}>この保存から再開する</button>}{failed && <button type="button" onClick={() => { setFailed(false); setMessage(""); }}>戻る</button>}</div>
+      {preview && <BattleSummaryView session={preview} />}
       {message && <p className="operation-message" aria-live="polite">{message}</p>}
-    </details>
+    </section>
   );
 }
 
-function BattleScreen({
+interface PendingSkillModal {
+  skill: SkillDescriptor;
+}
+
+function SkillTargetModal({
+  pending,
+  session,
+  onConfirm,
+  onClose,
+}: {
+  pending: PendingSkillModal;
+  session: BattleSession;
+  onConfirm: (targetId?: string, orderChange?: { frontlineInstanceId: string; reserveInstanceId: string }) => void;
+  onClose: () => void;
+}) {
+  const livingFrontline = session.loop.state.formation.ally.frontline.flatMap((unit, index) => unit?.alive ? [{ unit, index }] : []);
+  const livingReserve = session.loop.state.formation.ally.reserve.flatMap((unit, index) => unit.alive ? [{ unit, index }] : []);
+  const [targetId, setTargetId] = useState(livingFrontline[0]?.unit.instanceId ?? "");
+  const [frontlineId, setFrontlineId] = useState(livingFrontline[0]?.unit.instanceId ?? "");
+  const [reserveId, setReserveId] = useState(livingReserve[0]?.unit.instanceId ?? "");
+  return (
+    <Modal title={`${pending.skill.name}：対象選択`} onClose={onClose}>
+      {pending.skill.targetMode === "ally" ? (
+        <fieldset className="target-options"><legend>味方単体</legend>{livingFrontline.map(({ unit, index }) => <label className="radio-control" key={unit.instanceId}><input type="radio" name="skill-target" checked={targetId === unit.instanceId} onChange={() => setTargetId(unit.instanceId)} />前衛{index + 1}：{unit.name}</label>)}</fieldset>
+      ) : (
+        <div className="order-change-fields"><label>交換する前衛<select value={frontlineId} onChange={(event) => setFrontlineId(event.target.value)}>{livingFrontline.map(({ unit, index }) => <option key={unit.instanceId} value={unit.instanceId}>前衛{index + 1}：{unit.name}</option>)}</select></label><label>交換する控え<select value={reserveId} onChange={(event) => setReserveId(event.target.value)}>{livingReserve.map(({ unit, index }) => <option key={unit.instanceId} value={unit.instanceId}>控え{index + 1}：{unit.name}</option>)}</select></label></div>
+      )}
+      <div className="modal-actions"><button type="button" onClick={onClose}>キャンセル</button><button className="primary-button" type="button" disabled={pending.skill.targetMode === "ally" ? !targetId : !frontlineId || !reserveId} onClick={() => pending.skill.targetMode === "ally" ? onConfirm(targetId) : onConfirm(undefined, { frontlineInstanceId: frontlineId, reserveInstanceId: reserveId })}>決定</button></div>
+    </Modal>
+  );
+}
+
+function copySeed(seed: string, onMessage: (message: string) => void) {
+  if (navigator.clipboard?.writeText) {
+    void navigator.clipboard.writeText(seed).then(
+      () => onMessage("今回のシードをコピーしました。"),
+      () => onMessage(`コピーできませんでした。シード: ${seed}`),
+    );
+  } else {
+    onMessage(`シード: ${seed}`);
+  }
+}
+
+function ResultOverlay({ session, onReturn, onFixedSeed, onCopy }: { session: BattleSession; onReturn: () => void; onFixedSeed: () => void; onCopy: () => void }) {
+  const state = session.loop.state;
+  const status = presentBattleStatus(state, session.loop.rng.seed);
+  const allies = [...state.formation.ally.frontline.filter((unit): unit is BattleUnitState => unit !== null), ...state.formation.ally.reserve];
+  return (
+    <div className="result-backdrop" role="presentation">
+      <section className={`result-card ${state.outcome}`} role="dialog" aria-modal="true" aria-labelledby="result-heading" onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not([disabled])")];
+        if (buttons.length === 0) return;
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }}>
+        <p className="section-kicker">RESULT</p><h2 id="result-heading">{status.outcome}</h2>
+        <dl className="detail-list"><div><dt>最終Wave</dt><dd>{status.wave}</dd></div><div><dt>ターン</dt><dd>{status.battleTurn}</dd></div><div><dt>今回のシード</dt><dd>{status.seed}</dd></div><div><dt>生存状況</dt><dd>{allies.map((unit) => `${unit.name}：${unit.alive ? `生存 HP ${unit.hp.toLocaleString()}` : "退場"}`).join(" / ")}</dd></div></dl>
+        <div className="result-actions"><button className="primary-button" type="button" autoFocus onClick={onReturn}>設定へ戻る</button><button type="button" onClick={onCopy}>今回のシードをコピー</button><button type="button" onClick={onFixedSeed}>固定シードとして設定へ戻す</button></div>
+      </section>
+    </div>
+  );
+}
+
+function PlaybackOverlay({ notice, summaries }: { notice: string; summaries: BattleLogSummary[] }) {
+  return (
+    <div className="playback-blocker" role="alert" aria-live="assertive" aria-busy="true">
+      <div className="playback-notice"><strong>{notice}</strong>{summaries.slice(0, 4).map((summary) => <span key={summary.id}>{summary.title}{summary.changes.length ? `：${summary.changes.join(" / ")}` : summary.actualHpLoss !== null ? `：HP -${summary.actualHpLoss.toLocaleString()}` : ""}</span>)}</div>
+    </div>
+  );
+}
+
+export function BattleScreen({
   session,
   onSessionChange,
   onReturnToSetup,
+  onFixedSeedToSetup,
 }: {
   session: BattleSession;
   onSessionChange: (session: BattleSession) => void;
   onReturnToSetup: () => void;
+  onFixedSeedToSetup: (seed: string) => void;
 }) {
-  const state = session.loop.state;
-  const battleStatus = presentBattleStatus(state, session.loop.rng.seed);
+  const canonicalState = session.loop.state;
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
-  const [targetInstanceId, setTargetInstanceId] = useState(
-    () => firstLivingEnemyId(session),
-  );
+  const [targetInstanceId, setTargetInstanceId] = useState(() => firstLivingEnemyId(session));
   const [operationMessage, setOperationMessage] = useState("");
-  const [saveJson, setSaveJson] = useState("");
-  const choices = state.outcome === "ongoing"
-    ? listCommandCardChoices(state)
+  const [allyTab, setAllyTab] = useState<"frontline" | "reserve" | "mystic">("frontline");
+  const [detail, setDetail] = useState<DetailContent | null>(null);
+  const [pendingSkill, setPendingSkill] = useState<PendingSkillModal | null>(null);
+  const [playback, setPlayback] = useState<{
+    finalSession: BattleSession;
+    frames: Array<{
+      notice: string;
+      state: BattleState;
+      summaries: BattleLogSummary[];
+    }>;
+    index: number;
+  } | null>(null);
+  const playbackFrame = playback?.frames[playback.index] ?? null;
+  const state = playbackFrame?.state ?? canonicalState;
+  const commandState = playback ? canonicalState : state;
+  const battleStatus = presentBattleStatus(state, session.loop.rng.seed);
+  const choices = commandState.outcome === "ongoing"
+    ? listCommandCardChoices(commandState)
     : [];
-  const unitsById = new Map(
-    [
-      ...state.formation.ally.frontline,
-      ...state.formation.ally.reserve,
-      ...state.formation.enemy.frontline,
-      ...state.formation.enemy.reserve,
-    ].flatMap((unit) => unit ? [[unit.instanceId, unit] as const] : []),
-  );
+  const threeSelected = selectedCardIds.length === 3;
+  const interactionLock = playback ? "確定結果を再生中です。" : threeSelected ? "カードを3枚選択中です。選択解除または実行してください。" : null;
 
-  function toggleCard(cardId: string) {
-    setSelectedCardIds((current) => current.includes(cardId)
-      ? current.filter((selected) => selected !== cardId)
-      : [...current, cardId]);
+  useEffect(() => {
+    if (!playback) return;
+    const timer = window.setTimeout(() => {
+      if (playback.index + 1 < playback.frames.length) {
+        setPlayback({ ...playback, index: playback.index + 1 });
+        return;
+      }
+      onSessionChange(playback.finalSession);
+      setSelectedCardIds([]);
+      setTargetInstanceId(firstLivingEnemyId(playback.finalSession));
+      setOperationMessage("確定ログの再生が完了しました。");
+      setPlayback(null);
+    }, 950);
+    return () => window.clearTimeout(timer);
+  }, [playback, onSessionChange]);
+
+  useEffect(() => {
+    if (!playback) return;
+    const blockKeyboardInput = (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+    window.addEventListener("keydown", blockKeyboardInput, true);
+    return () => window.removeEventListener("keydown", blockKeyboardInput, true);
+  }, [playback]);
+
+  const unitsById = new Map([
+    ...state.formation.ally.frontline,
+    ...state.formation.ally.reserve,
+    ...state.formation.enemy.frontline,
+    ...state.formation.enemy.reserve,
+  ].flatMap((unit) => unit ? [[unit.instanceId, unit] as const] : []));
+  const frontlineSlotById = new Map(state.formation.ally.frontline.flatMap((unit, index) => unit ? [[unit.instanceId, index + 1] as const] : []));
+  const selectedHasCriticalBonus = selectedChainCriticalBonus(selectedCardIds, choices.map(({ card }) => card));
+
+  function allySkills(unit: BattleUnitState): SkillDescriptor[] {
+    const skills = session.actionEffectRegistry?.byInstanceId[unit.instanceId]?.actions
+      .filter((action) => action.kind === "skill")
+      .sort((left, right) => (left.skillSlot ?? 0) - (right.skillSlot ?? 0)) ?? [];
+    return skills.map((skill) => {
+      const slot = skill.skillSlot ?? 1;
+      const cooldown = unit.skillCooldowns[slot - 1] ?? 0;
+      const targetMode = actionUsesSingleTarget(skill) ? "ally" as const : "none" as const;
+      const livingTargets = state.formation.ally.frontline.some((target) => target?.alive);
+      const disabledReason = interactionLock
+        ?? (!unit.alive ? "使用済み・退場中" : null)
+        ?? (isActionDisabled(unit) ? "行動不能" : null)
+        ?? (cooldown > 0 ? `CT中（残り${cooldown}）` : null)
+        ?? (targetMode === "ally" && !livingTargets ? "対象不在" : null);
+      return {
+        kind: "ally" as const,
+        sourceInstanceId: unit.instanceId,
+        stableId: skill.stableId,
+        name: skill.name,
+        rank: servantSkillRank(unit.dataId, skill.stableId),
+        slot,
+        currentCooldown: cooldown,
+        cooldownAtMax: skill.cooldownAtMax ?? 0,
+        descriptions: skill.effects.map(({ description }) => description),
+        targetMode,
+        disabledReason,
+      };
+    });
+  }
+
+  const selectedMystic = state.loadout.mysticCode;
+  const mysticDefinition = selectedMystic && session.mysticCodeRegistry
+    ? session.mysticCodeRegistry.byDataId[selectedMystic.dataId]
+    : null;
+  const mysticSkills: SkillDescriptor[] = (mysticDefinition?.skills ?? []).map((skill) => {
+    const cooldown = state.mysticCodeCooldowns[skill.slot - 1] ?? 0;
+    const targetMode = skill.execution === "order_change"
+      ? "order_change" as const
+      : mysticCodeSkillUsesSelectedUnitInput(skill) ? "ally" as const : "none" as const;
+    const noTarget = targetMode === "ally"
+      ? !state.formation.ally.frontline.some((unit) => unit?.alive)
+      : targetMode === "order_change"
+        ? !state.formation.ally.frontline.some((unit) => unit?.alive) || !state.formation.ally.reserve.some((unit) => unit.alive)
+        : false;
+    return {
+      kind: "mystic",
+      stableId: skill.stableId,
+      name: skill.name,
+      rank: null,
+      slot: skill.slot,
+      currentCooldown: cooldown,
+      cooldownAtMax: skill.cooldownAtMax,
+      descriptions: skill.effects.map(({ description }) => description),
+      targetMode,
+      disabledReason: interactionLock ?? (cooldown > 0 ? `CT中（残り${cooldown}）` : null) ?? (noTarget ? "対象不在" : null),
+    };
+  });
+
+  function resolveSkill(skill: SkillDescriptor, targetId?: string, orderChange?: { frontlineInstanceId: string; reserveInstanceId: string }) {
+    if (skill.disabledReason) return;
+    if (skill.kind === "ally") {
+      const resolved = resolveBattleSessionAllySkill(session, {
+        kind: "ally_skill",
+        sourceInstanceId: skill.sourceInstanceId!,
+        skillStableId: skill.stableId,
+        ...(targetId ? { selectedTargetInstanceId: targetId } : {}),
+      });
+      onSessionChange(resolved.session);
+      if (resolved.result.accepted && effectsRedistributedCommandCards(resolved.result.effects)) setSelectedCardIds((current) => selectedCardsAfterCommandRedistribution(current, true));
+      setOperationMessage(resolved.result.accepted ? `${skill.name}が成立しました。` : ALLY_SKILL_REASON_LABELS[resolved.result.reason]);
+    } else {
+      const resolved = resolveBattleSessionMysticCodeSkill(session, {
+        kind: "mystic_code_skill",
+        skillStableId: skill.stableId,
+        ...(targetId ? { selectedTargetInstanceId: targetId } : {}),
+        ...(orderChange ? { orderChange } : {}),
+      });
+      onSessionChange(resolved.session);
+      if (resolved.result.accepted && resolved.result.execution === "effects" && effectsRedistributedCommandCards(resolved.result.effects)) setSelectedCardIds((current) => selectedCardsAfterCommandRedistribution(current, true));
+      setOperationMessage(resolved.result.accepted ? `${skill.name}が成立しました。` : MYSTIC_CODE_REASON_LABELS[resolved.result.reason]);
+    }
+    setPendingSkill(null);
+  }
+
+  function beginSkill(skill: SkillDescriptor) {
+    if (skill.disabledReason) return;
+    if (skill.targetMode === "none") resolveSkill(skill);
+    else setPendingSkill({ skill });
   }
 
   function executeTurn() {
+    if (playback) return;
     const result = resolveBattleSessionTurn(session, {
       cardIds: selectedCardIds,
-      ...(targetInstanceId
-        ? { ally: { requestedTargetInstanceId: targetInstanceId } }
-        : {}),
+      ...(targetInstanceId ? { ally: { requestedTargetInstanceId: targetInstanceId } } : {}),
     });
-    onSessionChange(result.session);
     if (!result.result.accepted) {
-      setOperationMessage(
-        SELECTION_REASON_LABELS[result.result.selection.reason],
-      );
+      setOperationMessage(SELECTION_REASON_LABELS[result.result.selection.reason]);
       return;
     }
-    setSelectedCardIds([]);
-    const nextTargetIds = result.session.loop.state.formation.enemy.frontline
-      .flatMap((unit) => unit?.alive ? [unit.instanceId] : []);
-    setTargetInstanceId((current) =>
-      nextTargetIds.includes(current) ? current : (nextTargetIds[0] ?? "")
-    );
-    setOperationMessage(`1ターン実行: ${result.result.resolution.stopReason}`);
+    const newLog = result.session.turnLogs[result.session.turnLogs.length - 1];
+    const resolution = result.result.resolution;
+    const presented = newLog ? presentBattleTurns([newLog], [])[0] : null;
+    const section = (kind: "ally_action" | "ally_turn_end" | "enemy_action" | "enemy_turn_end") =>
+      presented?.sections.find((candidate) => candidate.kind === kind)?.entries ?? [];
+    const frames: Array<{ notice: string; state: BattleState; summaries: BattleLogSummary[] }> = [];
+    if (resolution.allyAttacks.sequence.accepted) {
+      const sequence = resolution.allyAttacks.sequence.result;
+      for (const notice of confirmedChainNotices(sequence.chain)) {
+        frames.push({ notice, state: canonicalState, summaries: [] });
+      }
+      const allySummaries = section("ally_action");
+      sequence.actions.forEach((action, index) => {
+        frames.push({
+          notice: "スキル・味方行動",
+          state: action.boundary.state,
+          summaries: allySummaries[index] ? [allySummaries[index]] : [],
+        });
+      });
+    }
+    if (resolution.allyTurnEnd) {
+      frames.push({ notice: "味方ターン終了", state: resolution.allyTurnEnd.state, summaries: section("ally_turn_end") });
+      const allyEndRecord = newLog?.records.find((record) => record.recordType === "turn_end" && record.side === "ally");
+      if (allyEndRecord?.recordType === "turn_end" && allyEndRecord.checkpoint.waveTransition) {
+        frames.push({ notice: "Wave突破", state: resolution.allyTurnEnd.state, summaries: section("ally_turn_end") });
+      }
+    }
+    if (resolution.enemyAttacks) {
+      const enemySummaries = section("enemy_action");
+      resolution.enemyAttacks.sequence.actions.forEach((action, index) => {
+        frames.push({
+          notice: "敵行動",
+          state: action.boundary.state,
+          summaries: enemySummaries[index] ? [enemySummaries[index]] : [],
+        });
+      });
+    }
+    if (resolution.enemyTurnEnd) {
+      frames.push({ notice: "敵ターン終了", state: resolution.enemyTurnEnd.state, summaries: section("enemy_turn_end") });
+      const enemyEndRecord = newLog?.records.find((record) => record.recordType === "turn_end" && record.side === "enemy");
+      if (enemyEndRecord?.recordType === "turn_end" && enemyEndRecord.checkpoint.waveTransition) {
+        frames.push({ notice: "Wave突破", state: resolution.enemyTurnEnd.state, summaries: section("enemy_turn_end") });
+      }
+    }
+    if (frames.length === 0) {
+      frames.push({
+        notice: newLog ? confirmedPlaybackNotices(newLog)[0] ?? "確定結果を再生中" : "確定結果を再生中",
+        state: result.session.loop.state,
+        summaries: [],
+      });
+    }
+    setPlayback({ finalSession: result.session, frames, index: 0 });
   }
 
   return (
     <main className="app-shell battle-shell">
-      <header className="battle-header">
-        <div>
-          <p className="eyebrow">{EMBER_GATHERING_SABER_EXTREME.name}</p>
-          <h1>Wave {battleStatus.wave}</h1>
-        </div>
-        <dl className="battle-meta">
-          <div><dt>戦闘ターン</dt><dd>{battleStatus.battleTurn}</dd></div>
-          <div><dt>Waveターン</dt><dd>{battleStatus.waveTurn}</dd></div>
-          <div><dt>シード</dt><dd>{battleStatus.seed}</dd></div>
-          <div><dt>結果</dt><dd>{battleStatus.outcome}</dd></div>
-        </dl>
-      </header>
+      <section className="battle-header panel" aria-labelledby="status-heading">
+        <div><p className="eyebrow">{EMBER_GATHERING_SABER_EXTREME.name}</p><h1 id="status-heading">戦闘状況</h1></div>
+        <dl className="battle-meta"><div><dt>Wave</dt><dd>{battleStatus.wave}</dd></div><div><dt>戦闘ターン</dt><dd>{battleStatus.battleTurn}</dd></div><div><dt>Waveターン</dt><dd>{battleStatus.waveTurn}</dd></div><div><dt>結果</dt><dd>{battleStatus.outcome}</dd></div><div className="seed-meta"><dt>今回のシード</dt><dd>{battleStatus.seed}</dd></div></dl>
+        <div className="button-row seed-actions"><button type="button" disabled={Boolean(playback)} onClick={() => copySeed(battleStatus.seed, setOperationMessage)}>今回のシードをコピー</button><button type="button" disabled={threeSelected || Boolean(playback)} onClick={() => onFixedSeedToSetup(battleStatus.seed)}>固定シードとして設定へ戻す</button></div>
+      </section>
 
       <section className="panel" aria-labelledby="enemy-heading">
-        <div className="section-heading">
-          <div>
-            <p className="section-kicker">ENEMY</p>
-            <h2 id="enemy-heading">敵前衛</h2>
-          </div>
-          <span className="badge">チャージは状態値を表示</span>
-        </div>
-        <div className="unit-grid">
-          {state.formation.enemy.frontline.map((unit, index) => unit ? (
-            <div key={unit.instanceId} className="target-unit">
-              {state.outcome === "ongoing" && unit.alive && (
-                <label className="target-selector">
-                  <input
-                    type="radio"
-                    name="enemy-target"
-                    checked={targetInstanceId === unit.instanceId}
-                    onChange={() => setTargetInstanceId(unit.instanceId)}
-                  />
-                  攻撃対象にする（敵枠{index + 1}）
-                </label>
-              )}
-              <UnitPanel unit={unit} session={session} />
-            </div>
-          ) : (
-            <div key={`empty-enemy-${index}`} className="empty-slot">敵枠{index + 1}：空き</div>
-          ))}
-        </div>
+        <div className="section-heading"><div><p className="section-kicker">ENEMY</p><h2 id="enemy-heading">敵前衛</h2></div><span className="badge">3列表示</span></div>
+        <div className="unit-grid enemy-grid">{state.formation.enemy.frontline.map((unit, index) => unit ? <div key={unit.instanceId} className="target-unit">{state.outcome === "ongoing" && unit.alive && <label className={`target-selector ${threeSelected ? "control-disabled" : ""}`}><input type="radio" name="enemy-target" disabled={threeSelected} checked={targetInstanceId === unit.instanceId} onChange={() => setTargetInstanceId(unit.instanceId)} />攻撃対象（敵前衛{index + 1}）</label>}<UnitPanel unit={unit} session={session} slotLabel={`敵前衛${index + 1}`} onDetail={setDetail} /></div> : <div key={`empty-enemy-${index}`} className="empty-slot">敵前衛{index + 1}：空き</div>)}</div>
       </section>
 
       <section className="panel" aria-labelledby="ally-heading">
-        <div className="section-heading">
-          <div>
-            <p className="section-kicker">ALLY</p>
-            <h2 id="ally-heading">味方</h2>
-          </div>
-          <span className="badge">スター {state.commandStars}</span>
-        </div>
-        <div className="unit-grid">
-          {state.formation.ally.frontline.map((unit, index) => unit ? (
-            <UnitPanel key={unit.instanceId} unit={unit} session={session} />
-          ) : (
-            <div key={`empty-ally-${index}`} className="empty-slot">味方枠{index + 1}：空き</div>
-          ))}
-        </div>
-        {state.formation.ally.reserve.length > 0 && (
-          <details className="reserve-section">
-            <summary>控え {state.formation.ally.reserve.length}騎を表示</summary>
-            <div className="unit-grid">
-              {state.formation.ally.reserve.map((unit) => (
-                <UnitPanel
-                  key={unit.instanceId}
-                  unit={unit}
-                  session={session}
-                  reserve
-                />
-              ))}
-            </div>
-          </details>
-        )}
-        <p className="equipment-line">
-          魔術礼装：{state.loadout.mysticCode?.name ?? "未選択"}
-          {state.loadout.mysticCode
-            ? `（CT ${state.mysticCodeCooldowns.join(" / ")}）`
-            : ""}
-        </p>
+        <div className="section-heading"><div><p className="section-kicker">ALLY</p><h2 id="ally-heading">味方前衛・控え・魔術礼装</h2></div><span className="badge">スター {state.commandStars}</span></div>
+        <div className="tab-list ally-tabs" role="tablist" aria-label="味方領域">{(["frontline", "reserve", "mystic"] as const).map((tab, index) => <button key={tab} type="button" role="tab" aria-selected={allyTab === tab} onClick={() => setAllyTab(tab)}>{["前衛", "控え", "魔術礼装"][index]}</button>)}</div>
+        {allyTab === "frontline" && <div className="unit-grid">{state.formation.ally.frontline.map((unit, index) => unit ? <UnitPanel key={unit.instanceId} unit={unit} session={session} slotLabel={`前衛${index + 1}`} skills={state.outcome === "ongoing" ? allySkills(unit) : []} onSkill={beginSkill} onDetail={setDetail} /> : <div key={`empty-ally-${index}`} className="empty-slot">前衛{index + 1}：空き</div>)}</div>}
+        {allyTab === "reserve" && <><div className="unit-grid">{state.formation.ally.reserve.length ? state.formation.ally.reserve.map((unit, index) => <UnitPanel key={unit.instanceId} unit={unit} session={session} slotLabel={`控え${index + 1}`} onDetail={setDetail} />) : <div className="empty-slot">控えなし</div>}</div>{state.outcome === "ongoing" && mysticSkills.length > 0 && <article className="mystic-skills"><h3>魔術礼装スキル</h3><div className="unit-skill-row">{mysticSkills.map((skill) => <SkillButton key={skill.stableId} skill={skill} onUse={() => beginSkill(skill)} onDetail={() => setDetail({ kind: "skill", title: skill.name, rank: null, cooldown: skill.cooldownAtMax, descriptions: skill.descriptions })} />)}</div></article>}</>}
+        {allyTab === "mystic" && <article className="mystic-overview"><h3>{state.loadout.mysticCode?.name ?? "未選択"}</h3><p>スキルLv最大</p><p>現在CT：{state.mysticCodeCooldowns.join(" / ") || "—"}</p><p className="muted">魔術礼装スキルの操作は「控え」タブの下に表示します。</p></article>}
       </section>
 
-      {state.outcome === "ongoing" && (
-        <SkillControls
-          session={session}
-          onSessionChange={onSessionChange}
-          onMessage={setOperationMessage}
-          onCommandCardsRedistributed={() =>
-            setSelectedCardIds((current) =>
-              selectedCardsAfterCommandRedistribution(current, true)
-            )}
-        />
-      )}
-
-      {state.outcome === "ongoing" ? (
-        <section className="panel command-panel" aria-labelledby="command-heading">
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">COMMAND</p>
-              <h2 id="command-heading">カード選択</h2>
-            </div>
-            <span className="badge">選択 {selectedCardIds.length}枚</span>
-          </div>
-          <p className="muted">
-            現在手札と使用可能な宝具から実行順に3枚選びます。
-            枚数不成立はBattleSessionの結果を表示します。
-          </p>
-          <div className="card-grid">
-            {choices.map((choice) => {
-              const card = choice.card;
-              const owner = unitsById.get(card.ownerInstanceId);
-              const selectedIndex = selectedCardIds.indexOf(card.cardId);
-              const starAllocation = card.kind === "normal"
-                ? state.commandStarDistribution?.cards.find(
-                    ({ cardId }) => cardId === card.cardId,
-                  ) ?? null
-                : null;
-              const label = card.kind === "noble_phantasm"
-                ? card.noblePhantasmName
-                : `${CARD_TYPE_LABELS[card.type]} ${card.cardIndex + 1}`;
-              return (
-                <button
-                  key={card.cardId}
-                  type="button"
-                  className={`command-card ${card.type} ${selectedIndex >= 0 ? "selected" : ""}`}
-                  disabled={!choice.selectable}
-                  onClick={() => toggleCard(card.cardId)}
-                  aria-pressed={selectedIndex >= 0}
-                >
-                  <span className="card-order">
-                    {selectedIndex >= 0 ? `${selectedIndex + 1}枚目` : "未選択"}
-                  </span>
-                  <strong>{label}</strong>
-                  <small>{owner?.name ?? card.ownerInstanceId}</small>
-                  {starAllocation && (
-                    <small>
-                      スター {starAllocation.stars}個・クリティカル率
-                      {starAllocation.criticalRatePermille / 10}%
-                    </small>
-                  )}
-                  {!choice.selectable && (
-                    <small>{choice.executionRestrictions.join(" / ")}</small>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          {operationMessage && (
-            <p className="operation-message" aria-live="polite">{operationMessage}</p>
-          )}
-          <div className="sticky-actions battle-actions">
-            <button type="button" onClick={() => setSelectedCardIds([])}>
-              カード選択を解除
-            </button>
-            <button className="primary-button" type="button" onClick={executeTurn}>
-              選択カードで1ターン実行
-            </button>
-          </div>
-        </section>
-      ) : (
-        <section className={`outcome-banner ${state.outcome}`}>
-          <p>戦闘終了</p>
-          <h2>{battleStatus.outcome}</h2>
-          <button type="button" onClick={onReturnToSetup}>設定画面へ戻る</button>
-        </section>
-      )}
+      <section className="panel command-panel" aria-labelledby="command-heading">
+        <div className="section-heading"><div><p className="section-kicker">COMMAND</p><h2 id="command-heading">コマンドカード・実行</h2></div><span className="badge">選択 {selectedCardIds.length} / 3枚</span></div>
+        {state.outcome === "ongoing" ? <><p className="muted">3枚選択中は、未選択カード・対象変更・スキル・保存・設定復帰をロックします。</p><div className="card-grid">{choices.map((choice) => {
+          const card = choice.card;
+          const owner = unitsById.get(card.ownerInstanceId);
+          const selectedIndex = selectedCardIds.indexOf(card.cardId);
+          const unselectedLock = threeSelected && selectedIndex < 0;
+          const starAllocation = card.kind === "normal" ? commandState.commandStarDistribution?.cards.find(({ cardId }) => cardId === card.cardId) ?? null : null;
+          const label = card.kind === "noble_phantasm" ? card.noblePhantasmName : `${CARD_TYPE_LABELS[card.type]} ${card.cardIndex + 1}`;
+          return <button key={card.cardId} type="button" className={`command-card ${card.type} ${selectedIndex >= 0 ? "selected" : ""}`} disabled={!choice.selectable || unselectedLock || Boolean(playback)} onClick={() => setSelectedCardIds((current) => toggleSelectedCommandCard(current, card.cardId))} aria-pressed={selectedIndex >= 0}><span className="card-order">{selectedIndex >= 0 ? `${selectedIndex + 1}枚目` : "未選択"}</span><strong>{label}</strong><small>前衛{frontlineSlotById.get(card.ownerInstanceId) ?? "—"}・{owner?.name ?? card.ownerInstanceId}</small>{starAllocation && <small>スター {starAllocation.stars}個・確定表示率 {starAllocation.criticalRatePermille / 10}%</small>}{selectedHasCriticalBonus && selectedIndex >= 0 && card.kind === "normal" && <small className="chain-bonus">クリティカル率 +20%</small>}{!choice.selectable && <small>{choice.executionRestrictions.join(" / ")}</small>}{unselectedLock && <small>3枚選択中</small>}</button>;
+        })}</div><div className="sticky-actions battle-actions"><button type="button" disabled={selectedCardIds.length === 0 || Boolean(playback)} onClick={() => setSelectedCardIds([])}>カード選択を解除</button><button className="primary-button" type="button" disabled={selectedCardIds.length !== 3 || Boolean(playback)} onClick={executeTurn}>選択カードで1ターン実行</button></div></> : <p className="muted">戦闘は終了しました。確定した戦闘画面を保持しています。</p>}
+        {operationMessage && <p className="operation-message" aria-live="polite">{operationMessage}</p>}
+      </section>
 
       <BattleLogs session={session} />
-      <SuspendControls
-        session={session}
-        saveJson={saveJson}
-        onSaveJsonChange={setSaveJson}
-        onRestore={(restored) => {
-          onSessionChange(restored);
-          setSelectedCardIds([]);
-          setTargetInstanceId(firstLivingEnemyId(restored));
-          setOperationMessage("中断保存から直接再開しました。");
-        }}
-      />
-      <button className="text-button" type="button" onClick={onReturnToSetup}>
-        現在の戦闘を閉じて設定画面へ戻る
-      </button>
+      <SuspendControls session={session} lockedReason={interactionLock} onRestore={(restored) => { onSessionChange(restored); setSelectedCardIds([]); setTargetInstanceId(firstLivingEnemyId(restored)); setOperationMessage("中断保存から直接再開しました。"); }} />
+      <button className="text-button" type="button" disabled={threeSelected || Boolean(playback)} onClick={onReturnToSetup}>現在の戦闘を閉じて設定画面へ戻る</button>
+
+      {detail && <DetailModal detail={detail} onClose={() => setDetail(null)} />}
+      {pendingSkill && <SkillTargetModal pending={pendingSkill} session={session} onConfirm={(targetId, orderChange) => resolveSkill(pendingSkill.skill, targetId, orderChange)} onClose={() => setPendingSkill(null)} />}
+      {playbackFrame && <PlaybackOverlay notice={playbackFrame.notice} summaries={playbackFrame.summaries} />}
+      {state.outcome !== "ongoing" && !playback && <ResultOverlay session={session} onReturn={onReturnToSetup} onFixedSeed={() => onFixedSeedToSetup(session.loop.rng.seed)} onCopy={() => copySeed(session.loop.rng.seed, setOperationMessage)} />}
     </main>
   );
 }
@@ -1187,15 +1169,13 @@ export function App() {
   const [setup, setSetup] = useState<InitialBattleSetup>(storedSetup);
   const [session, setSession] = useState<BattleSession | null>(null);
   const [startError, setStartError] = useState("");
-
   useEffect(() => {
     try {
       localStorage.setItem(SETUP_STORAGE_KEY, JSON.stringify(setup));
     } catch {
-      // The setup remains usable even when browser storage is unavailable.
+      // Browser storage is optional; current input remains usable.
     }
   }, [setup]);
-
   function startBattle() {
     try {
       setSession(createInitialBattleSession(setup));
@@ -1204,29 +1184,11 @@ export function App() {
       setStartError(error instanceof Error ? error.message : "戦闘開始に失敗しました。");
     }
   }
-
   if (session) {
-    return (
-      <BattleScreen
-        session={session}
-        onSessionChange={setSession}
-        onReturnToSetup={() => setSession(null)}
-      />
-    );
+    return <BattleScreen session={session} onSessionChange={setSession} onReturnToSetup={() => setSession(null)} onFixedSeedToSetup={(seed) => {
+      setSetup((current) => ({ ...current, seedMode: "fixed", seed }));
+      setSession(null);
+    }} />;
   }
-
-  return (
-    <>
-      <SetupScreen
-        setup={setup}
-        onSetupChange={setSetup}
-        onStart={startBattle}
-        onRestore={(restored) => {
-          setSession(restored);
-          setStartError("");
-        }}
-      />
-      {startError && <p className="fatal-message" role="alert">{startError}</p>}
-    </>
-  );
+  return <><SetupScreen setup={setup} onSetupChange={setSetup} onStart={startBattle} onRestore={(restored) => { setSession(restored); setStartError(""); }} />{startError && <p className="fatal-message" role="alert">{startError}</p>}</>;
 }

@@ -29,6 +29,8 @@ import {
   createEmptyInitialBattleSetup,
   createInitialBattleSession,
   emptyInitialAllySlot,
+  initialAllySelectionForServant,
+  resolveInitialBattleSeed,
   validateInitialBattleSetup,
   type InitialAllySlotSelection,
   type InitialBattleSetup,
@@ -59,6 +61,7 @@ function completeSetup(seed = "initial-ui-seed"): InitialBattleSetup {
       emptyInitialAllySlot(),
     ],
     mysticCodeDataId: "atlas-academy-uniform",
+    seedMode: "fixed",
     seed,
   };
 }
@@ -91,7 +94,11 @@ describe("minimum initial battle UI adapter", () => {
     expect(invalid.valid).toBe(false);
     expect(invalid.errors.filter((error) => error.includes("前衛"))).toHaveLength(3);
     expect(invalid.errors).toContain("登録済み魔術礼装を1着選択してください。");
-    expect(invalid.errors).toContain("固定シードを入力してください。");
+    expect(invalid.errors).not.toContain("固定シードを入力してください。");
+
+    const fixedWithoutSeed = { ...empty, seedMode: "fixed" as const };
+    expect(validateInitialBattleSetup(fixedWithoutSeed).errors)
+      .toContain("固定シードを入力してください。");
 
     const complete = completeSetup();
     expect(validateInitialBattleSetup(complete)).toEqual({
@@ -101,6 +108,24 @@ describe("minimum initial battle UI adapter", () => {
     const session = createInitialBattleSession(complete);
     expect(session.loop.state.formation.ally.frontline).toHaveLength(3);
     expect(session.loop.state.formation.ally.reserve).toEqual([]);
+  });
+
+  it("defaults a selected Servant to final-ascension Lv and NP1, and resolves a random seed before BattleRng", () => {
+    expect(initialAllySelectionForServant(LIGHT_KOYANSKAYA.dataId)).toMatchObject({
+      servantDataId: LIGHT_KOYANSKAYA.dataId,
+      level: 90,
+      noblePhantasmLevel: 1,
+    });
+    const random = completeSetup();
+    random.seedMode = "random";
+    random.seed = "stale-fixed-seed";
+    expect(resolveInitialBattleSeed(random, () => "generated-replay-seed"))
+      .toBe("generated-replay-seed");
+    const session = createInitialBattleSession(
+      random,
+      () => "generated-replay-seed",
+    );
+    expect(session.loop.rng.seed).toBe("generated-replay-seed");
   });
 
   it("rejects incomplete or unregistered setup before constructing a session", () => {
@@ -343,9 +368,11 @@ describe("minimum initial battle UI adapter", () => {
 
     expect(markup).toContain("初期戦闘設定");
     expect(markup).toContain("前衛3騎必須");
-    expect(markup).toContain("種火集め（剣基準）極級");
-    expect(markup).toContain("魔術協会制服");
-    expect(markup).toContain("戦闘を開始する");
+    expect(markup).toContain("Wave・敵設定");
+    expect(markup).toContain("戦闘設定");
+    expect(markup).toContain("最終確認");
+    expect(markup).toContain("ランダムシード");
+    expect(markup).toContain("次へ");
     expect(markup).toContain("disabled");
   });
 });

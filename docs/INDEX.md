@@ -22,7 +22,7 @@
 | 計算・乱数 | [`specs/CALCULATIONS_AND_RNG.md`](specs/CALCULATIONS_AND_RNG.md) |
 | 効果・状態・発動順 | [`specs/EFFECTS_AND_TIMING.md`](specs/EFFECTS_AND_TIMING.md) |
 | UI・保存 | [`specs/UI_AND_STORAGE.md`](specs/UI_AND_STORAGE.md) |
-| 初期データ | [`specs/INITIAL_CONTENT.md`](specs/INITIAL_CONTENT.md) |
+| 初期データ | [`specs/INITIAL_CONTENT.md`](specs/INITIAL_CONTENT.md)（旧称入口: [`specs/INITIAL_DATA.md`](specs/INITIAL_DATA.md)） |
 
 ## 役割別指示と依頼テンプレート
 
@@ -33,6 +33,7 @@
 | 概念礼装 | [`roles/CRAFT_ESSENCE.md`](roles/CRAFT_ESSENCE.md) | [`templates/CRAFT_ESSENCE_ADDITION.md`](templates/CRAFT_ESSENCE_ADDITION.md) |
 | 魔術礼装 | [`roles/MYSTIC_CODE.md`](roles/MYSTIC_CODE.md) | [`templates/MYSTIC_CODE_ADDITION.md`](templates/MYSTIC_CODE_ADDITION.md) |
 | 敵 | [`roles/ENEMY.md`](roles/ENEMY.md) | [`templates/ENEMY_ADDITION.md`](templates/ENEMY_ADDITION.md) |
+| UI | [`roles/UI.md`](roles/UI.md) | — |
 | 不具合 | — | [`templates/BUG_REPORT.md`](templates/BUG_REPORT.md) |
 
 ## 引継ぎと履歴
@@ -44,6 +45,7 @@
 - スリップダメージ倍加の統合受入結果: [`qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md`](qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md)
 - 敵宝具Lv・OC文脈と段階別宣言値の統合受入結果: [`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)
 - ターン終了トリガーによるスター獲得の統合受入結果: [`qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md`](qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md)
+- UI完成仕様の受入結果: [`qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md`](qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md)
 - 詳細な完了履歴・決定理由・旧規則: [`archive/README.md`](archive/README.md)
 
 詳細仕様は現在も有効な正本です。履歴を確認する必要がある場合だけアーカイブを開いてください。
