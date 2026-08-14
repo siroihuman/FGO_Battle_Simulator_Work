@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { BattleScreen } from "../src/App";
+import { AllySlotEditor, BattleScreen } from "../src/App";
 import { listCommandCardChoices } from "../src/core/cards/selection";
 import { resolveBattleSessionTurn } from "../src/core/battle/session";
 import { LIGHT_KOYANSKAYA, LUCIFERA } from "../src/data/servants";
@@ -15,6 +15,7 @@ import {
   presentNoblePhantasmDetail,
   presentBattleSummary,
   presentBattleTurns,
+  registeredServantWikiUrl,
   selectedChainCriticalBonus,
   toggleSelectedCommandCard,
 } from "../src/ui/battleUi";
@@ -222,8 +223,24 @@ describe("completed battle UI selectors", () => {
     expect(detail?.descriptions).toHaveLength(
       LIGHT_KOYANSKAYA.noblePhantasm.effects.length,
     );
-    expect(detail?.descriptions.some((description) => description.includes("8Hit")))
-      .toBe(true);
+    expect(detail?.descriptions).toContain(
+      "＋敵全体に強力な攻撃[Lv]：300% / 400% / 450% / 475% / 500%",
+    );
+    expect(detail?.descriptions).toContain(
+      "＋味方全体のNPを少し増やす<OC:効果UP>：10% / 15% / 20% / 25% / 30%",
+    );
+    const luciferaDetail = presentNoblePhantasmDetail(
+      started.loop.state.formation.ally.frontline[1],
+    );
+    expect(luciferaDetail?.descriptions).toContain(
+      "＆〔悪〕特攻<OC:特攻威力UP>：150% / 162.5% / 175% / 187.5% / 200%",
+    );
+    expect(LUCIFERA.activeSkills[2].effects.map(({ description }) => description))
+      .toEqual([
+        "〔悪〕特性の味方全体のスキルチャージを1進める",
+        "＋味方単体のNPを倍化する[Lv]：100%",
+        "＆「ターン終了時に自身の強化状態を解除する状態」を付与【デメリット】",
+      ]);
   });
 
   it("uses explicit quest-special metadata for enemy tabs without guessing", () => {
@@ -398,6 +415,27 @@ describe("completed battle UI selectors", () => {
     expect(markup).toContain("今回のシード：<code>completed-ui</code>");
     expect(markup).toContain("戦闘状態要約");
     expect(markup).toContain("src=\"/FGO_Battle_Simulator_Work/assets/skill-icons/skill-np-charge.png\"");
+    expect(registeredServantWikiUrl(LIGHT_KOYANSKAYA.dataId))
+      .toBe("https://w.atwiki.jp/f_go/pages/5141.html");
+    expect(registeredServantWikiUrl(LUCIFERA.dataId))
+      .toBe("https://w.atwiki.jp/siroi_human/pages/795.html");
+    expect(registeredServantWikiUrl("unregistered-servant")).toBeNull();
+    expect(markup).toContain('href="https://w.atwiki.jp/f_go/pages/5141.html"');
+    expect(markup).toContain('href="https://w.atwiki.jp/siroi_human/pages/795.html"');
+    expect(markup).toContain('class="servant-wiki-link"');
+
+    const setupMarkup = renderToStaticMarkup(createElement(AllySlotEditor, {
+      label: "前衛1",
+      required: true,
+      selection: ally(LUCIFERA.dataId),
+      onChange: () => undefined,
+    }));
+    expect(setupMarkup.indexOf("wikiを開く"))
+      .toBeGreaterThan(setupMarkup.indexOf("概念礼装"));
+    expect(setupMarkup).toContain(
+      'href="https://w.atwiki.jp/siroi_human/pages/795.html"',
+    );
+    expect(setupMarkup).toContain('target="_blank"');
   });
 
 });

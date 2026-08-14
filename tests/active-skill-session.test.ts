@@ -21,6 +21,7 @@ import { MAGE_ASSOCIATION_UNIFORM } from "../src/data/mysticCodes";
 import {
   summarizeBattleInputLogs,
 } from "../src/ui/battlePresentation";
+import { registeredStatusIconPath } from "../src/ui/iconRegistry";
 import {
   createEmptyInitialBattleSetup,
   createInitialBattleSession,
@@ -120,6 +121,70 @@ describe("active skill BattleSession integration", () => {
         }],
       }],
     });
+  });
+
+  it("shows and resolves Queen of Vanity's delayed buff removal at turn end", () => {
+    let session = createInitialBattleSession(setup("queen-of-vanity-delayed-removal"));
+    session = resolveBattleSessionAllySkill(session, {
+      kind: "ally_skill",
+      sourceInstanceId: "ally-frontline-1",
+      skillStableId: "lucifera-familiar-six-sins",
+      selectedTargetInstanceId: "ally-frontline-1",
+    }).session;
+    const applied = resolveBattleSessionAllySkill(session, {
+      kind: "ally_skill",
+      sourceInstanceId: "ally-frontline-1",
+      skillStableId: "lucifera-queen-of-vanity",
+      selectedTargetInstanceId: "ally-frontline-1",
+    });
+    expect(applied.result.accepted).toBe(true);
+    if (!applied.result.accepted) throw new Error("虚栄の女王が成立しませんでした");
+    const delayedApplication = applied.result.effects.effects.find(
+      ({ effectStableId }) => effectStableId === "lucifera-queen-buff-clear",
+    )?.batch?.results[0]?.applicationResults?.[0];
+    expect(delayedApplication).toMatchObject({
+      outcome: "applied",
+      rate: {
+        baseRatePermille: 5_000,
+        targetModifierPermille: -175,
+        resolvedRatePermille: 4_825,
+      },
+    });
+    session = applied.session;
+
+    const beforeTurn = findUnitLocation(
+      session.loop.state.formation,
+      "ally-frontline-1",
+    )?.unit;
+    const delayedRemoval = beforeTurn?.effects.find(
+      ({ stableId }) => stableId === "lucifera-queen-buff-clear-state",
+    );
+    expect(beforeTurn?.effects.some(
+      ({ stableId }) => stableId === "lucifera-familiar-buster-state",
+    )).toBe(true);
+    expect(delayedRemoval).toMatchObject({
+      name: "ターン終了時強化解除",
+      category: "debuff",
+      remainingTurns: 1,
+    });
+    expect(registeredStatusIconPath(delayedRemoval!))
+      .toBe("/FGO_Battle_Simulator_Work/assets/status-icons/DelayedDebuff.webp");
+
+    const turn = resolveBattleSessionTurn(session, {
+      cardIds: firstThreeCardIds(session),
+      ally: { requestedTargetInstanceId: "enemy-w1-1" },
+    });
+    expect(turn.result.accepted).toBe(true);
+    const afterTurn = findUnitLocation(
+      turn.session.loop.state.formation,
+      "ally-frontline-1",
+    )?.unit;
+    expect(afterTurn?.effects.some(
+      ({ stableId }) => stableId === "lucifera-familiar-buster-state",
+    )).toBe(false);
+    expect(afterTurn?.effects.some(
+      ({ stableId }) => stableId === "lucifera-queen-buff-clear-state",
+    )).toBe(false);
   });
 
   it("logs a cooldown rejection without changing state, counters, or RNG", () => {

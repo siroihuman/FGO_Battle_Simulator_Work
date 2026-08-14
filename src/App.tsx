@@ -50,6 +50,7 @@ import {
   presentNoblePhantasmDetail,
   presentBattleSummary,
   presentBattleTurns,
+  registeredServantWikiUrl,
   selectedChainCriticalBonus,
   toggleSelectedCommandCard,
   type ConfirmedAttackDamage,
@@ -200,7 +201,7 @@ function allyName(selection: InitialAllySlotSelection): string {
     : "未選択";
 }
 
-function AllySlotEditor({
+export function AllySlotEditor({
   label,
   required,
   selection,
@@ -213,6 +214,9 @@ function AllySlotEditor({
 }) {
   const definition = selection.servantDataId
     ? servantDefinition(INITIAL_SERVANT_REGISTRY, selection.servantDataId)
+    : null;
+  const wikiUrl = definition
+    ? registeredServantWikiUrl(definition.dataId)
     : null;
   return (
     <fieldset className="setup-slot">
@@ -290,6 +294,16 @@ function AllySlotEditor({
           ))}
         </select>
       </label>
+      {wikiUrl && (
+        <a
+          className="wiki-button"
+          href={wikiUrl}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          wikiを開く
+        </a>
+      )}
     </fieldset>
   );
 }
@@ -594,7 +608,7 @@ function DetailModal({ detail, onClose }: { detail: DetailContent; onClose: () =
       <dl className="detail-list">
         <div><dt>発生元</dt><dd>{effect.sourceName}</dd></div>
         <div><dt>名称・ランク</dt><dd>{effect.applied.name} / {effect.sourceRank ?? "—"}</dd></div>
-        <div><dt>登録済み説明</dt><dd>{effect.description}</dd></div>
+        <div><dt>登録済み説明</dt><dd className="registered-description">{effect.description}</dd></div>
         <div><dt>効果量</dt><dd>{effectValueLabel(effect.applied, effect.applied.value)}（同一発生元の同種合計 {effectValueLabel(effect.applied, effect.totalValue)}）</dd></div>
         <div><dt>残り</dt><dd>{effect.applied.remainingTurns === null ? "ターン制限なし" : `${effect.applied.remainingTurns}T`} / {effect.applied.remainingUses === null ? "回数制限なし" : `${effect.applied.remainingUses}回`}</dd></div>
         <div><dt>解除可否</dt><dd>{effect.applied.removalPolicy === "removable" ? "解除可能" : effect.applied.removalPolicy === "unremovable" ? "解除不可" : "ID指定時のみ"}</dd></div>
@@ -801,9 +815,12 @@ function UnitPanel({
 }) {
   const attackData = session.registry.byInstanceId[unit.instanceId];
   const craftEssence = session.loop.state.loadout.craftEssencesByInstanceId[unit.instanceId];
+  const wikiUrl = unit.side === "ally"
+    ? registeredServantWikiUrl(unit.dataId)
+    : null;
   return (
     <article className={`unit-card ${unit.alive ? "" : "unit-defeated"}`}>
-      <div className="unit-title"><div><p className="unit-meta">{slotLabel} · {attackData?.classKey ?? "class未設定"}</p><h3>{unit.name}</h3></div><span className={`status-pill ${unit.alive ? "alive" : "defeated"}`}>{unit.alive ? "生存" : "退場"}</span></div>
+      <div className="unit-title"><div><p className="unit-meta">{slotLabel} · {attackData?.classKey ?? "class未設定"}</p><h3>{wikiUrl ? <a className="servant-wiki-link" href={wikiUrl} target="_blank" rel="noreferrer noopener">{unit.name}</a> : unit.name}</h3></div><span className={`status-pill ${unit.alive ? "alive" : "defeated"}`}>{unit.alive ? "生存" : "退場"}</span></div>
       <dl className="stat-list">
         <div><dt>HP</dt><dd>{unit.hp.toLocaleString()} / {unit.maxHp.toLocaleString()}</dd></div>
         <div><dt>ATK</dt><dd>{attackData?.attack.toLocaleString() ?? "—"}</dd></div>
@@ -1183,7 +1200,7 @@ export function BattleScreen({
         slot,
         currentCooldown: cooldown,
         cooldownAtMax: skill.cooldownAtMax ?? 0,
-        descriptions: skill.effects.map(({ description }) => description),
+        descriptions: skill.effects.flatMap(({ description }) => description.split("\n")),
         targetMode,
         disabledReason,
       };
@@ -1212,7 +1229,7 @@ export function BattleScreen({
       slot: skill.slot,
       currentCooldown: cooldown,
       cooldownAtMax: skill.cooldownAtMax,
-      descriptions: skill.effects.map(({ description }) => description),
+      descriptions: skill.effects.flatMap(({ description }) => description.split("\n")),
       targetMode,
       disabledReason: interactionLock ?? (cooldown > 0 ? `CT中（残り${cooldown}）` : null) ?? (noTarget ? "対象不在" : null),
     };

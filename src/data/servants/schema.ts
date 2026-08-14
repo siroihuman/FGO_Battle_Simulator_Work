@@ -15,6 +15,9 @@ import type {
 
 export const SERVANT_DATA_SCHEMA_VERSION = 1 as const;
 
+/** Default 500% base rate for a skill/NP demerit with no source-listed rate. */
+export const SERVANT_DEFAULT_DEMERIT_APPLICATION_RATE_PERMILLE = 5_000;
+
 export type ServantRarity = 0 | 1 | 2 | 3 | 4 | 5;
 
 export type ServantLevel =

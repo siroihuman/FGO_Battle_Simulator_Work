@@ -212,9 +212,12 @@
     "initialBattleUiLogSource": "saved_input_action_logs_and_battle_turn_logs",
     "initialBattleUiSuspendFlow": "serialize_parse_and_direct_restore",
     "initialBattleUiRecalculatesBattleValues": false,
+    "servantDefaultDemeritApplicationRatePermille": 5000,
+    "servantDefaultDemeritRateAppliesWhenSourceRateMissing": true,
+    "servantDemeritUsesDebuffResistanceAndImmunity": true,
     "completedUiSpecification": {
       "decisionRange": "D-077-D-085",
-      "acceptanceRevision": "D-087",
+      "acceptanceRevision": "D-088",
       "implementationStatus": "implemented_pending_user_screen_acceptance",
       "setupTabs": [
         "ally_formation",
@@ -273,7 +276,10 @@
         "first_card_change"
       ],
       "noblePhantasmDetail": "550ms_long_press_or_detail_button_registered_effect_lines",
-      "skillAndNoblePhantasmDescriptions": "one_registered_effect_per_line",
+      "skillAndNoblePhantasmDescriptions": "wiki_notation_with_registered_rates_one_effect_per_line",
+      "servantWikiLinks": "registered_wiki_source_only_in_setup_and_battle",
+      "setupServantWikiLinkPosition": "below_craft_essence",
+      "battleServantWikiLinkPosition": "ally_name",
       "confirmedLogPlaybackOnly": true,
       "playbackNavigation": "manual_previous_next",
       "playbackStageOrder": [

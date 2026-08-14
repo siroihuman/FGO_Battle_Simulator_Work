@@ -13,6 +13,16 @@ import {
   type BattleLogSummary,
 } from "./battlePresentation";
 
+/** Returns only a registered primary Wiki URL; unknown content stays unlinked. */
+export function registeredServantWikiUrl(dataId: string): string | null {
+  const definition = INITIAL_SERVANT_DEFINITIONS.find(
+    ({ dataId: registeredDataId }) => registeredDataId === dataId,
+  );
+  return definition?.sources.find(
+    ({ url }) => url.startsWith("https://w.atwiki.jp/"),
+  )?.url ?? null;
+}
+
 export function toggleSelectedCommandCard(
   selectedCardIds: readonly string[],
   cardId: string,
@@ -308,15 +318,24 @@ export function presentNoblePhantasmDetail(
     !definition
     || definition.noblePhantasm.stableId !== unit.noblePhantasm.stableId
   ) return null;
+  const rateSeries = (values: readonly number[]) =>
+    values.map((value) => `${value / 10}%`).join(" / ");
   const descriptions = [...definition.noblePhantasm.effects]
     .sort((left, right) => left.order - right.order)
-    .map((effect) => {
-      if (effect.kind === "effect") return effect.description;
+    .flatMap((effect) => {
+      if (effect.kind === "effect") return effect.description.split("\n");
       const target = effect.targetScope === "all" ? "敵全体" : "敵単体";
-      const specialAttack = effect.specialAttack
-        ? `・${effect.specialAttack.requiredTargetTraits?.map((trait) => `〔${trait}〕`).join("・") ?? "条件付き"}特攻`
-        : "";
-      return `${target}への攻撃（${effect.hitWeights.length}Hit${specialAttack}）`;
+      const attack = effect.specialAttack
+        ? `＆強力な攻撃[Lv]：${rateSeries(effect.damageMultiplierPermilleByLevel)}`
+        : `＋${target}に強力な攻撃[Lv]：${rateSeries(effect.damageMultiplierPermilleByLevel)}`;
+      if (!effect.specialAttack) return [attack];
+      const traits = effect.specialAttack.requiredTargetTraits
+        ?.map((trait) => `〔${trait}〕`)
+        .join("・") ?? "条件付き";
+      return [
+        attack,
+        `＆${traits}特攻<OC:特攻威力UP>：${rateSeries(effect.specialAttack.multiplierPermilleByOvercharge)}`,
+      ];
     });
   return {
     title: definition.noblePhantasm.name,

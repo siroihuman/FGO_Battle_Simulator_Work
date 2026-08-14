@@ -604,7 +604,10 @@ if (manifest) {
   assert(
     manifest.status === "completed-ui-spec-implemented"
       && completedUi.decisionRange === "D-077-D-085"
-      && completedUi.acceptanceRevision === "D-087"
+      && completedUi.acceptanceRevision === "D-088"
+      && manifest.coreRules.servantDefaultDemeritApplicationRatePermille === 5000
+      && manifest.coreRules.servantDefaultDemeritRateAppliesWhenSourceRateMissing === true
+      && manifest.coreRules.servantDemeritUsesDebuffResistanceAndImmunity === true
       && completedUi.defaultSeedMode === "random"
       && completedUi.randomBlankSeedResolvedBeforeBattleRng === true
       && JSON.stringify(completedUi.allyEffectTabs) === JSON.stringify(["class_skill", "craft_essence", "other", "combined"])
@@ -626,6 +629,8 @@ if (manifest) {
       && completedUi.playbackNavigation === "manual_previous_next"
       && completedUi.playbackAutomaticAdvance === false
       && completedUi.playbackStateSaved === false
+      && completedUi.servantWikiLinks === "registered_wiki_source_only_in_setup_and_battle"
+      && completedUi.skillAndNoblePhantasmDescriptions === "wiki_notation_with_registered_rates_one_effect_per_line"
       && completedUi.battleSuspendSchemaChange === false
       && completedUi.dataSchemaChange === false,
     "UI完成仕様の実装状態が一致しません"
@@ -1103,7 +1108,7 @@ const uiAcceptance = await readText(
 );
 assert(
   uiAcceptance.includes("判定: 条件付き合格")
-    && uiAcceptance.includes("51ファイル・524テスト")
+    && uiAcceptance.includes("51ファイル・525テスト")
     && uiAcceptance.includes("ユーザー実画面再確認待ち"),
   "UI完成仕様の受入報告が正本と一致しません"
 );
@@ -1161,7 +1166,8 @@ assert(
     && decisionLog.includes("## D-084 リザルトを確定戦闘画面へ重ねる")
     && decisionLog.includes("## D-085 保存・再開を要約付き・非破壊にする")
     && decisionLog.includes("## D-086 UI実画面受入の状態表示と確定結果演出を追補する")
-    && decisionLog.includes("## D-087 UI実画面受入の資源・状態・カード表示を追補する"),
+    && decisionLog.includes("## D-087 UI実画面受入の資源・状態・カード表示を追補する")
+    && decisionLog.includes("## D-088 UI実画面受入の遅延状態・Wiki導線・説明表記を追補する"),
   "決定記録にUI完成仕様D-077～D-085がありません"
 );
 
@@ -1257,6 +1263,13 @@ assert(
   "UI・保存仕様にD-087のダメージ・NP・状態期限・カード表示がありません"
 );
 assert(
+  uiAndStorage.includes("実画面受入の遅延状態・Wiki導線・説明表記追補（D-088）")
+    && uiAndStorage.includes("概念礼装欄の下へ登録済み主参照")
+    && uiAndStorage.includes("Wikiの効果順")
+    && uiAndStorage.includes("DelayedDebuff"),
+  "UI・保存仕様にD-088の遅延状態・Wiki導線・説明表記がありません"
+);
+assert(
   /button\s*\{[\s\S]*?min-height:\s*3\.5rem/.test(uiStyles)
     && /@media \(max-width: 43\.99rem\)[\s\S]*?\.unit-grid,[\s\S]*?overflow-x:\s*auto/.test(uiStyles)
     && /@media \(min-width: 44rem\)[\s\S]*?\.slot-grid,[\s\S]*?\.unit-grid\s*\{\s*grid-template-columns:\s*repeat\(3/.test(uiStyles)
@@ -1284,8 +1297,11 @@ assert(
     && battleUi.includes("confirmedHpTransitions")
     && battleUi.includes("displayedCommandCardCriticalRatePermille")
     && battleUi.includes("presentNoblePhantasmDetail")
+    && battleUi.includes("registeredServantWikiUrl")
+    && appSource.includes("servant-wiki-link")
+    && appSource.includes("wikiを開く")
     && effectPresentation.includes("effectExpiryLabel"),
-  "UI実装にD-086～D-087の画像・状態・カード・確定資源演出がありません"
+  "UI実装にD-086～D-088の画像・状態・カード・Wiki・確定資源演出がありません"
 );
 const battlePresentation = await readText("src/ui/battlePresentation.ts");
 assert(
@@ -1302,6 +1318,20 @@ assert(initialContent.includes("同じ概念礼装`dataId`を複数"), "初期�
 assert(initialContent.includes("radiant-arm-of-dawn-saber"), "初期データ仕様に黎明の炎腕（剣）の安定IDがありません");
 assert(initialContent.includes("136,216"), "初期データ仕様に極級Wave 3のHPがありません");
 assert(initialContent.includes("敵ターン終了時"), "初期データ仕様に敵通常チャージの時期がありません");
+assert(
+  initialContent.includes("基礎付与率500%（5000 permille）")
+    && initialContent.includes("弱体耐性と弱体無効"),
+  "初期データ仕様にスキル・宝具デメリットの既定付与率がありません"
+);
+const initialServants = await readText("src/data/servants/initialServants.ts");
+const servantSchema = await readText("src/data/servants/schema.ts");
+assert(
+  servantSchema.includes("SERVANT_DEFAULT_DEMERIT_APPLICATION_RATE_PERMILLE = 5_000")
+    && initialServants.includes("baseRatePermille: SERVANT_DEFAULT_DEMERIT_APPLICATION_RATE_PERMILLE")
+    && initialServants.includes("lucifera-queen-buff-clear-state")
+    && !initialServants.includes("ignoreResistance: true"),
+  "初期サーヴァントに500%の遅延デメリット登録がありません"
+);
 
 const archiveReadme = await readText("docs/archive/README.md");
 assert(archiveReadme.includes("IMPLEMENTATION_STATUS_v1.0.0.md"), "実装状況の履歴アーカイブへの案内がありません");
