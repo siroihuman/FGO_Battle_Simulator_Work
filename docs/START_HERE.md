@@ -4,16 +4,16 @@
 
 ## 現在地点
 
-- フェーズ: 18／UI完成仕様（D-077～D-085実装・受入確認）
-- 状態: 4タブ設定、確定シード、固定領域順、指定画像限定、味方・敵の発生元別／合算状態タブ、期限バッジ付きアイコン中心表示、表示倍率の百分率化、スキル・宝具詳細、対象モーダル、宝具上段／通常カード下段、選択途中のQuick始動率表示、3枚入力ロック、4区分ログ、前後ボタン式の確定ダメージ・HP・NPバー演出、重ねリザルト、要約付き保存・非破壊再開を実装。D-088で虚栄の女王の遅延強化解除、`DelayedDebuff`表示、初期2騎の登録Wiki導線、Wiki準拠説明を追補した。BattleSessionと既存保存・直接再開・リプレイ・カード再配布を維持し、新規具体コンテンツは未追加。2026-08-14にユーザー実画面受入を最終合格とし、UI完成仕様を完了した。
+- フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加
+- 状態: UI完成仕様は2026-08-14に最終合格。最初の追加対象としてNo.024’「支配のフォーリナー」を強化後宝具のみ、上位保有スキル3種、全クラススキル、正式Wiki導線・指定アイコンとともに登録した。固定150%の〔人の力〕特攻、OC別の宝具後効果、次回宝具OC+2（1回・3T）、毎ターンNP・スター、弱体付与成功率11.75%を共通処理へ接続し、BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布を維持した。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する。
+1. カテゴリ1の未登録サーヴァントから、No.が次に若い1騎だけを選定する。
 
-ターン終了スター獲得の受入詳細は[`qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md`](qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md)、敵宝具段階文脈は[`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)、スリップダメージ倍加は[`qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md`](qa/SLIP_DAMAGE_AMPLIFICATION_ACCEPTANCE_2026-08-11.md)、魔術協会制服は[`qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md`](qa/MAGE_ASSOCIATION_UNIFORM_ACCEPTANCE_2026-08-11.md)、カード再配布共通処理は[`qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md`](qa/COMMAND_CARD_REDISTRIBUTION_ACCEPTANCE_2026-08-11.md)、従来のv1.0初期範囲は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
+支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)、ターン終了スター獲得は[`qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md`](qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md)、敵宝具段階文脈は[`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)、従来のv1.0初期範囲は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
 
 ## 最初に読むもの
 

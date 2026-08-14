@@ -241,8 +241,15 @@ export function createServantBattleInstance(
             npAttack.damageMultiplierPermilleByLevel,
           ...(specialAttack
             ? {
-                specialAttackPermilleByOvercharge:
-                  specialAttack.multiplierPermilleByOvercharge,
+                ...(specialAttack.multiplierPermille !== undefined
+                  ? {
+                      specialAttackPermille:
+                        specialAttack.multiplierPermille,
+                    }
+                  : {
+                      specialAttackPermilleByOvercharge:
+                        specialAttack.multiplierPermilleByOvercharge,
+                    }),
                 ...(specialAttack.requiredTargetTraits
                   ? {
                       specialAttackRequiredTargetTraits:

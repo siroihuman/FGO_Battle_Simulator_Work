@@ -136,10 +136,27 @@ function assertNpAttack(
       `${name}.specialAttack.stableId`,
       stableIds,
     );
-    assertFiveMultipliers(
-      effect.specialAttack.multiplierPermilleByOvercharge,
-      `${name}.specialAttack.multiplierPermilleByOvercharge`,
-    );
+    const hasFixedMultiplier =
+      effect.specialAttack.multiplierPermille !== undefined;
+    const hasOverchargeMultipliers =
+      effect.specialAttack.multiplierPermilleByOvercharge !== undefined;
+    if (hasFixedMultiplier === hasOverchargeMultipliers) {
+      throw new RangeError(
+        `${name}.specialAttack must define exactly one multiplier source`,
+      );
+    }
+    if (effect.specialAttack.multiplierPermille !== undefined) {
+      assertPositiveInteger(
+        effect.specialAttack.multiplierPermille,
+        `${name}.specialAttack.multiplierPermille`,
+      );
+    }
+    if (effect.specialAttack.multiplierPermilleByOvercharge) {
+      assertFiveMultipliers(
+        effect.specialAttack.multiplierPermilleByOvercharge,
+        `${name}.specialAttack.multiplierPermilleByOvercharge`,
+      );
+    }
     if (effect.specialAttack.requiredTargetTraits) {
       assertUniqueStrings(
         effect.specialAttack.requiredTargetTraits,
@@ -216,11 +233,23 @@ export function assertValidServantDefinition(
   const stableIds = new Set<string>();
   registerStableId(definition.dataId, "dataId", stableIds);
   assertNonEmpty(definition.name, "name");
+  if (definition.classDisplayName !== undefined) {
+    assertNonEmpty(definition.classDisplayName, "classDisplayName");
+  }
+  if (definition.growthTendency !== undefined) {
+    assertNonEmpty(definition.growthTendency, "growthTendency");
+  }
+  if (definition.attackType !== undefined) {
+    assertNonEmpty(definition.attackType, "attackType");
+  }
   if (![0, 1, 2, 3, 4, 5].includes(definition.rarity)) {
     throw new RangeError("rarity must be from 0 to 5");
   }
   if (definition.collectionNo !== undefined) {
     assertPositiveInteger(definition.collectionNo, "collectionNo");
+  }
+  if (definition.collectionLabel !== undefined) {
+    assertNonEmpty(definition.collectionLabel, "collectionLabel");
   }
   if (definition.contentRevision !== "current_upgraded_only") {
     throw new RangeError("only current upgraded servant data is supported");

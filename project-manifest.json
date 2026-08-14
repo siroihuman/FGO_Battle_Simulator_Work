@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "completed-ui-spec-implemented",
+  "status": "content-addition-domination-foreigner-review-ready",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -218,7 +218,7 @@
     "completedUiSpecification": {
       "decisionRange": "D-077-D-085",
       "acceptanceRevision": "D-088",
-      "implementationStatus": "implemented_pending_user_screen_acceptance",
+      "implementationStatus": "accepted",
       "setupTabs": [
         "ally_formation",
         "wave_enemy",
@@ -502,6 +502,10 @@
     "duplicateTraitGrantLifetimesIndependent": true,
     "conditionalNpSpecialAttackTraitMatch": "all_required_traits",
     "conditionalNpSpecialAttackTiming": "after_declared_pre_attack",
+    "conditionalNpSpecialAttackMultiplierKinds": [
+      "fixed",
+      "overcharge"
+    ],
     "conditionalNpSpecialAttackMismatchPermille": 1000,
     "unresolvedDeclaredActionConsumesNpOrCharge": false,
     "enemySkillSingleTargetSource": "ai_request",
@@ -588,6 +592,22 @@
     "allySkillCompletedActionBoundary": true,
     "directNpChangeUsesTargetNpLevel": true,
     "servantSkillLevel": "max",
+    "allyNoblePhantasmOverchargeStageEffect": {
+      "effectType": "noble_phantasm_overcharge_stage",
+      "consumeTiming": "after_execution_preflight_before_np_reset",
+      "multipleEffects": "sum_all_in_registration_order_and_consume_each_once",
+      "finalStageCap": 5,
+      "fizzleConsumes": false,
+      "durationTick": "owner_turn_end",
+      "saveSchemaChange": false,
+      "dataSchemaChange": false
+    },
+    "preciseDebuffSuccessModifier": {
+      "effectType": "debuff_success_basis_points",
+      "unit": "0.01_percent",
+      "usedOnlyWhenPermilleCannotRepresentSourceValue": true,
+      "existingIntegerPermilleRngUnchanged": true
+    },
     "mysticCodeLevel": "max",
     "servantNpLevels": [
       1,
@@ -600,6 +620,24 @@
     "fixedSeedReplayRequired": true
   },
   "specifiedContent": {
+    "servants": [
+      {
+        "name": "支配のフォーリナー",
+        "collectionLabel": "024’",
+        "dataId": "domination-foreigner",
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented",
+        "source": "https://w.atwiki.jp/siroi_human/pages/766.html",
+        "sourceCheckedAt": "2026-08-14",
+        "activeSkillCount": 3,
+        "classSkillCount": 5,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "upgraded_only",
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      }
+    ],
     "mysticCodes": [
       {
         "name": "魔術協会制服",

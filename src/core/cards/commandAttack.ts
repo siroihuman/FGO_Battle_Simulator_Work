@@ -325,7 +325,10 @@ function resolveAllyActionData(
   const overchargeStage = resolveNoblePhantasmOverchargeStage(
     npBeforeUse,
     context.overchargeChainBonusStages,
-    additionalOverchargeStagesByCardId[card.cardId] ?? 0,
+    (additionalOverchargeStagesByCardId[card.cardId] ?? 0)
+      + ("additionalOverchargeStages" in input.preflight
+        ? input.preflight.additionalOverchargeStages
+        : 0),
   );
   return {
     accepted: true,
@@ -355,9 +358,10 @@ function resolveAllyActionData(
             card.noblePhantasmLevel,
           ),
         npSpecialAttackPermille:
-          noblePhantasm.specialAttackPermilleByOvercharge?.[
-            overchargeStage - 1
-          ],
+          noblePhantasm.specialAttackPermille
+          ?? noblePhantasm.specialAttackPermilleByOvercharge?.[
+              overchargeStage - 1
+            ],
         npSpecialAttackRequiredTargetTraits:
           noblePhantasm.specialAttackRequiredTargetTraits,
       },

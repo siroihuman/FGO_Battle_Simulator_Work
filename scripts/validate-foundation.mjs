@@ -602,9 +602,10 @@ if (manifest) {
   );
   const completedUi = manifest.coreRules.completedUiSpecification;
   assert(
-    manifest.status === "completed-ui-spec-implemented"
+    manifest.status === "content-addition-domination-foreigner-review-ready"
       && completedUi.decisionRange === "D-077-D-085"
       && completedUi.acceptanceRevision === "D-088"
+      && completedUi.implementationStatus === "accepted"
       && manifest.coreRules.servantDefaultDemeritApplicationRatePermille === 5000
       && manifest.coreRules.servantDefaultDemeritRateAppliesWhenSourceRateMissing === true
       && manifest.coreRules.servantDemeritUsesDebuffResistanceAndImmunity === true
@@ -1061,6 +1062,7 @@ const mandatoryFiles = [
   "docs/HANDOFF_TEMPLATE.md",
   "docs/qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md",
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md",
+  "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md",
   "docs/archive/README.md",
   "docs/archive/2026-08-04/PROJECT_RULES_v1.0.0.md",
   "docs/archive/2026-08-04/IMPLEMENTATION_STATUS_v1.0.0.md",
@@ -1082,7 +1084,9 @@ const mandatoryFiles = [
   "src/data/enemies/registry.ts",
   "src/data/enemies/initialEnemies.ts",
   "src/data/enemies/index.ts",
-  "src/core/battle/enemyNoblePhantasmContext.ts"
+  "src/core/battle/enemyNoblePhantasmContext.ts",
+  "src/data/servants/dominationForeigner.ts",
+  "src/effects/noblePhantasmOvercharge.ts",
 ];
 
 for (const path of mandatoryFiles) {
@@ -1099,10 +1103,10 @@ assert(startHere.includes("## 現在地点"), "作業開始ページに現在地
 assert(startHere.includes("## 次の作業"), "作業開始ページに次の作業がありません");
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
-  startHere.includes("フェーズ: 18／UI完成仕様（D-077～D-085実装・受入確認）")
-    && startHere.includes("2026-08-14にユーザー実画面受入を最終合格")
-    && startHere.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
-  "作業開始ページにUI完成実装と次作業がありません"
+  startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
+    && startHere.includes("No.024’「支配のフォーリナー」")
+    && startHere.includes("カテゴリ1の未登録サーヴァント"),
+  "作業開始ページに支配のフォーリナー実装と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1121,6 +1125,7 @@ const requiredUiAssets = [
     "skill-cooldown", "skill-damage-up", "skill-hp-heal",
     "skill-immune-invincibility", "skill-np-charge",
     "skill-unique-command-shuffle", "skill-unique-order-change",
+    "skill-card-quick-up", "skill-np-damafe-up",
   ].map((name) => `public/assets/skill-icons/${name}.png`),
   ...[
     "Artsupstatus", "Attackdown", "Attackup", "Buffatk", "Busterupstatus",
@@ -1129,6 +1134,7 @@ const requiredUiAssets = [
     "Nppowerdown", "Nppowerup", "Powerup", "Removalresistdown",
     "Removalresistup", "Resistancedown", "Resistanceup", "Quickupstatus",
     "Starabsoprtdown", "Stargainup", "Statusdown", "Statusup",
+    "Npgainturn", "Stargainturn", "NPOvercharge",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
@@ -1141,8 +1147,9 @@ assert(implementationStatus.includes("## 次の実装"), "実装状況に次の�
 assert(
   implementationStatus.includes("D-077～D-085のUI完成仕様")
     && implementationStatus.includes("v1.0初期完成範囲へ追加")
-    && implementationStatus.includes("形式4・データ1.38.0・敵データ形式1・行動ログ形式5"),
-  "実装状況にUI完成範囲と既存形式の維持記録がありません"
+    && implementationStatus.includes("No.024’「支配のフォーリナー」")
+    && implementationStatus.includes("52ファイル・533テスト"),
+  "実装状況にUI完成範囲、支配のフォーリナー、検査記録がありません"
 );
 
 const decisionLog = await readText("docs/DECISION_LOG.md");
@@ -1171,6 +1178,10 @@ assert(
     && decisionLog.includes("## D-087 UI実画面受入の資源・状態・カード表示を追補する")
     && decisionLog.includes("## D-088 UI実画面受入の遅延状態・Wiki導線・説明表記を追補する"),
   "決定記録にUI完成仕様D-077～D-085がありません"
+);
+assert(
+  decisionLog.includes("## D-089 No.024’「支配のフォーリナー」を最初の初期範囲外サーヴァントとして登録する"),
+  "決定記録に支配のフォーリナー実装方針がありません"
 );
 
 const enemyNpAcceptance = await readText(
@@ -1324,6 +1335,12 @@ assert(
   initialContent.includes("基礎付与率500%（5000 permille）")
     && initialContent.includes("弱体耐性と弱体無効"),
   "初期データ仕様にスキル・宝具デメリットの既定付与率がありません"
+);
+assert(
+  initialContent.includes("### No.024’ 支配のフォーリナー")
+    && initialContent.includes("debuff_success_basis_points")
+    && initialContent.includes("強化前宝具を選択肢または別定義として残さない"),
+  "具体データ仕様に支配のフォーリナーの採用範囲と精度規則がありません"
 );
 const initialServants = await readText("src/data/servants/initialServants.ts");
 const servantSchema = await readText("src/data/servants/schema.ts");

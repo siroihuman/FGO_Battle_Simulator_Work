@@ -8,6 +8,7 @@ import { findUnitLocation } from "../src/core/battle/formation";
 import { BattleRng } from "../src/core/rng";
 import {
   INITIAL_SERVANT_DEFINITIONS,
+  DOMINATION_FOREIGNER,
   LIGHT_KOYANSKAYA,
   LUCIFERA,
   assertValidServantDefinition,
@@ -50,7 +51,7 @@ function initialState() {
 }
 
 describe("initial servant definitions", () => {
-  it("registers the two source-backed, current-upgraded definitions", () => {
+  it("registers the source-backed, current-upgraded definitions", () => {
     for (const definition of INITIAL_SERVANT_DEFINITIONS) {
       expect(() => assertValidServantDefinition(definition)).not.toThrow();
     }
@@ -58,6 +59,7 @@ describe("initial servant definitions", () => {
     expect(Object.keys(registry.byDataId)).toEqual([
       "koyanskaya-of-light",
       "lucifera",
+      "domination-foreigner",
     ]);
     expect(LIGHT_KOYANSKAYA.levelStats.at(-1)).toEqual({
       level: 120,
@@ -68,6 +70,11 @@ describe("initial servant definitions", () => {
       level: 120,
       hp: 17_084,
       attack: 13_963,
+    });
+    expect(DOMINATION_FOREIGNER.levelStats.at(-1)).toEqual({
+      level: 120,
+      hp: 16_860,
+      attack: 16_169,
     });
   });
 

@@ -35,7 +35,7 @@ function cardTypeFlag(
 }
 
 export function assertValidNoblePhantasmCardTypeChangeTemplate(
-  template: EffectTemplate,
+  template: Pick<EffectTemplate, "effectType" | "category" | "flags">,
   name = "effect template",
 ): void {
   if (

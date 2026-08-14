@@ -9,6 +9,9 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "使い魔（六罪）": "skill-card-buster-up",
   "罪源業車": "skill-np-charge",
   "虚栄の女王": "skill-cooldown",
+  "永劫の探求": "skill-np-damafe-up",
+  "家のなかの絵": "skill-card-quick-up",
+  "狂気の山脈にて": "skill-np-charge",
   "オシリスの塵": "skill-immune-invincibility",
   "イシスの雨": "skill-clear-debuff",
   "メジェドの眼": "skill-cooldown",
@@ -26,6 +29,9 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "スター発生率アップ": "Stargainup",
   "精神異常耐性アップ": "Resistanceup",
   "与ダメージプラス": "Powerup",
+  "毎ターンNP獲得": "Npgainturn",
+  "毎ターンスター獲得": "Stargainturn",
+  "宝具OC段階アップ": "NPOvercharge",
 };
 
 function publicAssetPath(path: string): string {
@@ -75,7 +81,10 @@ function statusIconId(effect: AppliedEffect): string | null {
     effect.name === "弱体耐性ダウン"
     || effect.name === "即死耐性ダウン"
   ) return "Resistancedown";
-  if (effect.effectType === COMMON_EFFECT_TYPES.debuffSuccess) {
+  if (
+    effect.effectType === COMMON_EFFECT_TYPES.debuffSuccess
+    || effect.effectType === COMMON_EFFECT_TYPES.debuffSuccessBasisPoints
+  ) {
     return effect.value < 0 ? "Statusdown" : "Statusup";
   }
   if (effect.effectType === TRAIT_GRANT_EFFECT_TYPE) return "Dragontrait";

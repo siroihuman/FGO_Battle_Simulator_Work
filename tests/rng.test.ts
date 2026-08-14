@@ -48,6 +48,15 @@ describe("deterministic named RNG streams", () => {
     expect(rng.snapshot().drawCount).toBe(0);
   });
 
+  it("supports exact 0.01%-point chance rates", () => {
+    const first = new DeterministicRng(789n);
+    const second = new DeterministicRng(789n);
+    expect(first.chanceBasisPoints(1_175)).toBe(
+      second.chanceBasisPoints(1_175),
+    );
+    expect(first.snapshot()).toEqual(second.snapshot());
+  });
+
   it("audits logical draws without changing the generated sequence", () => {
     const audited = new DeterministicRng(456n);
     const plain = new DeterministicRng(456n);
