@@ -1100,16 +1100,18 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 18／UI完成仕様（D-077～D-085実装・受入確認）")
-    && startHere.includes("UI完成確認まではサーヴァント・敵・概念礼装等の具体コンテンツを追加しない"),
+    && startHere.includes("2026-08-14にユーザー実画面受入を最終合格")
+    && startHere.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
   "作業開始ページにUI完成実装と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
 );
 assert(
-  uiAcceptance.includes("判定: 条件付き合格")
+  uiAcceptance.includes("判定: 最終合格")
     && uiAcceptance.includes("51ファイル・525テスト")
-    && uiAcceptance.includes("ユーザー実画面再確認待ち"),
+    && uiAcceptance.includes("ユーザー実画面受入完了")
+    && uiAcceptance.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
   "UI完成仕様の受入報告が正本と一致しません"
 );
 
