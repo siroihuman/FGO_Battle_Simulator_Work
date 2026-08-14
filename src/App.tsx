@@ -304,23 +304,6 @@ export function AllySlotEditor({
           wikiを開く
         </a>
       )}
-      {definition && (
-        definition.collectionLabel
-        || definition.classDisplayName
-        || definition.growthTendency
-        || definition.attackType
-      ) && (
-        <p className="muted">
-          {[
-            definition.collectionLabel
-              ? `No.${definition.collectionLabel}`
-              : null,
-            definition.classDisplayName ?? null,
-            definition.growthTendency ?? null,
-            definition.attackType ?? null,
-          ].filter((value): value is string => value !== null).join(" / ")}
-        </p>
-      )}
     </fieldset>
   );
 }

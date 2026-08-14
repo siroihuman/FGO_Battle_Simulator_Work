@@ -134,6 +134,17 @@ describe("No.024’ 支配のフォーリナー", () => {
       cardType: "quick",
     });
     expect(DOMINATION_FOREIGNER.noblePhantasm.effects).toHaveLength(5);
+    const skillDescriptions = DOMINATION_FOREIGNER.activeSkills.flatMap(
+      ({ effects }) => effects.map(({ description }) => description),
+    );
+    expect(skillDescriptions).toContain(
+      "味方単体のQuickカード性能をアップ[Lv](3T)：50%",
+    );
+    expect(skillDescriptions.every((description) => !description.includes(" / ")))
+      .toBe(true);
+    expect(DOMINATION_FOREIGNER.noblePhantasm.effects.some(
+      (effect) => effect.kind === "effect" && effect.description.includes("10% / 15% / 20% / 25% / 30%"),
+    )).toBe(true);
 
     const instance = servant("domination");
     expect(instance.unresolvedEffectStableIds).toEqual([]);

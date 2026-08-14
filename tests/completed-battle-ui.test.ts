@@ -4,7 +4,11 @@ import { describe, expect, it } from "vitest";
 import { AllySlotEditor, BattleScreen } from "../src/App";
 import { listCommandCardChoices } from "../src/core/cards/selection";
 import { resolveBattleSessionTurn } from "../src/core/battle/session";
-import { LIGHT_KOYANSKAYA, LUCIFERA } from "../src/data/servants";
+import {
+  DOMINATION_FOREIGNER,
+  LIGHT_KOYANSKAYA,
+  LUCIFERA,
+} from "../src/data/servants";
 import {
   confirmedAttackDamageAmounts,
   confirmedPlaybackNotices,
@@ -436,6 +440,17 @@ describe("completed battle UI selectors", () => {
       'href="https://w.atwiki.jp/siroi_human/pages/795.html"',
     );
     expect(setupMarkup).toContain('target="_blank"');
+
+    const dominationSetupMarkup = renderToStaticMarkup(createElement(AllySlotEditor, {
+      label: "前衛1",
+      required: true,
+      selection: ally(DOMINATION_FOREIGNER.dataId),
+      onChange: () => undefined,
+    }));
+    expect(dominationSetupMarkup).toContain("wikiを開く");
+    expect(dominationSetupMarkup).not.toContain(
+      "No.024’ / フォーリナー / ATK偏重 / 魔術",
+    );
   });
 
 });
