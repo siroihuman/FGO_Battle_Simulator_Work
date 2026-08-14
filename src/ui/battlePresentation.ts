@@ -1,6 +1,7 @@
 import type {
   BattleActionLogEntry,
   BattleLogBatch,
+  BattleLogCommonActionResult,
 } from "../core/battle/log";
 import type {
   BattleLogTurnEndRecord,
@@ -67,6 +68,56 @@ function actionTargetNames(entry: BattleActionLogEntry): string[] {
 
 function actionChanges(entry: BattleActionLogEntry): string[] {
   const changes: string[] = [];
+  const knownUnits = [
+    entry.actor,
+    ...entry.targetsAtStart,
+    ...(entry.attack?.targets.map(({ target }) => target) ?? []),
+  ];
+  const displayTarget = (instanceId: string | null): string => {
+    if (!instanceId) return "対象なし";
+    const unit = knownUnits.find((candidate) =>
+      candidate.instanceId === instanceId
+    );
+    return unitName(unit?.name ?? null, instanceId);
+  };
+  const appendCommonResult = (result: BattleLogCommonActionResult) => {
+    const target = displayTarget(result.targetInstanceId);
+    if (result.hpChange !== null && result.hpChange !== 0) {
+      changes.push(`${target}：HP ${result.hpChange > 0 ? "+" : ""}${result.hpChange.toLocaleString()}`);
+    }
+    if (result.npChange !== null && result.npChange !== 0) {
+      changes.push(`${target}：NP ${result.npChange > 0 ? "+" : ""}${(result.npChange / 100).toFixed(2)}%`);
+    }
+    if (result.enemyChargeChange !== null && result.enemyChargeChange !== 0) {
+      changes.push(`${target}：チャージ ${result.enemyChargeChange > 0 ? "+" : ""}${result.enemyChargeChange}`);
+    }
+    if (result.skillCooldownsBefore && result.skillCooldownsAfter) {
+      changes.push(`${target}：CT ${result.skillCooldownsBefore.join("/")}→${result.skillCooldownsAfter.join("/")}`);
+    }
+  };
+  for (const target of entry.attack?.targets ?? []) {
+    if (target.hpBefore !== target.hpAfter) {
+      changes.push(`${unitName(target.target.name, target.target.instanceId)}：HP ${target.hpBefore.toLocaleString()}→${target.hpAfter.toLocaleString()}`);
+    }
+    if (target.receivedNp && target.receivedNp.totalUnits !== 0) {
+      changes.push(`${unitName(target.target.name, target.target.instanceId)}：NP +${(target.receivedNp.totalUnits / 100).toFixed(2)}%`);
+    }
+  }
+  if (entry.attack && entry.attack.attackNpTotalUnits !== 0) {
+    changes.push(`${unitName(entry.actor.name, entry.actor.instanceId)}：NP +${(entry.attack.attackNpTotalUnits / 100).toFixed(2)}%`);
+  }
+  for (const group of entry.declaredEffects) {
+    for (const effect of group.effects) {
+      effect.results.forEach(appendCommonResult);
+    }
+  }
+  for (const trigger of entry.attack?.triggerStages ?? []) {
+    for (const activation of trigger.activations) {
+      for (const action of activation.actions) {
+        action.results.forEach(appendCommonResult);
+      }
+    }
+  }
   for (const replacement of entry.boundary.allyReplacements) {
     const defeated = unitName(
       replacement.defeated.name,

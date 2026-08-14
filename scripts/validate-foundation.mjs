@@ -562,8 +562,7 @@ if (manifest) {
   );
   const turnEndStarGain = manifest.coreRules.turnEndTriggerStarGain;
   assert(
-    manifest.status === "turn-end-trigger-star-gain-implemented"
-      && turnEndStarGain.status === "accepted"
+    turnEndStarGain.status === "accepted"
       && turnEndStarGain.v1InitialScope === true
       && JSON.stringify(turnEndStarGain.endingSides) === JSON.stringify([
         "ally",
@@ -600,6 +599,41 @@ if (manifest) {
       && turnEndStarGain.uiRecalculates === false
       && turnEndStarGain.implementationStatus === "implemented_and_accepted",
     "ターン終了トリガーのスター獲得仕様が一致しません"
+  );
+  const completedUi = manifest.coreRules.completedUiSpecification;
+  assert(
+    manifest.status === "completed-ui-spec-implemented"
+      && completedUi.decisionRange === "D-077-D-085"
+      && completedUi.acceptanceRevision === "D-088"
+      && manifest.coreRules.servantDefaultDemeritApplicationRatePermille === 5000
+      && manifest.coreRules.servantDefaultDemeritRateAppliesWhenSourceRateMissing === true
+      && manifest.coreRules.servantDemeritUsesDebuffResistanceAndImmunity === true
+      && completedUi.defaultSeedMode === "random"
+      && completedUi.randomBlankSeedResolvedBeforeBattleRng === true
+      && JSON.stringify(completedUi.allyEffectTabs) === JSON.stringify(["class_skill", "craft_essence", "other", "combined"])
+      && completedUi.allyEffectDefaultTab === "other"
+      && JSON.stringify(completedUi.enemyEffectTabs) === JSON.stringify(["normal", "special", "combined"])
+      && completedUi.enemyEffectDefaultTab === "normal"
+      && completedUi.combinedEffectMutatesBattleState === false
+      && completedUi.rateDisplayUnit === "percent_from_permille_divided_by_10"
+      && completedUi.publicAssetUrlSource === "vite_base_url"
+      && completedUi.mysticCodeSkillPosition === "frontline_tab_bottom"
+      && completedUi.commandCardSelectionMaximum === 3
+      && JSON.stringify(completedUi.commandCardRows) === JSON.stringify(["noble_phantasm", "normal_command"])
+      && completedUi.otherEffectBadge === "remaining_turns_and_uses"
+      && completedUi.quickFirstPreviewTiming === "immediately_after_first_quick_selection_including_unselected_normal_candidates"
+      && completedUi.hpAttackNumberSource === "confirmed_action_log_target_total_damage"
+      && completedUi.hpDifferenceUsedAsAttackDamage === false
+      && completedUi.allyNpChangePresentation === "animated_bars_from_confirmed_before_and_after_np"
+      && completedUi.confirmedLogPlaybackOnly === true
+      && completedUi.playbackNavigation === "manual_previous_next"
+      && completedUi.playbackAutomaticAdvance === false
+      && completedUi.playbackStateSaved === false
+      && completedUi.servantWikiLinks === "registered_wiki_source_only_in_setup_and_battle"
+      && completedUi.skillAndNoblePhantasmDescriptions === "wiki_notation_with_registered_rates_one_effect_per_line"
+      && completedUi.battleSuspendSchemaChange === false
+      && completedUi.dataSchemaChange === false,
+    "UI完成仕様の実装状態が一致しません"
   );
   assert(
     manifest.coreRules.noblePhantasmCardTypeChangeCategory === "buff",
@@ -1026,6 +1060,7 @@ const mandatoryFiles = [
   "docs/NEW_CHAT_GUIDE.md",
   "docs/HANDOFF_TEMPLATE.md",
   "docs/qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md",
+  "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md",
   "docs/archive/README.md",
   "docs/archive/2026-08-04/PROJECT_RULES_v1.0.0.md",
   "docs/archive/2026-08-04/IMPLEMENTATION_STATUS_v1.0.0.md",
@@ -1035,6 +1070,8 @@ const mandatoryFiles = [
   "docs/roles/CRAFT_ESSENCE.md",
   "docs/roles/MYSTIC_CODE.md",
   "docs/roles/ENEMY.md",
+  "docs/roles/UI.md",
+  "docs/specs/INITIAL_DATA.md",
   "docs/templates/SERVANT_ADDITION.md",
   "docs/templates/CRAFT_ESSENCE_ADDITION.md",
   "docs/templates/MYSTIC_CODE_ADDITION.md",
@@ -1062,21 +1099,50 @@ assert(startHere.includes("## 現在地点"), "作業開始ページに現在地
 assert(startHere.includes("## 次の作業"), "作業開始ページに次の作業がありません");
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
-  startHere.includes("ターン終了トリガーによるスター獲得（共通処理・統合受入完了）")
-    && startHere.includes("同範囲の未実装は0件")
-    && startHere.includes("具体コンテンツ追加へ進む前に"),
-  "作業開始ページにターン終了スターの受入結果と次作業がありません"
+  startHere.includes("フェーズ: 18／UI完成仕様（D-077～D-085実装・受入確認）")
+    && startHere.includes("2026-08-14にユーザー実画面受入を最終合格")
+    && startHere.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
+  "作業開始ページにUI完成実装と次作業がありません"
 );
+const uiAcceptance = await readText(
+  "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
+);
+assert(
+  uiAcceptance.includes("判定: 最終合格")
+    && uiAcceptance.includes("51ファイル・525テスト")
+    && uiAcceptance.includes("ユーザー実画面受入完了")
+    && uiAcceptance.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
+  "UI完成仕様の受入報告が正本と一致しません"
+);
+
+const requiredUiAssets = [
+  ...[
+    "skill-attack-up", "skill-card-buster-up", "skill-clear-debuff",
+    "skill-cooldown", "skill-damage-up", "skill-hp-heal",
+    "skill-immune-invincibility", "skill-np-charge",
+    "skill-unique-command-shuffle", "skill-unique-order-change",
+  ].map((name) => `public/assets/skill-icons/${name}.png`),
+  ...[
+    "Artsupstatus", "Attackdown", "Attackup", "Buffatk", "Busterupstatus",
+    "Critabsup", "Critdmgup", "Debuffatk", "Debuffregen", "DelayedBuff",
+    "DelayedDebuff", "Dragontrait", "Invincible", "Npcardtypechange",
+    "Nppowerdown", "Nppowerup", "Powerup", "Removalresistdown",
+    "Removalresistup", "Resistancedown", "Resistanceup", "Quickupstatus",
+    "Starabsoprtdown", "Stargainup", "Statusdown", "Statusup",
+  ].map((name) => `public/assets/status-icons/${name}.webp`),
+];
+for (const path of requiredUiAssets) {
+  if (!(await exists(path))) errors.push(`指定済みUI画像がありません: ${path}`);
+}
 
 const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
 assert(implementationStatus.includes("## 現在地点"), "実装状況に現在地点がありません");
 assert(implementationStatus.includes("## 次の実装"), "実装状況に次の実装がありません");
 assert(
-  implementationStatus.includes("D-073")
-    && implementationStatus.includes("D-074")
+  implementationStatus.includes("D-077～D-085のUI完成仕様")
     && implementationStatus.includes("v1.0初期完成範囲へ追加")
     && implementationStatus.includes("形式4・データ1.38.0・敵データ形式1・行動ログ形式5"),
-  "実装状況にターン終了スターの受入結果と版判定がありません"
+  "実装状況にUI完成範囲と既存形式の維持記録がありません"
 );
 
 const decisionLog = await readText("docs/DECISION_LOG.md");
@@ -1091,6 +1157,21 @@ assert(
     && decisionLog.includes("## D-076 次の作業を初期範囲外の具体コンテンツ追加対象の選定とする"),
   "決定記録にターン終了スターの実装・初期範囲・次作業がありません"
 );
+assert(
+  decisionLog.includes("## D-077 初期設定と確定シードを4タブへ固定する")
+    && decisionLog.includes("## D-078 戦闘画面の領域順と操作可能寸法を固定する")
+    && decisionLog.includes("## D-079 効果表示を発生元別にし、登録・適用済み値だけを使う")
+    && decisionLog.includes("## D-080 アイコンをアップロード済み明示対応だけへ限定する")
+    && decisionLog.includes("## D-081 スキル短押し・詳細・対象確定を分離する")
+    && decisionLog.includes("## D-082 3枚選択時の入力ロックとカード識別を固定する")
+    && decisionLog.includes("## D-083 確定ログだけを再生し、再生中入力を遮断する")
+    && decisionLog.includes("## D-084 リザルトを確定戦闘画面へ重ねる")
+    && decisionLog.includes("## D-085 保存・再開を要約付き・非破壊にする")
+    && decisionLog.includes("## D-086 UI実画面受入の状態表示と確定結果演出を追補する")
+    && decisionLog.includes("## D-087 UI実画面受入の資源・状態・カード表示を追補する")
+    && decisionLog.includes("## D-088 UI実画面受入の遅延状態・Wiki導線・説明表記を追補する"),
+  "決定記録にUI完成仕様D-077～D-085がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1104,7 +1185,8 @@ assert(
 const docsIndex = await readText("docs/INDEX.md");
 assert(
   docsIndex.includes("qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md")
-    && docsIndex.includes("qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md"),
+    && docsIndex.includes("qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md")
+    && docsIndex.includes("qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"),
   "文書索引に最新の統合受入報告がありません"
 );
 
@@ -1150,6 +1232,11 @@ assert(
 );
 
 const uiAndStorage = await readText("docs/specs/UI_AND_STORAGE.md");
+const uiStyles = await readText("src/styles.css");
+const appSource = await readText("src/App.tsx");
+const effectPresentation = await readText("src/ui/effectPresentation.ts");
+const iconRegistry = await readText("src/ui/iconRegistry.ts");
+const battleUi = await readText("src/ui/battleUi.ts");
 assert(
   uiAndStorage.includes("敵宝具の任意の宝具Lv・OC文脈")
     && uiAndStorage.includes("UIは段階選択、配列参照、文脈補完"),
@@ -1160,6 +1247,63 @@ assert(
     && uiAndStorage.includes("中断保存形式4・データ1.38.0・行動ログ形式5・ターンログ形式2を維持")
     && uiAndStorage.includes("終了時効果、99個上限、次回用繰上げを再実行しない"),
   "UI・保存仕様にターン終了スターの確定ログと版維持規則がありません"
+);
+assert(
+  uiAndStorage.includes("味方効果はクラススキル／概念礼装／その他／合算")
+    && uiAndStorage.includes("敵効果は通常／特殊／合算")
+    && uiAndStorage.includes("倍率として登録されるpermille値は表示時だけ10で割って百分率")
+    && uiAndStorage.includes("時間による自動送りは行わない")
+    && uiAndStorage.includes("敵・味方のHPバー"),
+  "UI・保存仕様にD-086の状態表示・合算・手動HP演出がありません"
+);
+assert(
+  uiAndStorage.includes("実画面受入の資源・状態・カード表示追補（D-087）")
+    && uiAndStorage.includes("対象別`totalDamage`")
+    && uiAndStorage.includes("味方NPバー")
+    && uiAndStorage.includes("後続未選択カードにも直ちに表示")
+    && uiAndStorage.includes("宝具カードを上段、通常カードを下段"),
+  "UI・保存仕様にD-087のダメージ・NP・状態期限・カード表示がありません"
+);
+assert(
+  uiAndStorage.includes("実画面受入の遅延状態・Wiki導線・説明表記追補（D-088）")
+    && uiAndStorage.includes("概念礼装欄の下へ登録済み主参照")
+    && uiAndStorage.includes("Wikiの効果順")
+    && uiAndStorage.includes("DelayedDebuff"),
+  "UI・保存仕様にD-088の遅延状態・Wiki導線・説明表記がありません"
+);
+assert(
+  /button\s*\{[\s\S]*?min-height:\s*3\.5rem/.test(uiStyles)
+    && /@media \(max-width: 43\.99rem\)[\s\S]*?\.unit-grid,[\s\S]*?overflow-x:\s*auto/.test(uiStyles)
+    && /@media \(min-width: 44rem\)[\s\S]*?\.slot-grid,[\s\S]*?\.unit-grid\s*\{\s*grid-template-columns:\s*repeat\(3/.test(uiStyles)
+    && /@media \(min-width: 44rem\)[\s\S]*?\.normal-command-card-grid\s*\{\s*grid-template-columns:\s*repeat\(5/.test(uiStyles)
+    && /\.modal-backdrop,[\s\S]*?position:\s*fixed/.test(uiStyles)
+    && /\.playback-blocker\s*\{[\s\S]*?z-index:\s*120/.test(uiStyles)
+    && /\.animated-hp-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles)
+    && /\.animated-np-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles)
+    && uiStyles.includes(".effect-expiry-badge")
+    && uiStyles.includes(".noble-phantasm-card-grid"),
+  "UIのPC・スマートフォン・56px・モーダル・再生遮断CSSが一致しません"
+);
+assert(
+  appSource.includes("前へ")
+    && appSource.includes("次へ（操作へ戻る）")
+    && appSource.includes("confirmedHpTransitions")
+    && appSource.includes("confirmedNpTransitions")
+    && appSource.includes("confirmedAttackDamageAmounts")
+    && appSource.includes("noble-phantasm-card-grid")
+    && appSource.includes("action-description-list")
+    && appSource.includes("魔術礼装スキルの操作は「前衛」タブの最下部")
+    && effectPresentation.includes("presentCombinedEffects")
+    && effectPresentation.includes("value / 10")
+    && iconRegistry.includes("import.meta.env.BASE_URL")
+    && battleUi.includes("confirmedHpTransitions")
+    && battleUi.includes("displayedCommandCardCriticalRatePermille")
+    && battleUi.includes("presentNoblePhantasmDetail")
+    && battleUi.includes("registeredServantWikiUrl")
+    && appSource.includes("servant-wiki-link")
+    && appSource.includes("wikiを開く")
+    && effectPresentation.includes("effectExpiryLabel"),
+  "UI実装にD-086～D-088の画像・状態・カード・Wiki・確定資源演出がありません"
 );
 const battlePresentation = await readText("src/ui/battlePresentation.ts");
 assert(
@@ -1176,6 +1320,20 @@ assert(initialContent.includes("同じ概念礼装`dataId`を複数"), "初期�
 assert(initialContent.includes("radiant-arm-of-dawn-saber"), "初期データ仕様に黎明の炎腕（剣）の安定IDがありません");
 assert(initialContent.includes("136,216"), "初期データ仕様に極級Wave 3のHPがありません");
 assert(initialContent.includes("敵ターン終了時"), "初期データ仕様に敵通常チャージの時期がありません");
+assert(
+  initialContent.includes("基礎付与率500%（5000 permille）")
+    && initialContent.includes("弱体耐性と弱体無効"),
+  "初期データ仕様にスキル・宝具デメリットの既定付与率がありません"
+);
+const initialServants = await readText("src/data/servants/initialServants.ts");
+const servantSchema = await readText("src/data/servants/schema.ts");
+assert(
+  servantSchema.includes("SERVANT_DEFAULT_DEMERIT_APPLICATION_RATE_PERMILLE = 5_000")
+    && initialServants.includes("baseRatePermille: SERVANT_DEFAULT_DEMERIT_APPLICATION_RATE_PERMILLE")
+    && initialServants.includes("lucifera-queen-buff-clear-state")
+    && !initialServants.includes("ignoreResistance: true"),
+  "初期サーヴァントに500%の遅延デメリット登録がありません"
+);
 
 const archiveReadme = await readText("docs/archive/README.md");
 assert(archiveReadme.includes("IMPLEMENTATION_STATUS_v1.0.0.md"), "実装状況の履歴アーカイブへの案内がありません");

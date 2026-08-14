@@ -31,10 +31,12 @@ import {
   completeCommandCardRedistributionEffects,
   prepareCommandCardRedistributions,
 } from "./commandCardRedistribution";
+import { isActionDisabled } from "./classification";
 
 export type AllySkillUseRejectionReason =
   | "invalid_phase"
   | "source_unavailable"
+  | "source_action_disabled"
   | "action_data_missing"
   | "not_a_skill"
   | "skill_on_cooldown"
@@ -127,6 +129,9 @@ export function resolveAllySkillUse(
     || !sourceLocation.unit.alive
   ) {
     return rejected(input, "source_unavailable");
+  }
+  if (isActionDisabled(sourceLocation.unit)) {
+    return rejected(input, "source_action_disabled");
   }
   const combatant = combatantActionEffectData(
     input.registry,

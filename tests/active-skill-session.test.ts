@@ -1,8 +1,5 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
-  SkillControls,
   mysticCodeSkillUsesSelectedUnitInput,
 } from "../src/App";
 import { findUnitLocation } from "../src/core/battle/formation";
@@ -24,6 +21,7 @@ import { MAGE_ASSOCIATION_UNIFORM } from "../src/data/mysticCodes";
 import {
   summarizeBattleInputLogs,
 } from "../src/ui/battlePresentation";
+import { registeredStatusIconPath } from "../src/ui/iconRegistry";
 import {
   createEmptyInitialBattleSetup,
   createInitialBattleSession,
@@ -123,6 +121,70 @@ describe("active skill BattleSession integration", () => {
         }],
       }],
     });
+  });
+
+  it("shows and resolves Queen of Vanity's delayed buff removal at turn end", () => {
+    let session = createInitialBattleSession(setup("queen-of-vanity-delayed-removal"));
+    session = resolveBattleSessionAllySkill(session, {
+      kind: "ally_skill",
+      sourceInstanceId: "ally-frontline-1",
+      skillStableId: "lucifera-familiar-six-sins",
+      selectedTargetInstanceId: "ally-frontline-1",
+    }).session;
+    const applied = resolveBattleSessionAllySkill(session, {
+      kind: "ally_skill",
+      sourceInstanceId: "ally-frontline-1",
+      skillStableId: "lucifera-queen-of-vanity",
+      selectedTargetInstanceId: "ally-frontline-1",
+    });
+    expect(applied.result.accepted).toBe(true);
+    if (!applied.result.accepted) throw new Error("虚栄の女王が成立しませんでした");
+    const delayedApplication = applied.result.effects.effects.find(
+      ({ effectStableId }) => effectStableId === "lucifera-queen-buff-clear",
+    )?.batch?.results[0]?.applicationResults?.[0];
+    expect(delayedApplication).toMatchObject({
+      outcome: "applied",
+      rate: {
+        baseRatePermille: 5_000,
+        targetModifierPermille: -175,
+        resolvedRatePermille: 4_825,
+      },
+    });
+    session = applied.session;
+
+    const beforeTurn = findUnitLocation(
+      session.loop.state.formation,
+      "ally-frontline-1",
+    )?.unit;
+    const delayedRemoval = beforeTurn?.effects.find(
+      ({ stableId }) => stableId === "lucifera-queen-buff-clear-state",
+    );
+    expect(beforeTurn?.effects.some(
+      ({ stableId }) => stableId === "lucifera-familiar-buster-state",
+    )).toBe(true);
+    expect(delayedRemoval).toMatchObject({
+      name: "ターン終了時強化解除",
+      category: "debuff",
+      remainingTurns: 1,
+    });
+    expect(registeredStatusIconPath(delayedRemoval!))
+      .toBe("/FGO_Battle_Simulator_Work/assets/status-icons/DelayedDebuff.webp");
+
+    const turn = resolveBattleSessionTurn(session, {
+      cardIds: firstThreeCardIds(session),
+      ally: { requestedTargetInstanceId: "enemy-w1-1" },
+    });
+    expect(turn.result.accepted).toBe(true);
+    const afterTurn = findUnitLocation(
+      turn.session.loop.state.formation,
+      "ally-frontline-1",
+    )?.unit;
+    expect(afterTurn?.effects.some(
+      ({ stableId }) => stableId === "lucifera-familiar-buster-state",
+    )).toBe(false);
+    expect(afterTurn?.effects.some(
+      ({ stableId }) => stableId === "lucifera-queen-buff-clear-state",
+    )).toBe(false);
   });
 
   it("logs a cooldown rejection without changing state, counters, or RNG", () => {
@@ -487,41 +549,29 @@ describe("active skill BattleSession integration", () => {
     );
   });
 
-  it("renders explicit mobile-safe Servant, Mystic Code, target, and Order Change controls", () => {
+  it("keeps registered Servant and Mystic Code skill data available to the modal UI", () => {
     const session = createInitialBattleSession(setup("skill-ui-controls"));
-    const markup = renderToStaticMarkup(createElement(SkillControls, {
-      session,
-      onSessionChange: () => undefined,
-      onMessage: () => undefined,
-    }));
-
-    expect(markup).toContain("スキル操作");
-    expect(markup).toContain("味方単体の選択対象");
-    expect(markup).toContain("罪源業車");
-    expect(markup).toContain("応急支援");
-    expect(markup).toContain("交換する前衛");
-    expect(markup).toContain("交換する控え");
-    expect(markup).toContain("オーダーチェンジ");
+    expect(session.actionEffectRegistry?.byInstanceId["ally-frontline-1"].actions
+      .some(({ name }) => name === "罪源業車")).toBe(true);
+    expect(session.mysticCodeRegistry?.byDataId["normal-chaldea-uniform"].skills
+      .map(({ name }) => name)).toEqual([
+        "応急支援",
+        "魔力強化",
+        "オーダーチェンジ",
+      ]);
   });
 
-  it("renders Mage Association skills and CT values from registered format 2 data", () => {
+  it("keeps Mage Association skill names and CT values in registered format 2 data", () => {
     const session = createInitialBattleSession(setup(
       "mage-association-ui",
       "mage-association-uniform",
     ));
-    const markup = renderToStaticMarkup(createElement(SkillControls, {
-      session,
-      onSessionChange: () => undefined,
-      onMessage: () => undefined,
-    }));
-
-    expect(markup).toContain("魔術礼装：魔術協会制服");
-    expect(markup).toContain("スキル1：全体回復");
-    expect(markup).toContain("現在CT 0／使用時CT 12");
-    expect(markup).toContain("スキル2：霊子譲渡");
-    expect(markup).toContain("現在CT 0／使用時CT 15");
-    expect(markup).toContain("スキル3：コマンドシャッフル");
-    expect(markup).not.toContain("交換する控え");
+    expect(session.mysticCodeRegistry?.byDataId["mage-association-uniform"].skills)
+      .toMatchObject([
+        { name: "全体回復", slot: 1, cooldownAtMax: 12 },
+        { name: "霊子譲渡", slot: 2, cooldownAtMax: 15 },
+        { name: "コマンドシャッフル", slot: 3 },
+      ]);
     expect(MAGE_ASSOCIATION_UNIFORM.skills.map(
       mysticCodeSkillUsesSelectedUnitInput,
     )).toEqual([false, true, false]);

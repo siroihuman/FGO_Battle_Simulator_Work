@@ -56,6 +56,7 @@ export interface InitialBattleSetup {
   reserve: InitialAllySlotSelection[];
   mysticCodeDataId: string | null;
   enemyEncounterDataId: string;
+  seedMode: "random" | "fixed";
   seed: string;
 }
 
@@ -87,8 +88,59 @@ export function createEmptyInitialBattleSetup(): InitialBattleSetup {
     reserve: Array.from({ length: 3 }, emptyInitialAllySlot),
     mysticCodeDataId: null,
     enemyEncounterDataId: INITIAL_ENEMY_ENCOUNTER_DATA_ID,
+    seedMode: "random",
     seed: "",
   };
+}
+
+/** The sixth registered level is the ordinary final-ascension cap (before Grails). */
+export function finalAscensionLevelForServant(
+  servantDataId: string,
+): ServantLevel {
+  const definition = servantDefinition(INITIAL_SERVANT_REGISTRY, servantDataId);
+  if (!definition) {
+    throw new RangeError(`selected servant is not registered: ${servantDataId}`);
+  }
+  return definition.levelStats[5].level;
+}
+
+export function initialAllySelectionForServant(
+  servantDataId: string,
+): InitialAllySlotSelection {
+  return {
+    servantDataId,
+    level: finalAscensionLevelForServant(servantDataId),
+    noblePhantasmLevel: 1,
+    craftEssenceDataId: null,
+  };
+}
+
+function randomSeedBytes(): Uint32Array {
+  const values = new Uint32Array(4);
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    crypto.getRandomValues(values);
+    return values;
+  }
+  for (let index = 0; index < values.length; index += 1) {
+    values[index] = Math.floor(Math.random() * 0x1_0000_0000);
+  }
+  return values;
+}
+
+/** Generates a printable concrete seed before BattleRng is constructed. */
+export function generateReplayableSeed(): string {
+  const entropy = [...randomSeedBytes()]
+    .map((value) => value.toString(36).padStart(7, "0"))
+    .join("-");
+  return `random-${Date.now().toString(36)}-${entropy}`;
+}
+
+export function resolveInitialBattleSeed(
+  setup: Pick<InitialBattleSetup, "seedMode" | "seed">,
+  randomSeedFactory: () => string = generateReplayableSeed,
+): string {
+  if (setup.seedMode === "fixed") return setup.seed.trim();
+  return randomSeedFactory();
 }
 
 function validateAllySlot(
@@ -174,7 +226,7 @@ export function validateInitialBattleSetup(
   ) {
     errors.push("初期敵設定が登録済みの極級データと一致しません。");
   }
-  if (setup.seed.trim().length === 0) {
+  if (setup.seedMode === "fixed" && setup.seed.trim().length === 0) {
     errors.push("固定シードを入力してください。");
   }
   return { valid: errors.length === 0, errors };
@@ -223,6 +275,7 @@ function completeAllySelections(
  */
 export function createInitialBattleSession(
   setup: InitialBattleSetup,
+  randomSeedFactory: () => string = generateReplayableSeed,
 ): BattleSession {
   const validation = validateInitialBattleSetup(setup);
   if (!validation.valid) {
@@ -293,7 +346,7 @@ export function createInitialBattleSession(
       ),
     ),
   };
-  const rng = new BattleRng(setup.seed);
+  const rng = new BattleRng(resolveInitialBattleSeed(setup, randomSeedFactory));
   const initialized = initializeBattleLoadout({
     state,
     rng,
