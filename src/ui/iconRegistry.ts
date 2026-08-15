@@ -12,6 +12,9 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "永劫の探求": "skill-np-damafe-up",
   "家のなかの絵": "skill-card-quick-up",
   "狂気の山脈にて": "skill-np-charge",
+  "侘びの極み": "skill-card-quick-up",
+  "一輪の花": "skill-np-charge",
+  "幽玄たる黒": "skill-crit-damage-up",
   "オシリスの塵": "skill-immune-invincibility",
   "イシスの雨": "skill-clear-debuff",
   "メジェドの眼": "skill-cooldown",
@@ -32,6 +35,11 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "毎ターンNP獲得": "Npgainturn",
   "毎ターンスター獲得": "Stargainturn",
   "宝具OC段階アップ": "NPOvercharge",
+  "NP獲得量アップ": "NPGainUpDmg",
+  "QuickカードNP獲得量アップ": "QuickNpGainUp",
+  "Quickクリティカル威力アップ": "Quickdamageup",
+  "Quick攻撃時防御力ダウン": "Buffatk",
+  "呪い": "Curse",
 };
 
 function publicAssetPath(path: string): string {
@@ -53,6 +61,9 @@ function statusIconId(effect: AppliedEffect): string | null {
   if (effect.effectType === COMMON_EFFECT_TYPES.attack) {
     return effect.value < 0 ? "Attackdown" : "Attackup";
   }
+  if (effect.effectType === COMMON_EFFECT_TYPES.defense) {
+    return effect.value < 0 ? "Defensedown" : "Defenseup";
+  }
   if (
     effect.effectType === COMMON_EFFECT_TYPES.cardPerformance
     && effect.flags.cardType === "buster"
@@ -66,6 +77,9 @@ function statusIconId(effect: AppliedEffect): string | null {
   }
   if (effect.effectType === COMMON_EFFECT_TYPES.noblePhantasmCardTypeChange) {
     return "Npcardtypechange";
+  }
+  if (effect.effectType === COMMON_EFFECT_TYPES.noblePhantasmSeal) {
+    return "Npseal";
   }
   if (effect.effectType === COMMON_EFFECT_TYPES.buffRemovalResistance) {
     return effect.value < 0 ? "Removalresistdown" : "Removalresistup";
@@ -95,6 +109,7 @@ function statusIconId(effect: AppliedEffect): string | null {
   if (effect.effectType === "trigger") {
     if (
       effect.trigger?.timing === "on_attack"
+      || effect.trigger?.timing === "before_attack"
       || effect.trigger?.timing === "after_attack"
     ) {
       return effect.category === "debuff" ? "Debuffatk" : "Buffatk";

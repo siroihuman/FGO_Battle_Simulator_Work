@@ -90,6 +90,25 @@ function applyBatch(
     : setBattleFormation(state, formation);
 }
 
+function targetsForTriggerAction(
+  formation: BattleFormation,
+  ownerInstanceId: string,
+  action: TriggerAction,
+  event: TriggerEvent,
+): UnitLocation[] {
+  const resolved = resolveTargetLocations(
+    formation,
+    ownerInstanceId,
+    action.target,
+  );
+  if (action.targetAttackEventTargets !== true) return resolved;
+  const eventTargetIds = new Set(
+    event.targetInstanceIds
+      ?? (event.targetInstanceId ? [event.targetInstanceId] : []),
+  );
+  return resolved.filter(({ unit }) => eventTargetIds.has(unit.instanceId));
+}
+
 /**
  * Executes one snapshotted trigger event in location, priority, and
  * registration order. Turn-end simultaneous settlements are intentionally
@@ -192,10 +211,11 @@ export function resolveTriggerEvent(
           "turnEndSettlement is only valid for turn_end triggers",
         );
       }
-      const targetLocations = resolveTargetLocations(
+      const targetLocations = targetsForTriggerAction(
         currentState.formation,
         candidate.ownerInstanceId,
-        action.target,
+        action,
+        event,
       );
       const targets =
         targetLocations.length > 0

@@ -46,6 +46,13 @@ const SLIP_DAMAGE_AMPLIFIER_KINDS = [
   "toxic",
   "evil_curse",
 ] as const;
+const ATTACK_TRIGGER_TIMINGS = [
+  "before_attack",
+  "on_hit",
+  "on_attack",
+  "on_damage_taken",
+  "after_attack",
+] as const;
 
 function assertUniqueListedValues(
   values: readonly string[] | undefined,
@@ -110,6 +117,23 @@ export function assertValidEffectTrigger(
     const actionName = `${name}.actions[${index}]`;
     if (!action || typeof action !== "object" || !action.action) {
       throw new RangeError(`${actionName}.action is required`);
+    }
+    if (action.targetAttackEventTargets === true) {
+      if (!ATTACK_TRIGGER_TIMINGS.includes(
+        trigger.timing as typeof ATTACK_TRIGGER_TIMINGS[number],
+      )) {
+        throw new RangeError(
+          `${actionName}.targetAttackEventTargets requires attack timing`,
+        );
+      }
+      if (
+        action.target.relation === "self"
+        || action.target.selection !== "all"
+      ) {
+        throw new RangeError(
+          `${actionName}.targetAttackEventTargets requires non-self all selection`,
+        );
+      }
     }
     if (action.turnEndSettlement && trigger.timing !== "turn_end") {
       throw new RangeError(

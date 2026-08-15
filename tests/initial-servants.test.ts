@@ -11,6 +11,7 @@ import {
   DOMINATION_FOREIGNER,
   LIGHT_KOYANSKAYA,
   LUCIFERA,
+  SEN_NO_RIKYU,
   assertValidServantDefinition,
   createServantBattleInstance,
   createServantDataRegistry,
@@ -58,8 +59,9 @@ describe("initial servant definitions", () => {
     const registry = createServantDataRegistry(INITIAL_SERVANT_DEFINITIONS);
     expect(Object.keys(registry.byDataId)).toEqual([
       "koyanskaya-of-light",
-      "lucifera",
+      "sen-no-rikyu",
       "domination-foreigner",
+      "lucifera",
     ]);
     expect(LIGHT_KOYANSKAYA.levelStats.at(-1)).toEqual({
       level: 120,
@@ -75,6 +77,11 @@ describe("initial servant definitions", () => {
       level: 120,
       hp: 16_860,
       attack: 16_169,
+    });
+    expect(SEN_NO_RIKYU.levelStats.at(-1)).toEqual({
+      level: 120,
+      hp: 15_486,
+      attack: 16_013,
     });
   });
 

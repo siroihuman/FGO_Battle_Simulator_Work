@@ -5,15 +5,16 @@
 ## 現在地点
 
 - フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加
-- 状態: UI完成仕様は2026-08-14に最終合格。最初の追加対象としてNo.024’「支配のフォーリナー」を強化後宝具のみ、上位保有スキル3種、全クラススキル、正式Wiki導線・指定アイコンとともに登録した。初期設定のWiki下は補足行を表示せず、保有スキル説明はLv10倍率だけ、宝具説明は段階別倍率を維持する。固定150%の〔人の力〕特攻、OC別の宝具後効果、次回宝具OC+2（1回・3T）、毎ターンNP・スター、弱体付与成功率11.75%を共通処理へ接続した。2026-08-15にユーザー実画面受入を最終合格とし、BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布を維持した。
+- 状態: 初期完成範囲外の追加サーヴァントとして、No.024’「支配のフォーリナー」に続き公式No.362「千利休」を登録した。千利休の8段階能力値、Q3／A1／B1、上位3スキル、4クラススキル、〔人の力〕OC特攻全体Quick宝具、宝具封印、呪い、OC+2、無敵、Quick攻撃前の対象限定防御力ダウンを共通処理へ接続した。味方編成は公式／オリジナルの2タブへ分け、公式は光のコヤンスカヤ→千利休、オリジナルは支配のフォーリナー→ルシフェラのNo.昇順で表示する。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布を維持し、自動検査完了・実画面受入待ちである。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. カテゴリ1の未登録サーヴァントから、No.が次に若い1騎だけを選定する。
+1. 千利休と公式／オリジナル編成タブをPC・スマートフォンで実画面確認する。
+2. 合格後、カテゴリ1の未登録サーヴァントからNo.が次に若い1騎だけを選定する。
 
-支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)、ターン終了スター獲得は[`qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md`](qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md)、敵宝具段階文脈は[`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)、従来のv1.0初期範囲は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
+千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)、ターン終了スター獲得は[`qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md`](qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md)、敵宝具段階文脈は[`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)、従来のv1.0初期範囲は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
 
 ## 最初に読むもの
 

@@ -46,6 +46,8 @@
 - 敵宝具Lv・OC文脈と段階別宣言値の統合受入結果: [`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)
 - ターン終了トリガーによるスター獲得の統合受入結果: [`qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md`](qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md)
 - UI完成仕様の受入結果: [`qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md`](qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md)
+- No.024’「支配のフォーリナー」の受入結果: [`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)
+- No.362「千利休」と編成区分タブの受入結果: [`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)
 - 詳細な完了履歴・決定理由・旧規則: [`archive/README.md`](archive/README.md)
 
 詳細仕様は現在も有効な正本です。履歴を確認する必要がある場合だけアーカイブを開いてください。

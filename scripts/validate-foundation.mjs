@@ -332,6 +332,42 @@ if (manifest) {
     manifest.coreRules.battleTurnRngSource === "single_battle_rng",
     "1戦闘ターンは単一のBattleRngから用途別乱数列を受け取らなければなりません"
   );
+  const attackTargetRestriction = manifest.coreRules.attackTriggerEventTargetRestriction;
+  const servantOriginTabs = manifest.coreRules.servantSetupOriginTabs;
+  assert(
+    attackTargetRestriction.property === "targetAttackEventTargets"
+      && attackTargetRestriction.allowedSelector === "non_self_all"
+      && attackTargetRestriction.resolution === "resolve_declared_selector_then_filter_to_recorded_attack_target_ids_in_formation_order"
+      && attackTargetRestriction.emptyEventTargets === "no_targets_without_inference"
+      && attackTargetRestriction.damageInputAfterBeforeAttack === true
+      && attackTargetRestriction.saveSchemaChange === false
+      && attackTargetRestriction.dataSchemaChange === false
+      && attackTargetRestriction.battleLogSchemaChange === false,
+    "攻撃トリガーの実対象限定規則が一致しません"
+  );
+  assert(
+    servantOriginTabs.originSource === "explicit_registered_lists_without_name_or_url_inference"
+      && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
+        === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
+      && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
+        === JSON.stringify(["domination-foreigner", "lucifera"])
+      && servantOriginTabs.tabBrowseMutation === "none"
+      && servantOriginTabs.currentSelectionOutsideTabs === true,
+    "編成の公式／オリジナル区分とNo.順が一致しません"
+  );
+  const specifiedServants = manifest.specifiedContent?.servants ?? [];
+  const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
+  assert(
+    specifiedServants.length === 2
+      && senNoRikyu?.collectionNo === 362
+      && senNoRikyu?.implementationStatus === "implemented_awaiting_ui_acceptance"
+      && senNoRikyu?.activeSkillCount === 3
+      && senNoRikyu?.classSkillCount === 4
+      && senNoRikyu?.noblePhantasmCount === 1
+      && senNoRikyu?.battleSuspendSchemaVersion === 4
+      && senNoRikyu?.dataSchemaVersion === "1.38.0",
+    "指定コンテンツに千利休の登録状態がありません"
+  );
   assert(
     manifest.coreRules.battleTurnLogSchemaVersion === 2,
     "1戦闘ターンログ形式バージョンは2でなければなりません"
@@ -602,7 +638,7 @@ if (manifest) {
   );
   const completedUi = manifest.coreRules.completedUiSpecification;
   assert(
-    manifest.status === "content-addition-domination-foreigner-accepted"
+    manifest.status === "content-addition-sen-no-rikyu-awaiting-ui-acceptance"
       && completedUi.decisionRange === "D-077-D-085"
       && completedUi.acceptanceRevision === "D-088"
       && completedUi.implementationStatus === "accepted"
@@ -1063,6 +1099,7 @@ const mandatoryFiles = [
   "docs/qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md",
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md",
   "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md",
+  "docs/qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md",
   "docs/archive/README.md",
   "docs/archive/2026-08-04/PROJECT_RULES_v1.0.0.md",
   "docs/archive/2026-08-04/IMPLEMENTATION_STATUS_v1.0.0.md",
@@ -1086,6 +1123,7 @@ const mandatoryFiles = [
   "src/data/enemies/index.ts",
   "src/core/battle/enemyNoblePhantasmContext.ts",
   "src/data/servants/dominationForeigner.ts",
+  "src/data/servants/senNoRikyu.ts",
   "src/effects/noblePhantasmOvercharge.ts",
 ];
 
@@ -1104,9 +1142,10 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.024’「支配のフォーリナー」")
-    && startHere.includes("カテゴリ1の未登録サーヴァント"),
-  "作業開始ページに支配のフォーリナー実装と次作業がありません"
+    && startHere.includes("No.362「千利休」")
+    && startHere.includes("公式／オリジナル")
+    && startHere.includes("実画面受入待ち"),
+  "作業開始ページに千利休実装、編成区分、次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1125,7 +1164,7 @@ const requiredUiAssets = [
     "skill-cooldown", "skill-damage-up", "skill-hp-heal",
     "skill-immune-invincibility", "skill-np-charge",
     "skill-unique-command-shuffle", "skill-unique-order-change",
-    "skill-card-quick-up", "skill-np-damafe-up",
+    "skill-card-quick-up", "skill-np-damafe-up", "skill-crit-damage-up",
   ].map((name) => `public/assets/skill-icons/${name}.png`),
   ...[
     "Artsupstatus", "Attackdown", "Attackup", "Buffatk", "Busterupstatus",
@@ -1134,7 +1173,9 @@ const requiredUiAssets = [
     "Nppowerdown", "Nppowerup", "Powerup", "Removalresistdown",
     "Removalresistup", "Resistancedown", "Resistanceup", "Quickupstatus",
     "Starabsoprtdown", "Stargainup", "Statusdown", "Statusup",
-    "Npgainturn", "Stargainturn", "NPOvercharge",
+    "Npgainturn", "Stargainturn", "NPOvercharge", "NPGainUpDmg",
+    "QuickNpGainUp", "Quickdamageup", "Curse", "Defensedown",
+    "Defenseup", "Npseal",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
@@ -1147,9 +1188,9 @@ assert(implementationStatus.includes("## 次の実装"), "実装状況に次の�
 assert(
   implementationStatus.includes("D-077～D-085のUI完成仕様")
     && implementationStatus.includes("v1.0初期完成範囲へ追加")
-    && implementationStatus.includes("No.024’「支配のフォーリナー」")
-    && implementationStatus.includes("52ファイル・533テスト"),
-  "実装状況にUI完成範囲、支配のフォーリナー、検査記録がありません"
+    && implementationStatus.includes("No.362「千利休」")
+    && implementationStatus.includes("53ファイル・538テスト"),
+  "実装状況にUI完成範囲、千利休、検査記録がありません"
 );
 const dominationForeignerAcceptance = await readText(
   "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md"
@@ -1193,6 +1234,11 @@ assert(
   decisionLog.includes("## D-089 No.024’「支配のフォーリナー」を最初の初期範囲外サーヴァントとして登録する"),
   "決定記録に支配のフォーリナー実装方針がありません"
 );
+assert(
+  decisionLog.includes("## D-091 No.362「千利休」と編成区分タブを追加する")
+    && decisionLog.includes("targetAttackEventTargets"),
+  "決定記録に千利休と編成区分タブの実装方針がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1207,8 +1253,21 @@ const docsIndex = await readText("docs/INDEX.md");
 assert(
   docsIndex.includes("qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md")
     && docsIndex.includes("qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md")
-    && docsIndex.includes("qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"),
+    && docsIndex.includes("qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md")
+    && docsIndex.includes("qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md"),
   "文書索引に最新の統合受入報告がありません"
+);
+
+const senNoRikyuAcceptance = await readText(
+  "docs/qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md"
+);
+assert(
+  senNoRikyuAcceptance.includes("判定: 自動検査合格・実画面受入待ち")
+    && senNoRikyuAcceptance.includes("53ファイル、538テスト成功")
+    && senNoRikyuAcceptance.includes("targetAttackEventTargets")
+    && senNoRikyuAcceptance.includes("公式タブ")
+    && senNoRikyuAcceptance.includes("オリジナルタブ"),
+  "千利休・編成区分タブの受入報告が正本と一致しません"
 );
 
 const turnEndStarAcceptance = await readText(
@@ -1234,6 +1293,12 @@ assert(
     && effectsAndTiming.includes("`destination: next_command`だけを有効な登録")
     && effectsAndTiming.includes("実加算量0の成立結果"),
   "効果仕様にターン終了スターの登録・上限・ログ規則がありません"
+);
+assert(
+  effectsAndTiming.includes("`targetAttackEventTargets: true`")
+    && effectsAndTiming.includes("同じ攻撃イベントの実対象IDだけ")
+    && effectsAndTiming.includes("千利休「幽玄たる黒」"),
+  "効果仕様に攻撃イベント実対象へ限定する共通トリガー規則がありません"
 );
 
 const battleSystem = await readText("docs/specs/BATTLE_SYSTEM.md");
@@ -1276,6 +1341,15 @@ assert(
     && uiAndStorage.includes("時間による自動送りは行わない")
     && uiAndStorage.includes("敵・味方のHPバー"),
   "UI・保存仕様にD-086の状態表示・合算・手動HP演出がありません"
+);
+assert(
+  uiAndStorage.includes("「公式サーヴァント」「オリジナルサーヴァント」の2タブ")
+    && uiAndStorage.includes("光のコヤンスカヤ（No.314）、千利休（No.362）")
+    && uiAndStorage.includes("別区分タブを閲覧しただけでは現在選択を解除しない")
+    && appSource.includes("OFFICIAL_SERVANT_DEFINITIONS")
+    && appSource.includes("ORIGINAL_SERVANT_DEFINITIONS")
+    && appSource.includes("選択中："),
+  "編成UIに公式／オリジナル区分、No.順、選択維持がありません"
 );
 assert(
   uiAndStorage.includes("実画面受入の資源・状態・カード表示追補（D-087）")
@@ -1351,6 +1425,20 @@ assert(
     && initialContent.includes("debuff_success_basis_points")
     && initialContent.includes("強化前宝具を選択肢または別定義として残さない"),
   "具体データ仕様に支配のフォーリナーの採用範囲と精度規則がありません"
+);
+assert(
+  initialContent.includes("### No.362 千利休")
+    && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
+    && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
+    && initialContent.includes("オリジナル: No.024’ 支配のフォーリナー、No.062 ルシフェラ"),
+  "具体データ仕様に千利休と編成区分の採用範囲がありません"
+);
+const senNoRikyu = await readText("src/data/servants/senNoRikyu.ts");
+assert(
+  senNoRikyu.includes('dataId: "sen-no-rikyu"')
+    && senNoRikyu.includes('targetAttackEventTargets: true')
+    && senNoRikyu.includes('url: "https://w.atwiki.jp/f_go/pages/5723.html"'),
+  "千利休の登録データと実攻撃対象限定トリガーがありません"
 );
 const initialServants = await readText("src/data/servants/initialServants.ts");
 const servantSchema = await readText("src/data/servants/schema.ts");
