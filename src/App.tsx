@@ -814,13 +814,16 @@ function UnitPanel({
   onDetail: (detail: DetailContent) => void;
 }) {
   const attackData = session.registry.byInstanceId[unit.instanceId];
+  const servantData = unit.side === "ally"
+    ? servantDefinition(INITIAL_SERVANT_REGISTRY, unit.dataId)
+    : null;
   const craftEssence = session.loop.state.loadout.craftEssencesByInstanceId[unit.instanceId];
   const wikiUrl = unit.side === "ally"
     ? registeredServantWikiUrl(unit.dataId)
     : null;
   return (
     <article className={`unit-card ${unit.alive ? "" : "unit-defeated"}`}>
-      <div className="unit-title"><div><p className="unit-meta">{slotLabel} · {attackData?.classKey ?? "class未設定"}</p><h3>{wikiUrl ? <a className="servant-wiki-link" href={wikiUrl} target="_blank" rel="noreferrer noopener">{unit.name}</a> : unit.name}</h3></div><span className={`status-pill ${unit.alive ? "alive" : "defeated"}`}>{unit.alive ? "生存" : "退場"}</span></div>
+      <div className="unit-title"><div><p className="unit-meta">{slotLabel} · {servantData?.classDisplayName ?? attackData?.classKey ?? "class未設定"}</p><h3>{wikiUrl ? <a className="servant-wiki-link" href={wikiUrl} target="_blank" rel="noreferrer noopener">{unit.name}</a> : unit.name}</h3></div><span className={`status-pill ${unit.alive ? "alive" : "defeated"}`}>{unit.alive ? "生存" : "退場"}</span></div>
       <dl className="stat-list">
         <div><dt>HP</dt><dd>{unit.hp.toLocaleString()} / {unit.maxHp.toLocaleString()}</dd></div>
         <div><dt>ATK</dt><dd>{attackData?.attack.toLocaleString() ?? "—"}</dd></div>

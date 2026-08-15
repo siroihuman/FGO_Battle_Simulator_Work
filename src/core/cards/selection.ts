@@ -17,6 +17,9 @@ import { COMMON_EFFECT_TYPES } from "../../effects/modifiers";
 import {
   resolveNoblePhantasmCardType,
 } from "../../effects/noblePhantasmCardType";
+import {
+  consumeNoblePhantasmOverchargeStageEffects,
+} from "../../effects/noblePhantasmOvercharge";
 import type { CommandCard } from "./deck";
 
 export const COMMAND_CARD_SELECTION_SIZE = 3 as const;
@@ -100,6 +103,8 @@ export type CommandCardExecutionResult =
       card: SelectedCommandCard;
       npBeforeUse: number | null;
       npConsumed: number;
+      additionalOverchargeStages: number;
+      consumedOverchargeEffectInstanceIds: string[];
     }
   | {
       outcome: "fizzled";
@@ -108,6 +113,8 @@ export type CommandCardExecutionResult =
       restrictions: CommandCardExecutionRestriction[];
       npBeforeUse: number | null;
       npConsumed: 0;
+      additionalOverchargeStages: 0;
+      consumedOverchargeEffectInstanceIds: [];
     };
 
 function noblePhantasmCardId(ownerInstanceId: string): string {
@@ -368,6 +375,8 @@ export function beginCommandCardExecution(
       restrictions,
       npBeforeUse,
       npConsumed: 0,
+      additionalOverchargeStages: 0,
+      consumedOverchargeEffectInstanceIds: [],
     };
   }
   if (card.kind === "normal") {
@@ -377,14 +386,17 @@ export function beginCommandCardExecution(
       card,
       npBeforeUse: null,
       npConsumed: 0,
+      additionalOverchargeStages: 0,
+      consumedOverchargeEffectInstanceIds: [],
     };
   }
   if (!owner) {
     throw new RangeError("validated NP owner is missing");
   }
+  const overcharge = consumeNoblePhantasmOverchargeStageEffects(owner);
   const formation = replaceUnit(
     state.formation,
-    { ...owner, np: 0 },
+    { ...overcharge.unit, np: 0 },
   );
   return {
     outcome: "ready",
@@ -392,5 +404,8 @@ export function beginCommandCardExecution(
     card,
     npBeforeUse: owner.np,
     npConsumed: owner.np,
+    additionalOverchargeStages: overcharge.additionalStages,
+    consumedOverchargeEffectInstanceIds:
+      overcharge.consumedEffectInstanceIds,
   };
 }

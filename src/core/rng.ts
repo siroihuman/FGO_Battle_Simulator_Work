@@ -49,6 +49,12 @@ export type RngAuditEvent =
       ratePermille: number;
       roll: number | null;
       succeeded: boolean;
+    })
+  | (RngAuditBase & {
+      operation: "chance_basis_points";
+      rateBasisPoints: number;
+      roll: number | null;
+      succeeded: boolean;
     });
 
 export type RngAuditListener = (event: RngAuditEvent) => void;
@@ -191,6 +197,45 @@ export class DeterministicRng {
       drawsConsumed:
         result.drawNumberEnd - result.drawNumberStart + 1,
       ratePermille,
+      roll: result.value,
+      succeeded,
+    });
+    return succeeded;
+  }
+
+  /** Rolls a percentage rate expressed in 0.01%-point units. */
+  chanceBasisPoints(rateBasisPoints: number): boolean {
+    if (
+      !Number.isInteger(rateBasisPoints)
+      || rateBasisPoints < 0
+      || rateBasisPoints > 10_000
+    ) {
+      throw new RangeError(
+        "rateBasisPoints must be an integer from 0 to 10000",
+      );
+    }
+    if (rateBasisPoints === 0 || rateBasisPoints === 10_000) {
+      const succeeded = rateBasisPoints === 10_000;
+      this.emitAudit({
+        operation: "chance_basis_points",
+        drawNumberStart: null,
+        drawNumberEnd: null,
+        drawsConsumed: 0,
+        rateBasisPoints,
+        roll: null,
+        succeeded,
+      });
+      return succeeded;
+    }
+    const result = this.drawIntInclusive(1, 10_000);
+    const succeeded = result.value <= rateBasisPoints;
+    this.emitAudit({
+      operation: "chance_basis_points",
+      drawNumberStart: result.drawNumberStart,
+      drawNumberEnd: result.drawNumberEnd,
+      drawsConsumed:
+        result.drawNumberEnd - result.drawNumberStart + 1,
+      rateBasisPoints,
       roll: result.value,
       succeeded,
     });

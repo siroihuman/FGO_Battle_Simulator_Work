@@ -94,6 +94,27 @@ describe("effect application rates", () => {
     });
   });
 
+  it("preserves 0.01%-point debuff-success source values", () => {
+    const sourceResult = register(
+      unit("ally-a", "ally"),
+      {
+        stableId: "precise-debuff-success",
+        name: "弱体付与成功率アップ",
+        effectType: COMMON_EFFECT_TYPES.debuffSuccessBasisPoints,
+        category: "buff",
+        value: 1_175,
+      },
+      createEffectRuntimeCounters(),
+    );
+
+    expect(
+      calculateEffectApplicationRate(sourceResult.unit, unit("enemy-a", "enemy"), {
+        template: defenseDown,
+        baseRatePermille: 800,
+      }).resolvedRatePermille,
+    ).toBe(917.5);
+  });
+
   it("uses source buff success and the target's received-buff success", () => {
     let counters = createEffectRuntimeCounters();
     const sourceResult = register(

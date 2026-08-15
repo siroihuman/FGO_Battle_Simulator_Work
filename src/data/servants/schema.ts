@@ -73,7 +73,8 @@ export type ServantEffectDefinition = DeclaredActionEffect;
 export interface ServantNoblePhantasmSpecialAttack {
   stableId: string;
   requiredTargetTraits?: readonly string[];
-  multiplierPermilleByOvercharge: readonly [
+  multiplierPermille?: number;
+  multiplierPermilleByOvercharge?: readonly [
     number,
     number,
     number,
@@ -147,8 +148,13 @@ export interface ServantDefinition {
   dataId: string;
   /** Optional in-game collection number, retained only as external metadata. */
   collectionNo?: number;
+  /** Exact source label when the collection number carries a suffix. */
+  collectionLabel?: string;
   name: string;
   rarity: ServantRarity;
+  classDisplayName?: string;
+  growthTendency?: string;
+  attackType?: string;
   contentRevision: "current_upgraded_only";
   /** Active-skill values and cooldowns are always stored at level 10. */
   skillLevelPolicy: "max";

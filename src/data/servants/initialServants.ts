@@ -8,6 +8,7 @@ import {
   SERVANT_DATA_SCHEMA_VERSION,
   type ServantDefinition,
 } from "./schema";
+import { DOMINATION_FOREIGNER } from "./dominationForeigner";
 
 const PASSIVE = {
   category: "buff" as const,
@@ -195,4 +196,5 @@ export const LUCIFERA: ServantDefinition = {
 export const INITIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
   LIGHT_KOYANSKAYA,
   LUCIFERA,
+  DOMINATION_FOREIGNER,
 ];

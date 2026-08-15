@@ -330,11 +330,17 @@ export function presentNoblePhantasmDetail(
         : `＋${target}に強力な攻撃[Lv]：${rateSeries(effect.damageMultiplierPermilleByLevel)}`;
       if (!effect.specialAttack) return [attack];
       const traits = effect.specialAttack.requiredTargetTraits
-        ?.map((trait) => `〔${trait}〕`)
+        ?.map((trait) =>
+          trait.endsWith("の力")
+            ? `〔${trait}を持つ敵〕`
+            : `〔${trait}〕`
+        )
         .join("・") ?? "条件付き";
       return [
         attack,
-        `＆${traits}特攻<OC:特攻威力UP>：${rateSeries(effect.specialAttack.multiplierPermilleByOvercharge)}`,
+        effect.specialAttack.multiplierPermille !== undefined
+          ? `＆${traits}特攻：${effect.specialAttack.multiplierPermille / 10}%`
+          : `＆${traits}特攻<OC:特攻威力UP>：${rateSeries(effect.specialAttack.multiplierPermilleByOvercharge ?? [])}`,
       ];
     });
   return {

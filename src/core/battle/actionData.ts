@@ -34,6 +34,8 @@ export interface NoblePhantasmAttackData {
     number,
     number,
   ];
+  /** Optional fixed special-attack multiplier, in permille. */
+  specialAttackPermille?: number;
   /** Optional OC1 through OC5 special-attack multiplier. */
   specialAttackPermilleByOvercharge?: readonly [
     number,
@@ -252,8 +254,25 @@ function validateCombatant(data: CombatantAttackData): void {
         `${data.instanceId}.${noblePhantasm.stableId}.specialAttackPermilleByOvercharge`,
       );
     }
+    if (noblePhantasm.specialAttackPermille !== undefined) {
+      assertNonNegativeInteger(
+        noblePhantasm.specialAttackPermille,
+        `${data.instanceId}.${noblePhantasm.stableId}.specialAttackPermille`,
+      );
+    }
+    if (
+      noblePhantasm.specialAttackPermille !== undefined
+      && noblePhantasm.specialAttackPermilleByOvercharge
+    ) {
+      throw new RangeError(
+        `${data.instanceId}.${noblePhantasm.stableId} cannot define both fixed and OC special-attack multipliers`,
+      );
+    }
     if (noblePhantasm.specialAttackRequiredTargetTraits) {
-      if (!noblePhantasm.specialAttackPermilleByOvercharge) {
+      if (
+        noblePhantasm.specialAttackPermille === undefined
+        && !noblePhantasm.specialAttackPermilleByOvercharge
+      ) {
         throw new RangeError(
           `${data.instanceId}.${noblePhantasm.stableId}.specialAttackRequiredTargetTraits requires special-attack multipliers`,
         );

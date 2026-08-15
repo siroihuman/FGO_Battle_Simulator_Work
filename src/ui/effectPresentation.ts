@@ -53,6 +53,7 @@ const RATE_EFFECT_TYPES = new Set<string>([
   COMMON_EFFECT_TYPES.instantDeathSuccess,
   COMMON_EFFECT_TYPES.noblePhantasmDamage,
   COMMON_EFFECT_TYPES.npGain,
+  COMMON_EFFECT_TYPES.recurringNpGain,
   COMMON_EFFECT_TYPES.power,
   COMMON_EFFECT_TYPES.receivedBuffSuccess,
   COMMON_EFFECT_TYPES.receivedHpRecovery,
@@ -64,8 +65,12 @@ const RATE_EFFECT_TYPES = new Set<string>([
   COMMON_EFFECT_TYPES.targetStarGeneration,
 ]);
 
-function formattedNumber(value: number): string {
-  return value.toLocaleString("ja-JP", { maximumFractionDigits: 1 });
+const BASIS_POINT_RATE_EFFECT_TYPES = new Set<string>([
+  COMMON_EFFECT_TYPES.debuffSuccessBasisPoints,
+]);
+
+function formattedNumber(value: number, maximumFractionDigits = 1): string {
+  return value.toLocaleString("ja-JP", { maximumFractionDigits });
 }
 
 /** Converts only registered permille rate fields to their displayed percent. */
@@ -73,6 +78,9 @@ export function effectValueLabel(
   effect: Pick<AppliedEffect, "effectType">,
   value: number,
 ): string {
+  if (BASIS_POINT_RATE_EFFECT_TYPES.has(effect.effectType)) {
+    return `${formattedNumber(value / 100, 2)}%`;
+  }
   return RATE_EFFECT_TYPES.has(effect.effectType)
     ? `${formattedNumber(value / 10)}%`
     : formattedNumber(value);
@@ -81,7 +89,9 @@ export function effectValueLabel(
 export function effectHasDisplayValue(
   effect: Pick<AppliedEffect, "effectType" | "value">,
 ): boolean {
-  return RATE_EFFECT_TYPES.has(effect.effectType) || effect.value !== 0;
+  return RATE_EFFECT_TYPES.has(effect.effectType)
+    || BASIS_POINT_RATE_EFFECT_TYPES.has(effect.effectType)
+    || effect.value !== 0;
 }
 
 /** Compact remaining-duration label for the icon list. */
@@ -104,11 +114,15 @@ interface EffectSourceMetadata {
   description: string;
 }
 
-function nestedTemplates(effect: DeclaredActionEffect): EffectTemplate[] {
+function nestedTemplates(
+  effect: DeclaredActionEffect,
+): Array<Pick<EffectTemplate, "stableId">> {
   if (effect.action.kind !== "apply_effects") return [];
-  const templates: EffectTemplate[] = [];
-  const visit = (template: EffectTemplate) => {
-    templates.push(template);
+  const templates: Array<Pick<EffectTemplate, "stableId">> = [];
+  const visit = (
+    template: Pick<EffectTemplate, "stableId" | "trigger">,
+  ) => {
+    templates.push({ stableId: template.stableId });
     for (const triggerAction of template.trigger?.actions ?? []) {
       if (triggerAction.action.kind === "apply_effects") {
         for (const spec of triggerAction.action.effects) visit(spec.template);

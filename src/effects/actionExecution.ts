@@ -291,6 +291,24 @@ function preparedAction(
   if (effect.action.kind === "redistribute_command_cards") {
     return { kind: "redistribute_command_cards" };
   }
+  if (effect.action.kind === "apply_effects") {
+    return {
+      kind: "common",
+      action: {
+        kind: "apply_effects",
+        effects: effect.action.effects.map((spec) => ({
+          ...spec,
+          template: {
+            ...spec.template,
+            value: resolveDeclaredActionInteger(
+              spec.template.value ?? 0,
+              context,
+            ),
+          },
+        })),
+      },
+    };
+  }
   return { kind: "common", action: effect.action };
 }
 

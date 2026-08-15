@@ -4,6 +4,7 @@ import {
   assertValidNoblePhantasmCardTypeChangeTemplate,
 } from "./noblePhantasmCardType";
 import { assertValidEffectTrigger } from "./runtime";
+import type { EffectTemplate } from "./types";
 import type {
   TargetLifeFilter,
   TargetRelation,
@@ -64,7 +65,10 @@ export interface DeclaredActionTarget {
 }
 
 export type DeclaredEffectAction =
-  | Exclude<CommonAction, { kind: "change_np" }>
+  | Exclude<
+      CommonAction,
+      { kind: "change_np" } | { kind: "apply_effects" }
+    >
   | {
       kind: "change_np";
       amount: DeclaredActionInteger;
@@ -78,6 +82,17 @@ export type DeclaredEffectAction =
   | {
       /** Resets and redraws the current normal-command-card cycle. */
       kind: "redistribute_command_cards";
+    }
+  | {
+      kind: "apply_effects";
+      effects: readonly {
+        template: Omit<EffectTemplate, "value"> & {
+          value?: DeclaredActionInteger;
+        };
+        baseRatePermille?: number;
+        ignoreResistance?: boolean;
+        ignoreImmunity?: boolean;
+      }[];
     }
   | {
       /** Explicit marker for a known content effect not supported by the engine. */
@@ -183,14 +198,23 @@ export function declaredActionScalingRequirements(
   let overchargeStage = false;
   for (const effect of effects) {
     const action = effect.action;
-    const value = action.kind === "change_np" || action.kind === "gain_stars"
-      ? action.amount
-      : null;
-    if (value === null || typeof value === "number") continue;
-    if (value.scaling === "noble_phantasm_level") {
-      noblePhantasmLevel = true;
-    } else if (value.scaling === "overcharge") {
-      overchargeStage = true;
+    const values: DeclaredActionInteger[] = [];
+    if (action.kind === "change_np" || action.kind === "gain_stars") {
+      values.push(action.amount);
+    } else if (action.kind === "apply_effects") {
+      for (const spec of action.effects) {
+        if (spec.template.value !== undefined) {
+          values.push(spec.template.value);
+        }
+      }
+    }
+    for (const value of values) {
+      if (typeof value === "number") continue;
+      if (value.scaling === "noble_phantasm_level") {
+        noblePhantasmLevel = true;
+      } else if (value.scaling === "overcharge") {
+        overchargeStage = true;
+      }
     }
   }
   return { noblePhantasmLevel, overchargeStage };
@@ -373,7 +397,7 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
           `${name}.effects[${index}] template identity is required`,
         );
       }
-      assertSafeInteger(
+      assertValidDeclaredActionInteger(
         template.value ?? 0,
         `${name}.effects[${index}].template.value`,
       );

@@ -62,6 +62,11 @@ function rollResolvedRate(
 ): boolean {
   if (resolvedRatePermille <= 0) return false;
   if (resolvedRatePermille >= 1000) return true;
+  if (!Number.isInteger(resolvedRatePermille)) {
+    const rateBasisPoints = resolvedRatePermille * 10;
+    assertSafeInteger(rateBasisPoints, "resolvedRateBasisPoints");
+    return rng.chanceBasisPoints(rateBasisPoints);
+  }
   return rng.chance(resolvedRatePermille);
 }
 
@@ -81,7 +86,11 @@ export function calculateEffectApplicationRate(
       source,
       COMMON_EFFECT_TYPES.debuffSuccess,
       classifications,
-    );
+    ) + sumEffectModifiers(
+      source,
+      COMMON_EFFECT_TYPES.debuffSuccessBasisPoints,
+      classifications,
+    ) / 10;
     if (!spec.ignoreResistance) {
       targetModifierPermille = -sumEffectModifiers(
         target,
@@ -106,7 +115,9 @@ export function calculateEffectApplicationRate(
 
   const resolvedRatePermille =
     baseRatePermille + sourceModifierPermille + targetModifierPermille;
-  assertRate(resolvedRatePermille, "resolvedRatePermille");
+  if (!Number.isFinite(resolvedRatePermille)) {
+    throw new RangeError("resolvedRatePermille must be finite");
+  }
   return {
     baseRatePermille,
     sourceModifierPermille,

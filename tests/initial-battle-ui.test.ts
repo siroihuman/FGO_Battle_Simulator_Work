@@ -16,6 +16,7 @@ import {
   INITIAL_MYSTIC_CODE_REGISTRY,
 } from "../src/data/mysticCodes";
 import {
+  DOMINATION_FOREIGNER,
   LIGHT_KOYANSKAYA,
   LUCIFERA,
   type ServantLevel,
@@ -367,6 +368,7 @@ describe("minimum initial battle UI adapter", () => {
     const markup = renderToStaticMarkup(createElement(App));
 
     expect(markup).toContain("初期戦闘設定");
+    expect(markup).toContain(DOMINATION_FOREIGNER.name);
     expect(markup).toContain("前衛3騎必須");
     expect(markup).toContain("Wave・敵設定");
     expect(markup).toContain("戦闘設定");

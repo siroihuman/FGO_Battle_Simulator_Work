@@ -13,6 +13,8 @@ export const COMMON_EFFECT_TYPES = {
   debuffRemovalResistance: "debuff_removal_resistance",
   debuffResistance: "debuff_resistance",
   debuffSuccess: "debuff_success",
+  /** 0.01%-point units for source data that cannot be represented in permille. */
+  debuffSuccessBasisPoints: "debuff_success_basis_points",
   evade: "evade",
   guts: "guts",
   givenHpRecovery: "given_hp_recovery",
@@ -29,9 +31,13 @@ export const COMMON_EFFECT_TYPES = {
   criticalDamage: "critical_damage",
   fixedDamage: "fixed_damage",
   noblePhantasmDamage: "noble_phantasm_damage",
+  noblePhantasmOverchargeStage:
+    "noble_phantasm_overcharge_stage",
   noblePhantasmCardTypeChange:
     "noble_phantasm_card_type_change",
   npGain: "np_gain",
+  recurringNpGain: "recurring_np_gain",
+  recurringStarGain: "recurring_star_gain",
   power: "power",
   receivedNpGain: "received_np_gain",
   starGeneration: "star_generation",
