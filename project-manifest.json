@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "content-addition-sen-no-rikyu-awaiting-ui-acceptance",
+  "status": "content-addition-sen-no-rikyu-accepted",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -673,7 +673,7 @@
         "dataId": "sen-no-rikyu",
         "schemaVersion": 1,
         "contentRevision": "current_upgraded_only",
-        "implementationStatus": "implemented_awaiting_ui_acceptance",
+        "implementationStatus": "implemented_and_accepted",
         "source": "https://w.atwiki.jp/f_go/pages/5723.html",
         "secondarySource": "https://api.atlasacademy.io/nice/JP/servant/362",
         "sourceCheckedAt": "2026-08-15",
