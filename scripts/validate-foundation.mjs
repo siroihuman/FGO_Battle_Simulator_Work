@@ -602,7 +602,7 @@ if (manifest) {
   );
   const completedUi = manifest.coreRules.completedUiSpecification;
   assert(
-    manifest.status === "content-addition-domination-foreigner-review-ready"
+    manifest.status === "content-addition-domination-foreigner-accepted"
       && completedUi.decisionRange === "D-077-D-085"
       && completedUi.acceptanceRevision === "D-088"
       && completedUi.implementationStatus === "accepted"
@@ -1150,6 +1150,16 @@ assert(
     && implementationStatus.includes("No.024’「支配のフォーリナー」")
     && implementationStatus.includes("52ファイル・533テスト"),
   "実装状況にUI完成範囲、支配のフォーリナー、検査記録がありません"
+);
+const dominationForeignerAcceptance = await readText(
+  "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md"
+);
+assert(
+  dominationForeignerAcceptance.includes("判定: 最終合格")
+    && dominationForeignerAcceptance.includes("ユーザー実画面受入完了")
+    && dominationForeignerAcceptance.includes("保有スキル説明はLv10倍率だけ")
+    && dominationForeignerAcceptance.includes("宝具Lv別・OC別倍率を維持"),
+  "支配のフォーリナーの最終実画面受入結果が正本と一致しません"
 );
 
 const decisionLog = await readText("docs/DECISION_LOG.md");

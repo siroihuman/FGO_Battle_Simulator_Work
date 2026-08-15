@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "content-addition-domination-foreigner-review-ready",
+  "status": "content-addition-domination-foreigner-accepted",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -627,7 +627,7 @@
         "dataId": "domination-foreigner",
         "schemaVersion": 1,
         "contentRevision": "current_upgraded_only",
-        "implementationStatus": "implemented",
+        "implementationStatus": "implemented_and_accepted",
         "source": "https://w.atwiki.jp/siroi_human/pages/766.html",
         "sourceCheckedAt": "2026-08-14",
         "activeSkillCount": 3,
