@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "content-addition-domination-foreigner-accepted",
+  "status": "content-addition-sen-no-rikyu-awaiting-ui-acceptance",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -602,6 +602,36 @@
       "saveSchemaChange": false,
       "dataSchemaChange": false
     },
+    "attackTriggerEventTargetRestriction": {
+      "property": "targetAttackEventTargets",
+      "supportedTimings": [
+        "before_attack",
+        "on_hit",
+        "on_attack",
+        "on_damage_taken",
+        "after_attack"
+      ],
+      "allowedSelector": "non_self_all",
+      "resolution": "resolve_declared_selector_then_filter_to_recorded_attack_target_ids_in_formation_order",
+      "emptyEventTargets": "no_targets_without_inference",
+      "damageInputAfterBeforeAttack": true,
+      "saveSchemaChange": false,
+      "dataSchemaChange": false,
+      "battleLogSchemaChange": false
+    },
+    "servantSetupOriginTabs": {
+      "originSource": "explicit_registered_lists_without_name_or_url_inference",
+      "officialServantDataIdsInCollectionNumberOrder": [
+        "koyanskaya-of-light",
+        "sen-no-rikyu"
+      ],
+      "originalServantDataIdsInCollectionNumberOrder": [
+        "domination-foreigner",
+        "lucifera"
+      ],
+      "tabBrowseMutation": "none",
+      "currentSelectionOutsideTabs": true
+    },
     "preciseDebuffSuccessModifier": {
       "effectType": "debuff_success_basis_points",
       "unit": "0.01_percent",
@@ -634,6 +664,22 @@
         "classSkillCount": 5,
         "noblePhantasmCount": 1,
         "noblePhantasmRevision": "upgraded_only",
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
+        "name": "千利休",
+        "collectionNo": 362,
+        "dataId": "sen-no-rikyu",
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented_awaiting_ui_acceptance",
+        "source": "https://w.atwiki.jp/f_go/pages/5723.html",
+        "secondarySource": "https://api.atlasacademy.io/nice/JP/servant/362",
+        "sourceCheckedAt": "2026-08-15",
+        "activeSkillCount": 3,
+        "classSkillCount": 4,
+        "noblePhantasmCount": 1,
         "battleSuspendSchemaVersion": 4,
         "dataSchemaVersion": "1.38.0"
       }

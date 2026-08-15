@@ -9,6 +9,7 @@ import {
   type ServantDefinition,
 } from "./schema";
 import { DOMINATION_FOREIGNER } from "./dominationForeigner";
+import { SEN_NO_RIKYU } from "./senNoRikyu";
 
 const PASSIVE = {
   category: "buff" as const,
@@ -193,8 +194,25 @@ export const LUCIFERA: ServantDefinition = {
   sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/795.html", checkedAt: "2026-08-14", note: "強化後データのみ。スキル・宝具の効果順および表記を同ページで照合。" }],
 };
 
-export const INITIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
+function byCollectionNumber(
+  left: ServantDefinition,
+  right: ServantDefinition,
+): number {
+  return (left.collectionNo ?? Number.MAX_SAFE_INTEGER)
+    - (right.collectionNo ?? Number.MAX_SAFE_INTEGER);
+}
+
+export const OFFICIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
   LIGHT_KOYANSKAYA,
-  LUCIFERA,
+  SEN_NO_RIKYU,
+].sort(byCollectionNumber);
+
+export const ORIGINAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
   DOMINATION_FOREIGNER,
+  LUCIFERA,
+].sort(byCollectionNumber);
+
+export const INITIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
+  ...OFFICIAL_SERVANT_DEFINITIONS,
+  ...ORIGINAL_SERVANT_DEFINITIONS,
 ];

@@ -68,6 +68,12 @@ export type SlipDamageAmplifierKind =
  */
 export interface TriggerAction {
   target: TargetSelector;
+  /**
+   * Restricts this child action to the targets of the current attack event.
+   * The selector still controls side, life, reserve, exclusion, and traits;
+   * this flag only narrows its resolved formation-order candidates.
+   */
+  targetAttackEventTargets?: boolean;
   action:
     | CommonAction
     | {
@@ -140,6 +146,8 @@ export interface TriggerEvent {
   actorInstanceId?: string;
   actorSide?: BattleSide;
   targetInstanceId?: string;
+  /** All targets selected for the current attack, in formation order. */
+  targetInstanceIds?: readonly string[];
   targetSide?: BattleSide;
   hit?: boolean;
   damage?: number;

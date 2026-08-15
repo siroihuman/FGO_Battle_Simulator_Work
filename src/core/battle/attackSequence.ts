@@ -203,7 +203,7 @@ function eventForAttack(
   timing: TriggerEvent["timing"],
   sourceInstanceId: string | null,
   sourceSide: BattleSide | undefined,
-  targetInstanceId: string,
+  targetInstanceIds: readonly string[],
   targetSide: BattleSide,
   triggerContext: BattleAttackTriggerContext,
   summary?: {
@@ -211,6 +211,7 @@ function eventForAttack(
     damage: number;
   },
 ): TriggerEvent {
+  const targetInstanceId = targetInstanceIds[0];
   return {
     timing,
     ...(sourceInstanceId === null
@@ -220,6 +221,7 @@ function eventForAttack(
           actorSide: sourceSide,
         }),
     targetInstanceId,
+    targetInstanceIds: [...targetInstanceIds],
     targetSide,
     attackKind: triggerContext.attackKind,
     cardType: triggerContext.cardType,
@@ -405,7 +407,6 @@ export function resolveBattleAttackSequence(
   );
   const targetInstanceIds =
     participants.orderedTargetInstanceIds;
-  const primaryTargetInstanceId = targetInstanceIds[0];
   let currentState = state;
   let currentCounters = counters;
   let beforeAttack: TriggerEventResolutionResult | null = null;
@@ -418,7 +419,7 @@ export function resolveBattleAttackSequence(
         "before_attack",
         input.sourceInstanceId,
         participants.sourceSide,
-        primaryTargetInstanceId,
+        targetInstanceIds,
         participants.targetSide,
         input.triggerContext,
       ),
@@ -503,7 +504,7 @@ export function resolveBattleAttackSequence(
             "on_hit",
             input.sourceInstanceId,
             participants.sourceSide,
-            activeTargetInstanceIds[0],
+            activeTargetInstanceIds,
             participants.targetSide,
             input.triggerContext,
             summary,
@@ -543,7 +544,7 @@ export function resolveBattleAttackSequence(
           "on_attack",
           input.sourceInstanceId,
           participants.sourceSide,
-          activeTargetInstanceIds[0],
+          activeTargetInstanceIds,
           participants.targetSide,
           input.triggerContext,
           summary,
@@ -569,7 +570,7 @@ export function resolveBattleAttackSequence(
           "on_damage_taken",
           input.sourceInstanceId,
           participants.sourceSide,
-          target.targetInstanceId,
+          [target.targetInstanceId],
           participants.targetSide,
           input.triggerContext,
           {
@@ -602,7 +603,7 @@ export function resolveBattleAttackSequence(
         "after_attack",
         input.sourceInstanceId,
         participants.sourceSide,
-        primaryTargetInstanceId,
+        targetInstanceIds,
         participants.targetSide,
         input.triggerContext,
       ),

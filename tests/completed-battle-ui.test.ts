@@ -8,6 +8,7 @@ import {
   DOMINATION_FOREIGNER,
   LIGHT_KOYANSKAYA,
   LUCIFERA,
+  SEN_NO_RIKYU,
 } from "../src/data/servants";
 import {
   confirmedAttackDamageAmounts,
@@ -440,6 +441,35 @@ describe("completed battle UI selectors", () => {
       'href="https://w.atwiki.jp/siroi_human/pages/795.html"',
     );
     expect(setupMarkup).toContain('target="_blank"');
+    expect(setupMarkup).toContain(">公式</button>");
+    expect(setupMarkup).toContain(">オリジナル</button>");
+    expect(setupMarkup).not.toContain("公式サーヴァント");
+    expect(setupMarkup).not.toContain("オリジナルサーヴァント");
+    expect(setupMarkup).toContain(
+      'aria-selected="true">オリジナル</button>',
+    );
+    expect(setupMarkup.indexOf(
+      '<option value="domination-foreigner">No.024’ 支配のフォーリナー',
+    )).toBeLessThan(setupMarkup.indexOf(
+      '<option value="lucifera" selected="">No.062 ルシフェラ',
+    ));
+
+    const officialSetupMarkup = renderToStaticMarkup(createElement(AllySlotEditor, {
+      label: "前衛1",
+      required: true,
+      selection: ally(LIGHT_KOYANSKAYA.dataId),
+      onChange: () => undefined,
+    }));
+    expect(officialSetupMarkup).toContain(
+      'aria-selected="true">公式</button>',
+    );
+    expect(officialSetupMarkup.indexOf(
+      '<option value="koyanskaya-of-light" selected="">No.314 光のコヤンスカヤ',
+    )).toBeLessThan(officialSetupMarkup.indexOf(
+      '<option value="sen-no-rikyu">No.362 千利休',
+    ));
+    expect(registeredServantWikiUrl(SEN_NO_RIKYU.dataId))
+      .toBe("https://w.atwiki.jp/f_go/pages/5723.html");
 
     const dominationSetupMarkup = renderToStaticMarkup(createElement(AllySlotEditor, {
       label: "前衛1",

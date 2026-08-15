@@ -720,6 +720,27 @@ summary {
   box-shadow: inset 0 -3px var(--accent);
 }
 
+.servant-origin-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  overflow-x: hidden;
+  margin: 0.35rem 0 0.65rem;
+}
+
+.servant-origin-tabs button {
+  width: 100%;
+  min-width: 0;
+  min-height: 3.5rem;
+}
+
+.current-servant-selection {
+  margin: 0 0 0.65rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
 .setup-tabs {
   position: sticky;
   z-index: 6;

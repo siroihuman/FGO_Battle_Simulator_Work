@@ -32,7 +32,10 @@ import {
 } from "./data/mysticCodes";
 import {
   INITIAL_SERVANT_DEFINITIONS,
+  OFFICIAL_SERVANT_DEFINITIONS,
+  ORIGINAL_SERVANT_DEFINITIONS,
   servantDefinition,
+  type ServantDefinition,
   type ServantLevel,
 } from "./data/servants";
 import type { NoblePhantasmLevel } from "./formulas/np";
@@ -201,6 +204,21 @@ function allyName(selection: InitialAllySlotSelection): string {
     : "未選択";
 }
 
+type ServantOriginTab = "official" | "original";
+
+function servantOrigin(definition: ServantDefinition): ServantOriginTab {
+  return ORIGINAL_SERVANT_DEFINITIONS.some(
+    ({ dataId }) => dataId === definition.dataId,
+  ) ? "original" : "official";
+}
+
+function servantCollectionLabel(definition: ServantDefinition): string {
+  return definition.collectionLabel
+    ?? (definition.collectionNo === undefined
+      ? "番号未登録"
+      : String(definition.collectionNo).padStart(3, "0"));
+}
+
 export function AllySlotEditor({
   label,
   required,
@@ -218,14 +236,51 @@ export function AllySlotEditor({
   const wikiUrl = definition
     ? registeredServantWikiUrl(definition.dataId)
     : null;
+  const [originTab, setOriginTab] = useState<ServantOriginTab>(
+    definition ? servantOrigin(definition) : "official",
+  );
+  useEffect(() => {
+    if (definition) setOriginTab(servantOrigin(definition));
+  }, [definition?.dataId]);
+  const visibleDefinitions = originTab === "official"
+    ? OFFICIAL_SERVANT_DEFINITIONS
+    : ORIGINAL_SERVANT_DEFINITIONS;
+  const selectedIsVisible = definition
+    ? visibleDefinitions.some(({ dataId }) => dataId === definition.dataId)
+    : false;
   return (
     <fieldset className="setup-slot">
       <legend>{label}{required ? "（必須）" : "（任意）"}</legend>
+      <div
+        className="tab-list servant-origin-tabs"
+        role="tablist"
+        aria-label={`${label} サーヴァント区分`}
+      >
+        {([
+          ["official", "公式"],
+          ["original", "オリジナル"],
+        ] as const).map(([tab, tabLabel]) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={originTab === tab}
+            onClick={() => setOriginTab(tab)}
+          >
+            {tabLabel}
+          </button>
+        ))}
+      </div>
+      <p className="current-servant-selection" aria-live="polite">
+        選択中：{definition
+          ? `No.${servantCollectionLabel(definition)} ${definition.name}`
+          : "未選択"}
+      </p>
       <label>
         サーヴァント
         <select
           aria-label={`${label} サーヴァント`}
-          value={selection.servantDataId ?? ""}
+          value={selectedIsVisible ? selection.servantDataId ?? "" : ""}
           onChange={(event) => {
             const servantDataId = event.target.value || null;
             onChange(servantDataId
@@ -234,9 +289,9 @@ export function AllySlotEditor({
           }}
         >
           <option value="">未選択</option>
-          {INITIAL_SERVANT_DEFINITIONS.map((servant) => (
+          {visibleDefinitions.map((servant) => (
             <option key={servant.dataId} value={servant.dataId}>
-              {servant.name}（★{servant.rarity}）
+              No.{servantCollectionLabel(servant)} {servant.name}（★{servant.rarity}）
             </option>
           ))}
         </select>
