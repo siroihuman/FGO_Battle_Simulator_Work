@@ -1173,7 +1173,7 @@ const requiredUiAssets = [
     "Nppowerdown", "Nppowerup", "Powerup", "Removalresistdown",
     "Removalresistup", "Resistancedown", "Resistanceup", "Quickupstatus",
     "Starabsoprtdown", "Stargainup", "Statusdown", "Statusup",
-    "Npgainturn", "Stargainturn", "NPOvercharge", "NPGainUpDmg",
+    "Npgainturn", "Stargainturn", "NPOvercharge", "Npchargeup", "NPGainUpDmg",
     "QuickNpGainUp", "Quickdamageup", "Curse", "Defensedown",
     "Defenseup", "Npseal",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
@@ -1265,8 +1265,10 @@ assert(
   senNoRikyuAcceptance.includes("判定: 自動検査合格・実画面受入待ち")
     && senNoRikyuAcceptance.includes("53ファイル、538テスト成功")
     && senNoRikyuAcceptance.includes("targetAttackEventTargets")
-    && senNoRikyuAcceptance.includes("公式タブ")
-    && senNoRikyuAcceptance.includes("オリジナルタブ"),
+    && senNoRikyuAcceptance.includes("「公式」タブ")
+    && senNoRikyuAcceptance.includes("「オリジナル」タブ")
+    && senNoRikyuAcceptance.includes("Npchargeup")
+    && senNoRikyuAcceptance.includes("Critdmgup"),
   "千利休・編成区分タブの受入報告が正本と一致しません"
 );
 
@@ -1343,13 +1345,26 @@ assert(
   "UI・保存仕様にD-086の状態表示・合算・手動HP演出がありません"
 );
 assert(
-  uiAndStorage.includes("「公式サーヴァント」「オリジナルサーヴァント」の2タブ")
+  uiAndStorage.includes("「公式」「オリジナル」の2タブ")
     && uiAndStorage.includes("光のコヤンスカヤ（No.314）、千利休（No.362）")
     && uiAndStorage.includes("別区分タブを閲覧しただけでは現在選択を解除しない")
+    && uiAndStorage.includes("タブ部分の横スクロールを発生させない")
     && appSource.includes("OFFICIAL_SERVANT_DEFINITIONS")
     && appSource.includes("ORIGINAL_SERVANT_DEFINITIONS")
-    && appSource.includes("選択中："),
+    && appSource.includes("選択中：")
+    && !appSource.includes('"公式サーヴァント"')
+    && !appSource.includes('"オリジナルサーヴァント"')
+    && /\.servant-origin-tabs\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)[\s\S]*?overflow-x:\s*hidden/.test(uiStyles),
   "編成UIに公式／オリジナル区分、No.順、選択維持がありません"
+);
+assert(
+  iconRegistry.includes('"NP獲得量アップ": "Npchargeup"')
+    && iconRegistry.includes('"被ダメージ時NP獲得量アップ": "NPGainUpDmg"')
+    && iconRegistry.includes('"Quickカードの威力アップ": "Quickdamageup"')
+    && !iconRegistry.includes('"Quickクリティカル威力アップ": "Quickdamageup"')
+    && iconRegistry.includes('effect.effectType === COMMON_EFFECT_TYPES.criticalDamage')
+    && iconRegistry.includes('effect.effectType === COMMON_EFFECT_TYPES.starFocus'),
+  "状態アイコンのNP獲得量・色限定クリティカル・スター集中対応が一致しません"
 );
 assert(
   uiAndStorage.includes("実画面受入の資源・状態・カード表示追補（D-087）")

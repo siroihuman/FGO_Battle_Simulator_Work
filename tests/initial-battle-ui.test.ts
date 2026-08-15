@@ -370,8 +370,10 @@ describe("minimum initial battle UI adapter", () => {
     expect(markup).toContain("初期戦闘設定");
     expect(markup).toContain(LIGHT_KOYANSKAYA.name);
     expect(markup).toContain(SEN_NO_RIKYU.name);
-    expect(markup).toContain("公式サーヴァント");
-    expect(markup).toContain("オリジナルサーヴァント");
+    expect(markup).toContain(">公式</button>");
+    expect(markup).toContain(">オリジナル</button>");
+    expect(markup).not.toContain("公式サーヴァント");
+    expect(markup).not.toContain("オリジナルサーヴァント");
     expect(markup).toContain("前衛3騎必須");
     expect(markup).toContain("Wave・敵設定");
     expect(markup).toContain("戦闘設定");

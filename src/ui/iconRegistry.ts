@@ -35,9 +35,10 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "毎ターンNP獲得": "Npgainturn",
   "毎ターンスター獲得": "Stargainturn",
   "宝具OC段階アップ": "NPOvercharge",
-  "NP獲得量アップ": "NPGainUpDmg",
+  "NP獲得量アップ": "Npchargeup",
+  "被ダメージ時NP獲得量アップ": "NPGainUpDmg",
   "QuickカードNP獲得量アップ": "QuickNpGainUp",
-  "Quickクリティカル威力アップ": "Quickdamageup",
+  "Quickカードの威力アップ": "Quickdamageup",
   "Quick攻撃時防御力ダウン": "Buffatk",
   "呪い": "Curse",
 };

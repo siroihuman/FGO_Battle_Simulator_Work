@@ -26,14 +26,15 @@
 
 ## 編成UI
 
-- 公式タブ: No.314 光のコヤンスカヤ、No.362 千利休。
-- オリジナルタブ: No.024’ 支配のフォーリナー、No.062 ルシフェラ。
+- 「公式」タブ: No.314 光のコヤンスカヤ、No.362 千利休。
+- 「オリジナル」タブ: No.024’ 支配のフォーリナー、No.062 ルシフェラ。
 - 各タブは数値No.昇順とし、区分は明示リストから取得する。
 - 別タブを閲覧しても現在選択を解除せず、タブ外へ選択中のNo.と名称を表示する。
+- 2タブを各枠の2列均等幅へ収め、スマートフォンでもタブ部分の横スクロールを発生させない。
 
 ## アイコン
 
-添付済み正式素材から`skill-crit-damage-up.png`、`NPGainUpDmg.webp`、`QuickNpGainUp.webp`、`Quickdamageup.webp`、`Curse.webp`、`Defensedown.webp`、`Defenseup.webp`、`Npseal.webp`を追加した。既存の明示対応も再利用し、未指定名称へ推測画像を割り当てていない。登録済み千利休効果に未指定アイコンはない。
+添付済み正式素材から`skill-crit-damage-up.png`、`Npchargeup.webp`、`QuickNpGainUp.webp`、`Critdmgup.webp`、`Curse.webp`、`Defensedown.webp`、`Defenseup.webp`、`Npseal.webp`を使用した。NP獲得量アップは`Npchargeup`、Quickクリティカル威力アップは汎用`Critdmgup`とする。`NPGainUpDmg`は被ダメージ時NP獲得量アップ、`Quickdamageup`はQuickカードの威力アップだけへ明示対応し、未指定名称へ推測画像を割り当てていない。登録済み千利休効果に未指定アイコンはない。
 
 ## 回帰検査
 

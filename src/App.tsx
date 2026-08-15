@@ -257,8 +257,8 @@ export function AllySlotEditor({
         aria-label={`${label} サーヴァント区分`}
       >
         {([
-          ["official", "公式サーヴァント"],
-          ["original", "オリジナルサーヴァント"],
+          ["official", "公式"],
+          ["original", "オリジナル"],
         ] as const).map(([tab, tabLabel]) => (
           <button
             key={tab}

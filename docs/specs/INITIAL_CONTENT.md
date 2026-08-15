@@ -81,7 +81,7 @@
 - 「一期一会」は宝具Lv別600／800／900／950／1000%、対象ごとの〔人の力〕特攻をOC別150／162.5／175／187.5／200%として攻撃し、攻撃後に敵全体へ宝具封印1ターン、呪い1000・5ターンを資料順で付与する。
 - クラススキルはBuster10%・クリティカル威力5%、Arts8%・精神異常耐性20%、弱体付与成功率10%、QuickカードNP獲得量10%を戦闘開始時の解除不能受動効果として適用する。
 - Skill 2のOC+2は既存`noble_phantasm_overcharge_stage`、無敵・宝具封印・呪いは既存共通効果を再利用する。保存形式4・データ1.38.0・固定シードリプレイ・カード再配布を変更しない。
-- アイコンは登録済み正式素材`skill-card-quick-up`、`skill-np-charge`、`skill-crit-damage-up`、`NPGainUpDmg`、`QuickNpGainUp`、`Quickdamageup`、`Curse`、`Defensedown`、`Defenseup`、`Npseal`等の明示対応だけを使い、未指定画像を推測流用しない。
+- アイコンは登録済み正式素材`skill-card-quick-up`、`skill-np-charge`、`skill-crit-damage-up`、`Npchargeup`、`QuickNpGainUp`、`Critdmgup`、`Curse`、`Defensedown`、`Defenseup`、`Npseal`等の明示対応だけを使い、未指定画像を推測流用しない。`NPGainUpDmg`は被ダメージ時NP獲得量アップ、`Quickdamageup`はQuickカードの威力アップ専用とする。
 
 ## 魔術礼装
 

@@ -441,10 +441,12 @@ describe("completed battle UI selectors", () => {
       'href="https://w.atwiki.jp/siroi_human/pages/795.html"',
     );
     expect(setupMarkup).toContain('target="_blank"');
-    expect(setupMarkup).toContain("公式サーヴァント");
-    expect(setupMarkup).toContain("オリジナルサーヴァント");
+    expect(setupMarkup).toContain(">公式</button>");
+    expect(setupMarkup).toContain(">オリジナル</button>");
+    expect(setupMarkup).not.toContain("公式サーヴァント");
+    expect(setupMarkup).not.toContain("オリジナルサーヴァント");
     expect(setupMarkup).toContain(
-      'aria-selected="true">オリジナルサーヴァント</button>',
+      'aria-selected="true">オリジナル</button>',
     );
     expect(setupMarkup.indexOf(
       '<option value="domination-foreigner">No.024’ 支配のフォーリナー',
@@ -459,7 +461,7 @@ describe("completed battle UI selectors", () => {
       onChange: () => undefined,
     }));
     expect(officialSetupMarkup).toContain(
-      'aria-selected="true">公式サーヴァント</button>',
+      'aria-selected="true">公式</button>',
     );
     expect(officialSetupMarkup.indexOf(
       '<option value="koyanskaya-of-light" selected="">No.314 光のコヤンスカヤ',

@@ -721,10 +721,16 @@ summary {
 }
 
 .servant-origin-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  overflow-x: hidden;
   margin: 0.35rem 0 0.65rem;
 }
 
 .servant-origin-tabs button {
+  width: 100%;
+  min-width: 0;
   min-height: 3.5rem;
 }
 

@@ -27,6 +27,7 @@ import {
 } from "../src/effects/actionExecution";
 import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
 import { createEffectRuntimeCounters } from "../src/effects/runtime";
+import type { AppliedEffect } from "../src/effects/types";
 import { resolveAllySkillUse } from "../src/effects/skillExecution";
 import { resolveSideTurnEnd } from "../src/effects/turnEnd";
 import {
@@ -101,6 +102,30 @@ function attackStreams(seed: string) {
     effects: rng.stream("effects"),
     damage: rng.stream("damage"),
     stars: rng.stream("stars"),
+  };
+}
+
+function iconTestEffect(
+  effectType: string,
+  name: string,
+  flags: Record<string, boolean | number | string> = {},
+): AppliedEffect {
+  return {
+    stableId: `icon-${effectType}`,
+    instanceId: `icon-${effectType}-1`,
+    name,
+    effectType,
+    category: "buff",
+    removalPolicy: "removable",
+    durationTick: "owner_turn_end",
+    flags,
+    sourceInstanceId: "source",
+    targetInstanceId: "target",
+    classifications: [],
+    value: 100,
+    remainingTurns: 3,
+    remainingUses: null,
+    registrationOrder: 1,
   };
 }
 
@@ -458,5 +483,28 @@ describe("No.362 千利休", () => {
       "apply_effects",
     ]);
     expect(COMMON_EFFECT_TYPES.noblePhantasmSeal).toBe("noble_phantasm_seal");
+    expect(registeredStatusIconPath(iconTestEffect(
+      COMMON_EFFECT_TYPES.npGain,
+      "NP獲得量アップ",
+    ))).toContain("Npchargeup.webp");
+    expect(registeredStatusIconPath(iconTestEffect(
+      COMMON_EFFECT_TYPES.npGain,
+      "被ダメージ時NP獲得量アップ",
+    ))).toContain("NPGainUpDmg.webp");
+    expect(registeredStatusIconPath(iconTestEffect(
+      COMMON_EFFECT_TYPES.criticalDamage,
+      "Quickクリティカル威力アップ",
+      { cardType: "quick" },
+    ))).toContain("Critdmgup.webp");
+    expect(registeredStatusIconPath(iconTestEffect(
+      COMMON_EFFECT_TYPES.starFocus,
+      "Quickスター集中度アップ",
+      { cardType: "quick" },
+    ))).toContain("Critabsup.webp");
+    expect(registeredStatusIconPath(iconTestEffect(
+      COMMON_EFFECT_TYPES.power,
+      "Quickカードの威力アップ",
+      { cardType: "quick" },
+    ))).toContain("Quickdamageup.webp");
   });
 });
