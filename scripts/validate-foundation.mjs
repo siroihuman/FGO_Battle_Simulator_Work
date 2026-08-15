@@ -360,7 +360,7 @@ if (manifest) {
   assert(
     specifiedServants.length === 2
       && senNoRikyu?.collectionNo === 362
-      && senNoRikyu?.implementationStatus === "implemented_awaiting_ui_acceptance"
+      && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
       && senNoRikyu?.classSkillCount === 4
       && senNoRikyu?.noblePhantasmCount === 1
@@ -638,7 +638,7 @@ if (manifest) {
   );
   const completedUi = manifest.coreRules.completedUiSpecification;
   assert(
-    manifest.status === "content-addition-sen-no-rikyu-awaiting-ui-acceptance"
+    manifest.status === "content-addition-sen-no-rikyu-accepted"
       && completedUi.decisionRange === "D-077-D-085"
       && completedUi.acceptanceRevision === "D-088"
       && completedUi.implementationStatus === "accepted"
@@ -1143,8 +1143,10 @@ assert(startHere.includes("## 必須規則"), "作業開始ページに必須規
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
     && startHere.includes("No.362「千利休」")
-    && startHere.includes("公式／オリジナル")
-    && startHere.includes("実画面受入待ち"),
+    && startHere.includes("「公式」／「オリジナル」")
+    && startHere.includes("ユーザー実画面受入を完了")
+    && startHere.includes("PR #67")
+    && startHere.includes("カテゴリ1の未登録サーヴァントからNo.が次に若い1騎だけを選定する"),
   "作業開始ページに千利休実装、編成区分、次作業がありません"
 );
 const uiAcceptance = await readText(
@@ -1189,7 +1191,9 @@ assert(
   implementationStatus.includes("D-077～D-085のUI完成仕様")
     && implementationStatus.includes("v1.0初期完成範囲へ追加")
     && implementationStatus.includes("No.362「千利休」")
-    && implementationStatus.includes("53ファイル・538テスト"),
+    && implementationStatus.includes("53ファイル・538テスト")
+    && implementationStatus.includes("ユーザー実画面受入を完了")
+    && implementationStatus.includes("PR #67"),
   "実装状況にUI完成範囲、千利休、検査記録がありません"
 );
 const dominationForeignerAcceptance = await readText(
@@ -1236,7 +1240,9 @@ assert(
 );
 assert(
   decisionLog.includes("## D-091 No.362「千利休」と編成区分タブを追加する")
-    && decisionLog.includes("targetAttackEventTargets"),
+    && decisionLog.includes("targetAttackEventTargets")
+    && decisionLog.includes("## D-093 No.362「千利休」と編成区分タブを最終受入とする")
+    && decisionLog.includes("cf66a170d7af1e81f74efcf117b7ba47b6dc69b8"),
   "決定記録に千利休と編成区分タブの実装方針がありません"
 );
 
@@ -1262,7 +1268,9 @@ const senNoRikyuAcceptance = await readText(
   "docs/qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md"
 );
 assert(
-  senNoRikyuAcceptance.includes("判定: 自動検査合格・実画面受入待ち")
+  senNoRikyuAcceptance.includes("判定: 最終合格")
+    && senNoRikyuAcceptance.includes("最終実画面受入日: 2026-08-15")
+    && senNoRikyuAcceptance.includes("未確認の受入項目はない")
     && senNoRikyuAcceptance.includes("53ファイル、538テスト成功")
     && senNoRikyuAcceptance.includes("targetAttackEventTargets")
     && senNoRikyuAcceptance.includes("「公式」タブ")
