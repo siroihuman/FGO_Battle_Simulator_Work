@@ -75,6 +75,8 @@ import {
   createInitialBattleSession,
   emptyInitialAllySlot,
   initialAllySelectionForServant,
+  SERVANT_FOU_MAX,
+  SERVANT_FOU_MIN,
   validateInitialBattleSetup,
   type InitialAllySlotSelection,
   type InitialBattleSetup,
@@ -147,15 +149,21 @@ export function mysticCodeSkillUsesSelectedUnitInput(
   );
 }
 
-function normalizeStoredSetup(value: unknown): InitialBattleSetup | null {
+export function normalizeStoredSetup(value: unknown): InitialBattleSetup | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const candidate = value as Partial<InitialBattleSetup>;
-  const isSlot = (slot: unknown): slot is InitialAllySlotSelection => {
+  type StoredAllySlot = Omit<
+    InitialAllySlotSelection,
+    "hpFou" | "attackFou"
+  > & Partial<Pick<InitialAllySlotSelection, "hpFou" | "attackFou">>;
+  const isSlot = (slot: unknown): slot is StoredAllySlot => {
     if (!slot || typeof slot !== "object" || Array.isArray(slot)) return false;
     const current = slot as Partial<InitialAllySlotSelection>;
     return (current.servantDataId === null || typeof current.servantDataId === "string")
       && (current.level === null || typeof current.level === "number")
       && (current.noblePhantasmLevel === null || typeof current.noblePhantasmLevel === "number")
+      && (current.hpFou === undefined || typeof current.hpFou === "number")
+      && (current.attackFou === undefined || typeof current.attackFou === "number")
       && (current.craftEssenceDataId === null || typeof current.craftEssenceDataId === "string");
   };
   if (
@@ -169,9 +177,14 @@ function normalizeStoredSetup(value: unknown): InitialBattleSetup | null {
     || typeof candidate.enemyEncounterDataId !== "string"
     || typeof candidate.seed !== "string"
   ) return null;
+  const normalizeSlot = (slot: StoredAllySlot): InitialAllySlotSelection => ({
+    ...slot,
+    hpFou: slot.hpFou ?? SERVANT_FOU_MIN,
+    attackFou: slot.attackFou ?? SERVANT_FOU_MIN,
+  });
   return {
-    frontline: candidate.frontline,
-    reserve: candidate.reserve,
+    frontline: candidate.frontline.map(normalizeSlot),
+    reserve: candidate.reserve.map(normalizeSlot),
     mysticCodeDataId: candidate.mysticCodeDataId ?? null,
     enemyEncounterDataId: candidate.enemyEncounterDataId,
     seedMode: candidate.seedMode === "random" || candidate.seedMode === "fixed"
@@ -330,6 +343,47 @@ export function AllySlotEditor({
           </select>
         </label>
       </div>
+      <div className="inline-fields fou-fields">
+        <label>
+          HPフォウ
+          <input
+            aria-label={`${label} HPフォウ`}
+            type="number"
+            inputMode="numeric"
+            min={SERVANT_FOU_MIN}
+            max={SERVANT_FOU_MAX}
+            step={1}
+            disabled={!definition}
+            value={selection.hpFou}
+            onChange={(event) => onChange({
+              ...selection,
+              hpFou: event.target.value === ""
+                ? SERVANT_FOU_MIN
+                : Number(event.target.value),
+            })}
+          />
+        </label>
+        <label>
+          ATKフォウ
+          <input
+            aria-label={`${label} ATKフォウ`}
+            type="number"
+            inputMode="numeric"
+            min={SERVANT_FOU_MIN}
+            max={SERVANT_FOU_MAX}
+            step={1}
+            disabled={!definition}
+            value={selection.attackFou}
+            onChange={(event) => onChange({
+              ...selection,
+              attackFou: event.target.value === ""
+                ? SERVANT_FOU_MIN
+                : Number(event.target.value),
+            })}
+          />
+        </label>
+      </div>
+      <p className="setup-field-note">各0～3000の整数で指定します。</p>
       <label>
         概念礼装
         <select
@@ -1143,7 +1197,7 @@ function ResourceTransitionBars({
   );
 }
 
-function PlaybackOverlay({ notice, summaries, hpTransitions, npTransitions, damageAmounts, index, total, onPrevious, onNext }: { notice: string; summaries: BattleLogSummary[]; hpTransitions: ConfirmedHpTransition[]; npTransitions: ConfirmedNpTransition[]; damageAmounts: ConfirmedAttackDamage[]; index: number; total: number; onPrevious: () => void; onNext: () => void }) {
+export function PlaybackOverlay({ notice, summaries, hpTransitions, npTransitions, damageAmounts, index, total, onPrevious, onNext, onSkip }: { notice: string; summaries: BattleLogSummary[]; hpTransitions: ConfirmedHpTransition[]; npTransitions: ConfirmedNpTransition[]; damageAmounts: ConfirmedAttackDamage[]; index: number; total: number; onPrevious: () => void; onNext: () => void; onSkip: () => void }) {
   return (
     <div className="playback-blocker" role="presentation">
       <section className="playback-notice" role="dialog" aria-modal="true" aria-labelledby="playback-heading" onKeyDown={(event) => {
@@ -1160,7 +1214,10 @@ function PlaybackOverlay({ notice, summaries, hpTransitions, npTransitions, dama
           first.focus();
         }
       }}>
-        <p className="playback-counter">{index + 1} / {total}</p>
+        <div className="playback-heading-row">
+          <p className="playback-counter">{index + 1} / {total}</p>
+          <button className="playback-skip-button" type="button" aria-label="確定結果演出をスキップ" onClick={onSkip}>スキップ</button>
+        </div>
         <strong id="playback-heading" aria-live="polite">{notice}</strong>
         <ResourceTransitionBars hpTransitions={hpTransitions} npTransitions={npTransitions} damageAmounts={damageAmounts} />
         {summaries.slice(0, 4).map((summary) => <span key={summary.id}>{summary.title}{summary.changes.length ? `：${summary.changes.join(" / ")}` : summary.actualHpLoss !== null ? `：HP -${summary.actualHpLoss.toLocaleString()}` : ""}</span>)}
@@ -1336,11 +1393,20 @@ export function BattleScreen({
       setPlayback({ ...playback, index: playback.index + 1 });
       return;
     }
+    finishPlayback("確定結果の確認が完了しました。");
+  }
+
+  function finishPlayback(message: string) {
+    if (!playback) return;
     onSessionChange(playback.finalSession);
     setSelectedCardIds([]);
     setTargetInstanceId(firstLivingEnemyId(playback.finalSession));
-    setOperationMessage("確定結果の確認が完了しました。");
+    setOperationMessage(message);
     setPlayback(null);
+  }
+
+  function skipPlayback() {
+    finishPlayback("確定結果の演出をスキップしました。");
   }
 
   function executeTurn() {
@@ -1518,7 +1584,7 @@ export function BattleScreen({
 
       {detail && <DetailModal detail={detail} onClose={() => setDetail(null)} />}
       {pendingSkill && <SkillTargetModal pending={pendingSkill} session={session} onConfirm={(targetId, orderChange) => resolveSkill(pendingSkill.skill, targetId, orderChange)} onClose={() => setPendingSkill(null)} />}
-      {playbackFrame && playback && <PlaybackOverlay key={playback.index} notice={playbackFrame.notice} summaries={playbackFrame.summaries} hpTransitions={playbackFrame.hpTransitions} npTransitions={playbackFrame.npTransitions} damageAmounts={playbackFrame.damageAmounts} index={playback.index} total={playback.frames.length} onPrevious={showPreviousPlaybackFrame} onNext={showNextPlaybackFrame} />}
+      {playbackFrame && playback && <PlaybackOverlay key={playback.index} notice={playbackFrame.notice} summaries={playbackFrame.summaries} hpTransitions={playbackFrame.hpTransitions} npTransitions={playbackFrame.npTransitions} damageAmounts={playbackFrame.damageAmounts} index={playback.index} total={playback.frames.length} onPrevious={showPreviousPlaybackFrame} onNext={showNextPlaybackFrame} onSkip={skipPlayback} />}
       {state.outcome !== "ongoing" && !playback && <ResultOverlay session={session} onReturn={onReturnToSetup} onFixedSeed={() => onFixedSeedToSetup(session.loop.rng.seed)} onCopy={() => copySeed(session.loop.rng.seed, setOperationMessage)} />}
     </main>
   );

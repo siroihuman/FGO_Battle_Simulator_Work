@@ -61,6 +61,7 @@ const RATE_EFFECT_TYPES = new Set<string>([
   COMMON_EFFECT_TYPES.specialDefense,
   COMMON_EFFECT_TYPES.starFocus,
   COMMON_EFFECT_TYPES.starGeneration,
+  COMMON_EFFECT_TYPES.targetFocus,
   COMMON_EFFECT_TYPES.targetDamage,
   COMMON_EFFECT_TYPES.targetStarGeneration,
 ]);

@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { AllySlotEditor, BattleScreen } from "../src/App";
+import { AllySlotEditor, BattleScreen, PlaybackOverlay } from "../src/App";
 import { listCommandCardChoices } from "../src/core/cards/selection";
 import { resolveBattleSessionTurn } from "../src/core/battle/session";
 import {
@@ -49,6 +49,8 @@ function ally(
     servantDataId,
     level: 90,
     noblePhantasmLevel: 1,
+    hpFou: 0,
+    attackFou: 0,
     craftEssenceDataId,
   };
 }
@@ -67,6 +69,26 @@ function session() {
 }
 
 describe("completed battle UI selectors", () => {
+  it("places a playback skip control inside the input-blocking dialog", () => {
+    const markup = renderToStaticMarkup(createElement(PlaybackOverlay, {
+      notice: "チェイン発生",
+      summaries: [],
+      hpTransitions: [],
+      npTransitions: [],
+      damageAmounts: [],
+      index: 0,
+      total: 4,
+      onPrevious: () => undefined,
+      onNext: () => undefined,
+      onSkip: () => undefined,
+    }));
+    expect(markup).toContain('class="playback-heading-row"');
+    expect(markup).toContain('class="playback-skip-button"');
+    expect(markup).toContain('aria-label="確定結果演出をスキップ"');
+    expect(markup.indexOf("1 / 4")).toBeLessThan(markup.indexOf("スキップ"));
+    expect(markup.indexOf("スキップ")).toBeLessThan(markup.indexOf("チェイン発生"));
+  });
+
   it("caps command selection at three while keeping selected cards removable", () => {
     expect(toggleSelectedCommandCard(["a", "b", "c"], "d"))
       .toEqual(["a", "b", "c"]);

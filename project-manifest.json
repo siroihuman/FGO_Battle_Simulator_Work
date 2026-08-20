@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "content-addition-sen-no-rikyu-accepted",
+  "status": "content-addition-mother-mary-accepted",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -215,9 +215,14 @@
     "servantDefaultDemeritApplicationRatePermille": 5000,
     "servantDefaultDemeritRateAppliesWhenSourceRateMissing": true,
     "servantDemeritUsesDebuffResistanceAndImmunity": true,
+    "initialAttributeAffinitiesPermille": {
+      "earth": { "sky": 900, "human": 1100 },
+      "sky": { "earth": 1100, "human": 900 },
+      "human": { "sky": 1100, "earth": 900 }
+    },
     "completedUiSpecification": {
       "decisionRange": "D-077-D-085",
-      "acceptanceRevision": "D-088",
+      "acceptanceRevision": "D-097",
       "implementationStatus": "accepted",
       "setupTabs": [
         "ally_formation",
@@ -282,6 +287,9 @@
       "battleServantWikiLinkPosition": "ally_name",
       "confirmedLogPlaybackOnly": true,
       "playbackNavigation": "manual_previous_next",
+      "playbackSkipPosition": "upper_right",
+      "playbackSkipResult": "show_already_resolved_final_session_and_return_to_input_or_result",
+      "playbackSkipRecalculatesOrMutatesBattle": false,
       "playbackStageOrder": [
         "chain",
         "confirmed_ally_and_enemy_hp_and_ally_np_changes",
@@ -627,10 +635,61 @@
       ],
       "originalServantDataIdsInCollectionNumberOrder": [
         "domination-foreigner",
-        "lucifera"
+        "lucifera",
+        "mother-mary"
       ],
       "tabBrowseMutation": "none",
       "currentSelectionOutsideTabs": true
+    },
+    "servantFouSetup": {
+      "hpField": "hpFou",
+      "attackField": "attackFou",
+      "independentPerBattleInstance": true,
+      "minimum": 0,
+      "maximum": 3000,
+      "integerOnly": true,
+      "default": 0,
+      "legacyStoredMissingValue": 0,
+      "applicationOrder": "selected_level_stats_then_fou_then_craft_essence",
+      "uiRecalculation": false,
+      "rngDraws": 0,
+      "battleSuspendSchemaChange": false,
+      "dataSchemaChange": false
+    },
+    "servantAscensionVariantPolicy": {
+      "currentRegistration": "user_specified_stage_only",
+      "motherMaryStage": "final_ascension",
+      "futureStageSelection": "shared_feature_when_first_required",
+      "perServantAdHocSelector": false
+    },
+    "servantActiveSkillRankMayBeOmittedWhenSourceOmits": true,
+    "declaredStagedHealHp": {
+      "supportedScalings": [
+        "fixed",
+        "noble_phantasm_level",
+        "overcharge"
+      ],
+      "resolutionSource": "engine_action_context",
+      "uiRecalculation": false,
+      "saveSchemaChange": false,
+      "dataSchemaChange": false
+    },
+    "enemySingleTargetFocus": {
+      "effectType": "target_focus",
+      "candidateScope": "living_ally_frontline",
+      "positiveValuesOnly": true,
+      "singleCandidateRngDraws": 0,
+      "multipleCandidatePolicy": "existing_action_target_policy",
+      "customSelectorOverridden": true,
+      "allTargetUnaffected": true,
+      "saveSchemaChange": false,
+      "dataSchemaChange": false
+    },
+    "motherMaryIconCorrections": {
+      "targetFocus": "Tauntup",
+      "enemySpecialTargetFocusReserved": "Enemyfocus",
+      "enemySpecialTargetFocusUseRequiresExplicitUserSpecification": true,
+      "knowledgeOfHereticSkill": "skill-hp-heal-per-turn"
     },
     "preciseDebuffSuccessModifier": {
       "effectType": "debuff_success_basis_points",
@@ -680,6 +739,23 @@
         "activeSkillCount": 3,
         "classSkillCount": 4,
         "noblePhantasmCount": 1,
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
+        "name": "聖母マリア",
+        "collectionNo": 70,
+        "dataId": "mother-mary",
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "ascensionStage": "final",
+        "implementationStatus": "implemented_and_accepted",
+        "source": "https://w.atwiki.jp/siroi_human/pages/781.html",
+        "sourceCheckedAt": "2026-08-15",
+        "activeSkillCount": 3,
+        "classSkillCount": 5,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "final_ascension_upgraded_only",
         "battleSuspendSchemaVersion": 4,
         "dataSchemaVersion": "1.38.0"
       }
@@ -790,6 +866,7 @@
         "attributeKey": "sky",
         "classAttackCoefficientPermille": 1000,
         "traits": [
+          "天の力",
           "demon_unused",
           "bonus_enemy",
           "hand_or_door",

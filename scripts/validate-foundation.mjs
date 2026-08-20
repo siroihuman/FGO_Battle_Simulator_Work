@@ -334,6 +334,7 @@ if (manifest) {
   );
   const attackTargetRestriction = manifest.coreRules.attackTriggerEventTargetRestriction;
   const servantOriginTabs = manifest.coreRules.servantSetupOriginTabs;
+  const servantFouSetup = manifest.coreRules.servantFouSetup;
   assert(
     attackTargetRestriction.property === "targetAttackEventTargets"
       && attackTargetRestriction.allowedSelector === "non_self_all"
@@ -350,15 +351,32 @@ if (manifest) {
       && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
         === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
       && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["domination-foreigner", "lucifera"])
+        === JSON.stringify(["domination-foreigner", "lucifera", "mother-mary"])
       && servantOriginTabs.tabBrowseMutation === "none"
       && servantOriginTabs.currentSelectionOutsideTabs === true,
     "編成の公式／オリジナル区分とNo.順が一致しません"
   );
+  assert(
+    servantFouSetup.hpField === "hpFou"
+      && servantFouSetup.attackField === "attackFou"
+      && servantFouSetup.independentPerBattleInstance === true
+      && servantFouSetup.minimum === 0
+      && servantFouSetup.maximum === 3000
+      && servantFouSetup.integerOnly === true
+      && servantFouSetup.default === 0
+      && servantFouSetup.legacyStoredMissingValue === 0
+      && servantFouSetup.applicationOrder === "selected_level_stats_then_fou_then_craft_essence"
+      && servantFouSetup.uiRecalculation === false
+      && servantFouSetup.rngDraws === 0
+      && servantFouSetup.battleSuspendSchemaChange === false
+      && servantFouSetup.dataSchemaChange === false,
+    "編成のHP／ATKフォウ入力規則が一致しません"
+  );
   const specifiedServants = manifest.specifiedContent?.servants ?? [];
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
+  const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 2
+    specifiedServants.length === 3
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -367,6 +385,50 @@ if (manifest) {
       && senNoRikyu?.battleSuspendSchemaVersion === 4
       && senNoRikyu?.dataSchemaVersion === "1.38.0",
     "指定コンテンツに千利休の登録状態がありません"
+  );
+  assert(
+    motherMary?.collectionNo === 70
+      && motherMary?.ascensionStage === "final"
+      && motherMary?.implementationStatus === "implemented_and_accepted"
+      && motherMary?.activeSkillCount === 3
+      && motherMary?.classSkillCount === 5
+      && motherMary?.noblePhantasmCount === 1
+      && motherMary?.battleSuspendSchemaVersion === 4
+      && motherMary?.dataSchemaVersion === "1.38.0"
+      && manifest.coreRules.servantAscensionVariantPolicy?.motherMaryStage === "final_ascension"
+      && manifest.coreRules.servantAscensionVariantPolicy?.perServantAdHocSelector === false
+      && manifest.coreRules.servantActiveSkillRankMayBeOmittedWhenSourceOmits === true,
+    "指定コンテンツに聖母マリアの最終再臨登録状態がありません"
+  );
+  const stagedHeal = manifest.coreRules.declaredStagedHealHp;
+  const targetFocus = manifest.coreRules.enemySingleTargetFocus;
+  const motherMaryIcons = manifest.coreRules.motherMaryIconCorrections;
+  assert(
+    JSON.stringify(stagedHeal?.supportedScalings) === JSON.stringify(["fixed", "noble_phantasm_level", "overcharge"])
+      && stagedHeal?.resolutionSource === "engine_action_context"
+      && stagedHeal?.uiRecalculation === false
+      && stagedHeal?.saveSchemaChange === false
+      && stagedHeal?.dataSchemaChange === false,
+    "段階式HP回復の共通規則が一致しません"
+  );
+  assert(
+    targetFocus?.effectType === "target_focus"
+      && targetFocus?.candidateScope === "living_ally_frontline"
+      && targetFocus?.positiveValuesOnly === true
+      && targetFocus?.singleCandidateRngDraws === 0
+      && targetFocus?.multipleCandidatePolicy === "existing_action_target_policy"
+      && targetFocus?.customSelectorOverridden === true
+      && targetFocus?.allTargetUnaffected === true
+      && targetFocus?.saveSchemaChange === false
+      && targetFocus?.dataSchemaChange === false,
+    "敵単体攻撃のターゲット集中規則が一致しません"
+  );
+  assert(
+    motherMaryIcons?.targetFocus === "Tauntup"
+      && motherMaryIcons?.enemySpecialTargetFocusReserved === "Enemyfocus"
+      && motherMaryIcons?.enemySpecialTargetFocusUseRequiresExplicitUserSpecification === true
+      && motherMaryIcons?.knowledgeOfHereticSkill === "skill-hp-heal-per-turn",
+    "聖母マリアの指定アイコン規則が一致しません"
   );
   assert(
     manifest.coreRules.battleTurnLogSchemaVersion === 2,
@@ -638,9 +700,9 @@ if (manifest) {
   );
   const completedUi = manifest.coreRules.completedUiSpecification;
   assert(
-    manifest.status === "content-addition-sen-no-rikyu-accepted"
+    manifest.status === "content-addition-mother-mary-accepted"
       && completedUi.decisionRange === "D-077-D-085"
-      && completedUi.acceptanceRevision === "D-088"
+      && completedUi.acceptanceRevision === "D-097"
       && completedUi.implementationStatus === "accepted"
       && manifest.coreRules.servantDefaultDemeritApplicationRatePermille === 5000
       && manifest.coreRules.servantDefaultDemeritRateAppliesWhenSourceRateMissing === true
@@ -664,6 +726,9 @@ if (manifest) {
       && completedUi.allyNpChangePresentation === "animated_bars_from_confirmed_before_and_after_np"
       && completedUi.confirmedLogPlaybackOnly === true
       && completedUi.playbackNavigation === "manual_previous_next"
+      && completedUi.playbackSkipPosition === "upper_right"
+      && completedUi.playbackSkipResult === "show_already_resolved_final_session_and_return_to_input_or_result"
+      && completedUi.playbackSkipRecalculatesOrMutatesBattle === false
       && completedUi.playbackAutomaticAdvance === false
       && completedUi.playbackStateSaved === false
       && completedUi.servantWikiLinks === "registered_wiki_source_only_in_setup_and_battle"
@@ -671,6 +736,15 @@ if (manifest) {
       && completedUi.battleSuspendSchemaChange === false
       && completedUi.dataSchemaChange === false,
     "UI完成仕様の実装状態が一致しません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.initialAttributeAffinitiesPermille)
+      === JSON.stringify({
+        earth: { sky: 900, human: 1100 },
+        sky: { earth: 1100, human: 900 },
+        human: { sky: 1100, earth: 900 },
+      }),
+    "初期戦闘の天地人相性表が一致しません"
   );
   assert(
     manifest.coreRules.noblePhantasmCardTypeChangeCategory === "buff",
@@ -976,6 +1050,7 @@ if (manifest) {
   );
   assert(
     JSON.stringify(radiantArm.traits) === JSON.stringify([
+      "天の力",
       "demon_unused",
       "bonus_enemy",
       "hand_or_door",
@@ -1142,12 +1217,11 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.362「千利休」")
-    && startHere.includes("「公式」／「オリジナル」")
-    && startHere.includes("ユーザー実画面受入を完了")
-    && startHere.includes("PR #67")
-    && startHere.includes("カテゴリ1の未登録サーヴァントからNo.が次に若い1騎だけを選定する"),
-  "作業開始ページに千利休実装、編成区分、次作業がありません"
+    && startHere.includes("No.070「聖母マリア」")
+    && startHere.includes("最終再臨版")
+    && startHere.includes("2026-08-21にユーザー実画面受入を完了")
+    && startHere.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
+  "作業開始ページに聖母マリアの実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1167,6 +1241,7 @@ const requiredUiAssets = [
     "skill-immune-invincibility", "skill-np-charge",
     "skill-unique-command-shuffle", "skill-unique-order-change",
     "skill-card-quick-up", "skill-np-damafe-up", "skill-crit-damage-up",
+    "skill-hp-heal-per-turn",
   ].map((name) => `public/assets/skill-icons/${name}.png`),
   ...[
     "Artsupstatus", "Attackdown", "Attackup", "Buffatk", "Busterupstatus",
@@ -1177,7 +1252,7 @@ const requiredUiAssets = [
     "Starabsoprtdown", "Stargainup", "Statusdown", "Statusup",
     "Npgainturn", "Stargainturn", "NPOvercharge", "Npchargeup", "NPGainUpDmg",
     "QuickNpGainUp", "Quickdamageup", "Curse", "Defensedown",
-    "Defenseup", "Npseal",
+    "Defenseup", "Npseal", "Tauntup", "Hpregen", "Maxhpup", "Specialinvincible",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
@@ -1190,11 +1265,16 @@ assert(implementationStatus.includes("## 次の実装"), "実装状況に次の�
 assert(
   implementationStatus.includes("D-077～D-085のUI完成仕様")
     && implementationStatus.includes("v1.0初期完成範囲へ追加")
-    && implementationStatus.includes("No.362「千利休」")
-    && implementationStatus.includes("53ファイル・538テスト")
-    && implementationStatus.includes("ユーザー実画面受入を完了")
-    && implementationStatus.includes("PR #67"),
-  "実装状況にUI完成範囲、千利休、検査記録がありません"
+    && implementationStatus.includes("No.070「聖母マリア」")
+    && implementationStatus.includes("54ファイル・551テスト")
+    && implementationStatus.includes("HPフォウ・ATKフォウ")
+    && implementationStatus.includes("右上スキップ")
+    && implementationStatus.includes("`天の力`特性")
+    && implementationStatus.includes("`Tauntup`")
+    && implementationStatus.includes("2026-08-21にユーザー実画面受入を完了")
+    && implementationStatus.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する")
+    && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
+  "実装状況にUI完成範囲、聖母マリア、検査記録がありません"
 );
 const dominationForeignerAcceptance = await readText(
   "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md"
@@ -1245,6 +1325,32 @@ assert(
     && decisionLog.includes("cf66a170d7af1e81f74efcf117b7ba47b6dc69b8"),
   "決定記録に千利休と編成区分タブの実装方針がありません"
 );
+assert(
+  decisionLog.includes("## D-094 No.070「聖母マリア」の最終再臨版を登録する")
+    && decisionLog.includes("`target_focus`")
+    && decisionLog.includes("共通の再臨段階選択")
+    && decisionLog.includes("実画面受入待ち"),
+  "決定記録に聖母マリアと再臨段階の実装方針がありません"
+);
+assert(
+  decisionLog.includes("## D-095 編成フォウ入力と聖母マリアの正式アイコンを追加・訂正する")
+    && decisionLog.includes("0～3000の整数")
+    && decisionLog.includes("`Tauntup`")
+    && decisionLog.includes("`skill-hp-heal-per-turn`"),
+  "決定記録に編成フォウ入力と聖母マリアのアイコン訂正がありません"
+);
+assert(
+  decisionLog.includes("## D-096 確定結果演出のスキップと初期戦闘の天地人・天特性を接続する")
+    && decisionLog.includes("`powerFactorPermille: 1300`")
+    && decisionLog.includes("22401／24871／27316"),
+  "決定記録に演出スキップと聖母マリア宝具ダメージ訂正がありません"
+);
+assert(
+  decisionLog.includes("## D-097 No.070「聖母マリア」を最終受入とする")
+    && decisionLog.includes("PR #69")
+    && decisionLog.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
+  "決定記録に聖母マリアの最終受入がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1260,8 +1366,28 @@ assert(
   docsIndex.includes("qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md")
     && docsIndex.includes("qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md")
     && docsIndex.includes("qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md")
-    && docsIndex.includes("qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md"),
+    && docsIndex.includes("qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md")
+    && docsIndex.includes("qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md"),
   "文書索引に最新の統合受入報告がありません"
+);
+const motherMaryAcceptance = await readText(
+  "docs/qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md"
+);
+assert(
+  motherMaryAcceptance.includes("判定: 最終合格")
+    && motherMaryAcceptance.includes("最終実画面受入日: 2026-08-21")
+    && motherMaryAcceptance.includes("最終再臨")
+    && motherMaryAcceptance.includes("54ファイル・551テスト")
+    && motherMaryAcceptance.includes("HPフォウ・ATKフォウ")
+    && motherMaryAcceptance.includes("右上スキップ")
+    && motherMaryAcceptance.includes("22401／24871／27316")
+    && motherMaryAcceptance.includes("`Tauntup`")
+    && motherMaryAcceptance.includes("`skill-hp-heal-per-turn`")
+    && motherMaryAcceptance.includes("`Specialinvincible`")
+    && motherMaryAcceptance.includes("未確認の受入項目はない")
+    && motherMaryAcceptance.includes("PR #69")
+    && motherMaryAcceptance.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
+  "聖母マリアの受入報告が正本と一致しません"
 );
 
 const senNoRikyuAcceptance = await readText(
@@ -1332,6 +1458,7 @@ const uiStyles = await readText("src/styles.css");
 const appSource = await readText("src/App.tsx");
 const effectPresentation = await readText("src/ui/effectPresentation.ts");
 const iconRegistry = await readText("src/ui/iconRegistry.ts");
+const initialBattleUi = await readText("src/ui/initialBattle.ts");
 const battleUi = await readText("src/ui/battleUi.ts");
 assert(
   uiAndStorage.includes("敵宝具の任意の宝具Lv・OC文脈")
@@ -1366,6 +1493,20 @@ assert(
   "編成UIに公式／オリジナル区分、No.順、選択維持がありません"
 );
 assert(
+  uiAndStorage.includes("HPフォウとATKフォウ")
+    && uiAndStorage.includes("それぞれ0～3000の整数、初期値0")
+    && uiAndStorage.includes("欠落したHPフォウ・ATKフォウをそれぞれ0")
+    && calculationsAndRng.includes("選択LvのHP・ATKへそれぞれ加算した後、概念礼装")
+    && initialBattleUi.includes("export const SERVANT_FOU_MIN = 0")
+    && initialBattleUi.includes("export const SERVANT_FOU_MAX = 3_000")
+    && initialBattleUi.includes("maxHpAdjustment: selection.hpFou")
+    && initialBattleUi.includes("attackAdjustment: selection.attackFou")
+    && appSource.includes("normalizeStoredSetup")
+    && appSource.includes("hpFou: slot.hpFou ?? SERVANT_FOU_MIN")
+    && appSource.includes("attackFou: slot.attackFou ?? SERVANT_FOU_MIN"),
+  "編成UI・計算仕様・実装にHP／ATKフォウ入力と旧保存互換がありません"
+);
+assert(
   iconRegistry.includes('"NP獲得量アップ": "Npchargeup"')
     && iconRegistry.includes('"被ダメージ時NP獲得量アップ": "NPGainUpDmg"')
     && iconRegistry.includes('"Quickカードの威力アップ": "Quickdamageup"')
@@ -1373,6 +1514,12 @@ assert(
     && iconRegistry.includes('effect.effectType === COMMON_EFFECT_TYPES.criticalDamage')
     && iconRegistry.includes('effect.effectType === COMMON_EFFECT_TYPES.starFocus'),
   "状態アイコンのNP獲得量・色限定クリティカル・スター集中対応が一致しません"
+);
+assert(
+  iconRegistry.includes('"外道の知識（姉なるもの）": "skill-hp-heal-per-turn"')
+    && iconRegistry.includes('"ターゲット集中": "Tauntup"')
+    && !iconRegistry.includes('"ターゲット集中": "Enemyfocus"'),
+  "聖母マリアのスキル・ターゲット集中アイコン対応が一致しません"
 );
 assert(
   uiAndStorage.includes("実画面受入の資源・状態・カード表示追補（D-087）")
@@ -1396,6 +1543,8 @@ assert(
     && /@media \(min-width: 44rem\)[\s\S]*?\.normal-command-card-grid\s*\{\s*grid-template-columns:\s*repeat\(5/.test(uiStyles)
     && /\.modal-backdrop,[\s\S]*?position:\s*fixed/.test(uiStyles)
     && /\.playback-blocker\s*\{[\s\S]*?z-index:\s*120/.test(uiStyles)
+    && /\.playback-heading-row\s*\{[\s\S]*?grid-template-columns:\s*1fr auto/.test(uiStyles)
+    && uiStyles.includes(".playback-skip-button")
     && /\.animated-hp-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles)
     && /\.animated-np-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles)
     && uiStyles.includes(".effect-expiry-badge")
@@ -1405,6 +1554,9 @@ assert(
 assert(
   appSource.includes("前へ")
     && appSource.includes("次へ（操作へ戻る）")
+    && appSource.includes("確定結果演出をスキップ")
+    && appSource.includes("onSkip={skipPlayback}")
+    && appSource.includes("finishPlayback(\"確定結果の演出をスキップしました。\")")
     && appSource.includes("confirmedHpTransitions")
     && appSource.includes("confirmedNpTransitions")
     && appSource.includes("confirmedAttackDamageAmounts")
@@ -1436,6 +1588,7 @@ assert(initialContent.includes("カレイドスコープ"), "初期データ仕�
 assert(initialContent.includes("黒の聖杯"), "初期データ仕様に黒の聖杯がありません");
 assert(initialContent.includes("同じ概念礼装`dataId`を複数"), "初期データ仕様に概念礼装の重複装備規則がありません");
 assert(initialContent.includes("radiant-arm-of-dawn-saber"), "初期データ仕様に黎明の炎腕（剣）の安定IDがありません");
+assert(initialContent.includes("条件付き効果が使う正式な日本語特性`天の力`"), "初期敵仕様に天の力特性がありません");
 assert(initialContent.includes("136,216"), "初期データ仕様に極級Wave 3のHPがありません");
 assert(initialContent.includes("敵ターン終了時"), "初期データ仕様に敵通常チャージの時期がありません");
 assert(
@@ -1453,8 +1606,17 @@ assert(
   initialContent.includes("### No.362 千利休")
     && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
     && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
-    && initialContent.includes("オリジナル: No.024’ 支配のフォーリナー、No.062 ルシフェラ"),
+    && initialContent.includes("オリジナル: No.024’ 支配のフォーリナー、No.062 ルシフェラ、No.070 聖母マリア"),
   "具体データ仕様に千利休と編成区分の採用範囲がありません"
+);
+assert(
+  initialContent.includes("### No.070 聖母マリア")
+    && initialContent.includes("最終再臨")
+    && initialContent.includes("OC別HP回復は共通`heal_hp`の段階値")
+    && initialContent.includes("`Tauntup`")
+    && initialContent.includes("`skill-hp-heal-per-turn`")
+    && initialContent.includes("`Specialinvincible`"),
+  "具体データ仕様に聖母マリアの採用範囲がありません"
 );
 const senNoRikyu = await readText("src/data/servants/senNoRikyu.ts");
 assert(
@@ -1462,6 +1624,21 @@ assert(
     && senNoRikyu.includes('targetAttackEventTargets: true')
     && senNoRikyu.includes('url: "https://w.atwiki.jp/f_go/pages/5723.html"'),
   "千利休の登録データと実攻撃対象限定トリガーがありません"
+);
+const motherMary = await readText("src/data/servants/motherMary.ts");
+assert(
+  motherMary.includes('dataId: "mother-mary"')
+    && motherMary.includes('collectionNo: 70')
+    && motherMary.includes('effectType: COMMON_EFFECT_TYPES.targetFocus')
+    && motherMary.includes('amount: { scaling: "overcharge"')
+    && motherMary.includes('url: "https://w.atwiki.jp/siroi_human/pages/781.html"'),
+  "聖母マリアの登録データ、ターゲット集中、段階式回復がありません"
+);
+assert(
+  initialBattleUi.includes("export const INITIAL_ATTACK_AFFINITIES")
+    && initialBattleUi.includes("earth: { sky: 900, human: 1_100 }")
+    && (await readText("src/data/enemies/initialEnemies.ts")).includes('\"天の力\"'),
+  "初期戦闘に天地人相性表または黎明の炎腕の天の力特性がありません"
 );
 const initialServants = await readText("src/data/servants/initialServants.ts");
 const servantSchema = await readText("src/data/servants/schema.ts");

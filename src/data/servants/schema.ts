@@ -106,7 +106,8 @@ export type ServantNoblePhantasmEffect =
 export interface ServantActiveSkillDefinition {
   stableId: string;
   name: string;
-  rank: string;
+  /** Omitted when the source lists no rank for this skill. */
+  rank?: string;
   slot: 1 | 2 | 3;
   /** Remaining cooldown immediately after use at skill level 10. */
   cooldownAtMax: number;

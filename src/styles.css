@@ -228,6 +228,12 @@ h3 {
   margin-top: 0.8rem;
 }
 
+.setup-field-note {
+  margin: 0.45rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
 .setup-options {
   display: grid;
   gap: 0.8rem;
@@ -1173,7 +1179,17 @@ summary {
   color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 800;
-  text-align: right;
+}
+
+.playback-heading-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.playback-skip-button {
+  min-width: 6rem;
 }
 
 .playback-actions {

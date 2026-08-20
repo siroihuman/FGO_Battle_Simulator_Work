@@ -4,6 +4,7 @@ import {
 } from "../src/core/battle/actionData";
 import {
   findUnitLocation,
+  replaceUnit,
 } from "../src/core/battle/formation";
 import {
   beginAllyTurnEnd,
@@ -27,6 +28,11 @@ import {
 import type {
   EnemyNoblePhantasmContext,
 } from "../src/effects/declarations";
+import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
+import {
+  applyEffect,
+  createEffectRuntimeCounters,
+} from "../src/effects/runtime";
 import { summarizeBattleLogBatch } from "../src/ui/battlePresentation";
 import { combatantData } from "./helpers/attackData";
 import { unit } from "./helpers/battle";
@@ -360,6 +366,54 @@ describe("enemy data-to-attack integration", () => {
     ).toBeGreaterThan(0);
     expect(resolved.sequence.state.nextCommandStars).toBe(0);
     expect(resolved.sequence.state.phase).toBe("enemy_turn_end");
+  });
+
+  it("prioritizes a living frontline target-focus holder for a single-target attack", () => {
+    const initial = enemyTurn();
+    const target = findUnitLocation(initial.formation, "ally-b")?.unit;
+    if (!target) throw new Error("target-focus test ally is missing");
+    const applied = applyEffect(
+      target,
+      {
+        stableId: "test-target-focus",
+        name: "ターゲット集中",
+        effectType: COMMON_EFFECT_TYPES.targetFocus,
+        category: "buff",
+        value: 3_000,
+        remainingTurns: 1,
+      },
+      "ally-b",
+      createEffectRuntimeCounters(),
+    );
+    const state = {
+      ...initial,
+      formation: replaceUnit(initial.formation, applied.unit),
+    };
+    const random = streams("enemy-target-focus");
+    let selectorCalls = 0;
+    const resolved = resolveEnemyAttacks({
+      state,
+      priorityRequests: [],
+      registry: registry(),
+      counters: applied.counters,
+      rng: random.streams,
+      singleTargetSelector: () => {
+        selectorCalls += 1;
+        return "ally-a";
+      },
+    });
+    const detail = resolved.sequence.actions[0]
+      ?.resolverDetail as EnemyAttackDetail;
+    expect(detail).toMatchObject({
+      outcome: "resolved",
+      targetScope: "single",
+      targetInstanceIds: ["ally-b"],
+    });
+    expect(selectorCalls).toBe(0);
+    expect(findUnitLocation(resolved.sequence.state.formation, "ally-a")?.unit.hp)
+      .toBe(100_000);
+    expect(findUnitLocation(resolved.sequence.state.formation, "ally-b")?.unit.hp)
+      .toBeLessThan(100_000);
   });
 
   it("uses a full-charge all-target NP and resets charge before damage", () => {
