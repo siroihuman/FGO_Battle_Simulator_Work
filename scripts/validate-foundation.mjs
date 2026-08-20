@@ -1375,10 +1375,15 @@ const servantClassification = await readText("docs/SERVANT_CLASSIFICATION.md");
 assert(
   servantClassification.includes("サーヴァント実装カテゴリ一覧")
     && servantClassification.includes("未記録の候補を過去チャットや名称から推測してカテゴリ1へ入れない")
-    && servantClassification.includes("| 024’ | 支配のフォーリナー | 最終再臨版 | オリジナル | 1 |")
+    && servantClassification.includes("| 001 | 八百屋お七 | 通常 | 2 |")
+    && servantClassification.includes("| 005 | 黄帝 | 通常 | 4 |")
+    && servantClassification.includes("| 024’ | 支配のフォーリナー | 派生 | 1 |")
     && servantClassification.includes("https://w.atwiki.jp/siroi_human/pages/766.html")
-    && servantClassification.includes("| 070 | 聖母マリア | 最終再臨版 | オリジナル | 1 |")
-    && servantClassification.includes("https://w.atwiki.jp/siroi_human/pages/781.html"),
+    && servantClassification.includes("| 070 | 聖母マリア | 通常 | 1 |")
+    && servantClassification.includes("https://w.atwiki.jp/siroi_human/pages/781.html")
+    && servantClassification.includes("| 027’ | 949番ページ | 派生 | 保留 |")
+    && servantClassification.includes("| 110 | モリガン・トライユーン | 通常 | 4 |")
+    && servantClassification.includes("| 475 | 紅閻魔／バーサーカー | 公式 | 4 |"),
   "サーヴァント実装カテゴリ一覧の確定記録が一致しません"
 );
 const motherMaryAcceptance = await readText(
