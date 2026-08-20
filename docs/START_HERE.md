@@ -5,15 +5,15 @@
 ## 現在地点
 
 - フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加
-- 状態: 初期完成範囲外の追加サーヴァントとして、No.024’「支配のフォーリナー」に続き公式No.362「千利休」を登録した。千利休の8段階能力値、Q3／A1／B1、上位3スキル、4クラススキル、〔人の力〕OC特攻全体Quick宝具、宝具封印、呪い、OC+2、無敵、Quick攻撃前の対象限定防御力ダウンを共通処理へ接続した。味方編成は「公式」／「オリジナル」の2タブへ分け、横スクロールなしで収め、公式は光のコヤンスカヤ→千利休、オリジナルは支配のフォーリナー→ルシフェラのNo.昇順で表示する。千利休のNP獲得量アップは`Npchargeup`、色限定クリティカル威力アップは汎用`Critdmgup`へ訂正した。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布を維持し、2026-08-15にユーザー実画面受入を完了してPR #67を`main`へマージした。
+- 状態: 初期完成範囲外の追加対象として、オリジナルNo.070「聖母マリア」の最終再臨版を登録した。8段階能力値、Q1／A3／B1、上位3スキル、5クラススキル、〔天の力〕OC特攻全体Arts宝具、OC別HP回復・NP増加、最大HPアップ、ターゲット集中、対粛清防御を共通処理へ接続した。編成の「オリジナル」タブは支配のフォーリナー→ルシフェラ→聖母マリアのNo.昇順とする。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布は変更していない。自動検査後、ユーザー実画面受入待ちとする。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. カテゴリ1の未登録サーヴァントからNo.が次に若い1騎だけを選定する。
+1. No.070「聖母マリア」をPC・スマートフォン実画面で確認し、必要な表示修正と最終受入を行う。
 
-千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)、ターン終了スター獲得は[`qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md`](qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md)、敵宝具段階文脈は[`qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md`](qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md)、従来のv1.0初期範囲は[`qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md`](qa/V1_INITIAL_ACCEPTANCE_2026-08-10.md)を参照します。
+聖母マリアは[`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)、千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)を参照します。
 
 ## 最初に読むもの
 

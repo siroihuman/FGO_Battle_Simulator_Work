@@ -12,6 +12,9 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "永劫の探求": "skill-np-damafe-up",
   "家のなかの絵": "skill-card-quick-up",
   "狂気の山脈にて": "skill-np-charge",
+  "聖霊の加護": "skill-immune-invincibility",
+  "身籠る聖処女": "skill-np-charge",
+  "外道の知識（姉なるもの）": "skill-hp-heal-per-turn",
   "侘びの極み": "skill-card-quick-up",
   "一輪の花": "skill-np-charge",
   "幽玄たる黒": "skill-crit-damage-up",
@@ -41,6 +44,10 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "Quickカードの威力アップ": "Quickdamageup",
   "Quick攻撃時防御力ダウン": "Buffatk",
   "呪い": "Curse",
+  "毎ターンHP回復": "Hpregen",
+  "最大HPアップ": "Maxhpup",
+  "ターゲット集中": "Enemyfocus",
+  "対粛清防御": "Specialinvincible",
 };
 
 function publicAssetPath(path: string): string {

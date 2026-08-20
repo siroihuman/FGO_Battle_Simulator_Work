@@ -67,8 +67,16 @@ export interface DeclaredActionTarget {
 export type DeclaredEffectAction =
   | Exclude<
       CommonAction,
-      { kind: "change_np" } | { kind: "apply_effects" }
+      | { kind: "change_np" }
+      | { kind: "heal_hp" }
+      | { kind: "apply_effects" }
     >
+  | {
+      kind: "heal_hp";
+      amount: DeclaredActionInteger;
+      ignoreRecoveryModifiers?: boolean;
+      ignoreHealingBlock?: boolean;
+    }
   | {
       kind: "change_np";
       amount: DeclaredActionInteger;
@@ -199,7 +207,11 @@ export function declaredActionScalingRequirements(
   for (const effect of effects) {
     const action = effect.action;
     const values: DeclaredActionInteger[] = [];
-    if (action.kind === "change_np" || action.kind === "gain_stars") {
+    if (
+      action.kind === "change_np"
+      || action.kind === "heal_hp"
+      || action.kind === "gain_stars"
+    ) {
       values.push(action.amount);
     } else if (action.kind === "apply_effects") {
       for (const spec of action.effects) {
@@ -331,6 +343,16 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
     assertValidDeclaredActionInteger(action.amount, `${name}.amount`);
     return;
   }
+  if (action.kind === "heal_hp") {
+    assertValidDeclaredActionInteger(action.amount, `${name}.amount`);
+    const values = typeof action.amount === "number"
+      ? [action.amount]
+      : action.amount.values;
+    values.forEach((value, index) =>
+      assertNonNegative(value, `${name}.amount.values[${index}]`)
+    );
+    return;
+  }
   if (action.kind === "gain_stars") {
     assertValidDeclaredActionInteger(action.amount, `${name}.amount`);
     const values = typeof action.amount === "number"
@@ -361,7 +383,7 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
     return;
   }
 
-  if (action.kind === "heal_hp" || action.kind === "reduce_hp") {
+  if (action.kind === "reduce_hp") {
     assertNonNegative(action.amount, `${name}.amount`);
   } else if (action.kind === "advance_skill_cooldowns") {
     assertNonNegative(action.amount, `${name}.amount`);

@@ -350,15 +350,16 @@ if (manifest) {
       && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
         === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
       && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["domination-foreigner", "lucifera"])
+        === JSON.stringify(["domination-foreigner", "lucifera", "mother-mary"])
       && servantOriginTabs.tabBrowseMutation === "none"
       && servantOriginTabs.currentSelectionOutsideTabs === true,
     "編成の公式／オリジナル区分とNo.順が一致しません"
   );
   const specifiedServants = manifest.specifiedContent?.servants ?? [];
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
+  const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 2
+    specifiedServants.length === 3
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -367,6 +368,42 @@ if (manifest) {
       && senNoRikyu?.battleSuspendSchemaVersion === 4
       && senNoRikyu?.dataSchemaVersion === "1.38.0",
     "指定コンテンツに千利休の登録状態がありません"
+  );
+  assert(
+    motherMary?.collectionNo === 70
+      && motherMary?.ascensionStage === "final"
+      && motherMary?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && motherMary?.activeSkillCount === 3
+      && motherMary?.classSkillCount === 5
+      && motherMary?.noblePhantasmCount === 1
+      && motherMary?.battleSuspendSchemaVersion === 4
+      && motherMary?.dataSchemaVersion === "1.38.0"
+      && manifest.coreRules.servantAscensionVariantPolicy?.motherMaryStage === "final_ascension"
+      && manifest.coreRules.servantAscensionVariantPolicy?.perServantAdHocSelector === false
+      && manifest.coreRules.servantActiveSkillRankMayBeOmittedWhenSourceOmits === true,
+    "指定コンテンツに聖母マリアの最終再臨登録状態がありません"
+  );
+  const stagedHeal = manifest.coreRules.declaredStagedHealHp;
+  const targetFocus = manifest.coreRules.enemySingleTargetFocus;
+  assert(
+    JSON.stringify(stagedHeal?.supportedScalings) === JSON.stringify(["fixed", "noble_phantasm_level", "overcharge"])
+      && stagedHeal?.resolutionSource === "engine_action_context"
+      && stagedHeal?.uiRecalculation === false
+      && stagedHeal?.saveSchemaChange === false
+      && stagedHeal?.dataSchemaChange === false,
+    "段階式HP回復の共通規則が一致しません"
+  );
+  assert(
+    targetFocus?.effectType === "target_focus"
+      && targetFocus?.candidateScope === "living_ally_frontline"
+      && targetFocus?.positiveValuesOnly === true
+      && targetFocus?.singleCandidateRngDraws === 0
+      && targetFocus?.multipleCandidatePolicy === "existing_action_target_policy"
+      && targetFocus?.customSelectorOverridden === true
+      && targetFocus?.allTargetUnaffected === true
+      && targetFocus?.saveSchemaChange === false
+      && targetFocus?.dataSchemaChange === false,
+    "敵単体攻撃のターゲット集中規則が一致しません"
   );
   assert(
     manifest.coreRules.battleTurnLogSchemaVersion === 2,
@@ -638,7 +675,7 @@ if (manifest) {
   );
   const completedUi = manifest.coreRules.completedUiSpecification;
   assert(
-    manifest.status === "content-addition-sen-no-rikyu-accepted"
+    manifest.status === "content-addition-mother-mary-awaiting-acceptance"
       && completedUi.decisionRange === "D-077-D-085"
       && completedUi.acceptanceRevision === "D-088"
       && completedUi.implementationStatus === "accepted"
@@ -1142,12 +1179,11 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.362「千利休」")
-    && startHere.includes("「公式」／「オリジナル」")
-    && startHere.includes("ユーザー実画面受入を完了")
-    && startHere.includes("PR #67")
-    && startHere.includes("カテゴリ1の未登録サーヴァントからNo.が次に若い1騎だけを選定する"),
-  "作業開始ページに千利休実装、編成区分、次作業がありません"
+    && startHere.includes("No.070「聖母マリア」")
+    && startHere.includes("最終再臨版")
+    && startHere.includes("ユーザー実画面受入待ち")
+    && startHere.includes("PC・スマートフォン実画面で確認"),
+  "作業開始ページに聖母マリアの実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1177,7 +1213,7 @@ const requiredUiAssets = [
     "Starabsoprtdown", "Stargainup", "Statusdown", "Statusup",
     "Npgainturn", "Stargainturn", "NPOvercharge", "Npchargeup", "NPGainUpDmg",
     "QuickNpGainUp", "Quickdamageup", "Curse", "Defensedown",
-    "Defenseup", "Npseal",
+    "Defenseup", "Npseal", "Enemyfocus", "Hpregen", "Maxhpup", "Specialinvincible",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
@@ -1190,11 +1226,11 @@ assert(implementationStatus.includes("## 次の実装"), "実装状況に次の�
 assert(
   implementationStatus.includes("D-077～D-085のUI完成仕様")
     && implementationStatus.includes("v1.0初期完成範囲へ追加")
-    && implementationStatus.includes("No.362「千利休」")
-    && implementationStatus.includes("53ファイル・538テスト")
-    && implementationStatus.includes("ユーザー実画面受入を完了")
-    && implementationStatus.includes("PR #67"),
-  "実装状況にUI完成範囲、千利休、検査記録がありません"
+    && implementationStatus.includes("No.070「聖母マリア」")
+    && implementationStatus.includes("54ファイル・546テスト")
+    && implementationStatus.includes("ユーザー実画面受入待ち")
+    && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
+  "実装状況にUI完成範囲、聖母マリア、検査記録がありません"
 );
 const dominationForeignerAcceptance = await readText(
   "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md"
@@ -1245,6 +1281,13 @@ assert(
     && decisionLog.includes("cf66a170d7af1e81f74efcf117b7ba47b6dc69b8"),
   "決定記録に千利休と編成区分タブの実装方針がありません"
 );
+assert(
+  decisionLog.includes("## D-094 No.070「聖母マリア」の最終再臨版を登録する")
+    && decisionLog.includes("`target_focus`")
+    && decisionLog.includes("共通の再臨段階選択")
+    && decisionLog.includes("実画面受入待ち"),
+  "決定記録に聖母マリアと再臨段階の実装方針がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1260,8 +1303,21 @@ assert(
   docsIndex.includes("qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md")
     && docsIndex.includes("qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md")
     && docsIndex.includes("qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md")
-    && docsIndex.includes("qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md"),
+    && docsIndex.includes("qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md")
+    && docsIndex.includes("qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md"),
   "文書索引に最新の統合受入報告がありません"
+);
+const motherMaryAcceptance = await readText(
+  "docs/qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md"
+);
+assert(
+  motherMaryAcceptance.includes("判定: 自動検査完了・ユーザー実画面受入待ち")
+    && motherMaryAcceptance.includes("最終再臨")
+    && motherMaryAcceptance.includes("54ファイル・546テスト")
+    && motherMaryAcceptance.includes("`Enemyfocus`")
+    && motherMaryAcceptance.includes("`Specialinvincible`")
+    && motherMaryAcceptance.includes("PRを`main`へマージしない"),
+  "聖母マリアの受入報告が正本と一致しません"
 );
 
 const senNoRikyuAcceptance = await readText(
@@ -1453,8 +1509,16 @@ assert(
   initialContent.includes("### No.362 千利休")
     && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
     && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
-    && initialContent.includes("オリジナル: No.024’ 支配のフォーリナー、No.062 ルシフェラ"),
+    && initialContent.includes("オリジナル: No.024’ 支配のフォーリナー、No.062 ルシフェラ、No.070 聖母マリア"),
   "具体データ仕様に千利休と編成区分の採用範囲がありません"
+);
+assert(
+  initialContent.includes("### No.070 聖母マリア")
+    && initialContent.includes("最終再臨")
+    && initialContent.includes("OC別HP回復は共通`heal_hp`の段階値")
+    && initialContent.includes("`Enemyfocus`")
+    && initialContent.includes("`Specialinvincible`"),
+  "具体データ仕様に聖母マリアの採用範囲がありません"
 );
 const senNoRikyu = await readText("src/data/servants/senNoRikyu.ts");
 assert(
@@ -1462,6 +1526,15 @@ assert(
     && senNoRikyu.includes('targetAttackEventTargets: true')
     && senNoRikyu.includes('url: "https://w.atwiki.jp/f_go/pages/5723.html"'),
   "千利休の登録データと実攻撃対象限定トリガーがありません"
+);
+const motherMary = await readText("src/data/servants/motherMary.ts");
+assert(
+  motherMary.includes('dataId: "mother-mary"')
+    && motherMary.includes('collectionNo: 70')
+    && motherMary.includes('effectType: COMMON_EFFECT_TYPES.targetFocus')
+    && motherMary.includes('amount: { scaling: "overcharge"')
+    && motherMary.includes('url: "https://w.atwiki.jp/siroi_human/pages/781.html"'),
+  "聖母マリアの登録データ、ターゲット集中、段階式回復がありません"
 );
 const initialServants = await readText("src/data/servants/initialServants.ts");
 const servantSchema = await readText("src/data/servants/schema.ts");

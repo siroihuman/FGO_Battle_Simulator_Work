@@ -62,6 +62,7 @@ describe("initial servant definitions", () => {
       "sen-no-rikyu",
       "domination-foreigner",
       "lucifera",
+      "mother-mary",
     ]);
     expect(LIGHT_KOYANSKAYA.levelStats.at(-1)).toEqual({
       level: 120,

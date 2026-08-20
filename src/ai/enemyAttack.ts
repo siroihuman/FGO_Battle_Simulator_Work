@@ -64,6 +64,7 @@ import {
   declaredActionScalingRequirements,
   type EnemyNoblePhantasmContext,
 } from "../effects/declarations";
+import { COMMON_EFFECT_TYPES } from "../effects/modifiers";
 import type {
   EnemyActionRequest,
   EnemyPrioritySkillRequest,
@@ -238,12 +239,25 @@ function livingAllyFrontlineInstanceIds(state: BattleState): string[] {
     .map(({ unit }) => unit.instanceId);
 }
 
+function targetFocusCandidateIds(state: BattleState): string[] {
+  return orderedLocations(state.formation, "ally")
+    .filter(({ area, unit }) =>
+      area === "frontline"
+      && unit.alive
+      && unit.effects.some(
+        ({ effectType, value }) =>
+          effectType === COMMON_EFFECT_TYPES.targetFocus && value > 0,
+      )
+    )
+    .map(({ unit }) => unit.instanceId);
+}
+
 function declarativeSingleTarget(
   state: BattleState,
   policy: EnemyAttackTargetPolicy,
   aiRng: DeterministicRng | undefined,
+  candidates = livingAllyFrontlineInstanceIds(state),
 ): string | null {
-  const candidates = livingAllyFrontlineInstanceIds(state);
   if (candidates.length === 0) return null;
   if (
     policy === "frontmost_living_ally"
@@ -278,18 +292,26 @@ function targetIds(
   ) {
     return [];
   }
-  const selected = selector
-    ? selector({
+  const targetFocusCandidates = targetFocusCandidateIds(input.state);
+  const selected = targetFocusCandidates.length > 0
+    ? declarativeSingleTarget(
+        input.state,
+        action.targetPolicy ?? "frontmost_living_ally",
+        aiRng,
+        targetFocusCandidates,
+      )
+    : selector
+      ? selector({
         state: input.state,
         actorInstanceId: input.actorInstanceId,
         request: input.request,
         actionStableId: input.preflight.action.stableId,
       })
-    : declarativeSingleTarget(
-        input.state,
-        action.targetPolicy ?? "frontmost_living_ally",
-        aiRng,
-      );
+      : declarativeSingleTarget(
+          input.state,
+          action.targetPolicy ?? "frontmost_living_ally",
+          aiRng,
+        );
   if (selected === null) return [];
   const location = findUnitLocation(
     input.state.formation,

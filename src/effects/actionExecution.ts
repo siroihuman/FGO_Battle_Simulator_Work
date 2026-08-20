@@ -276,6 +276,20 @@ function preparedAction(
       resolvedAmount: amount,
     };
   }
+  if (effect.action.kind === "heal_hp") {
+    const amount = resolveDeclaredActionInteger(
+      effect.action.amount,
+      context,
+    );
+    return {
+      kind: "common",
+      action: {
+        ...effect.action,
+        amount,
+      },
+      resolvedAmount: amount,
+    };
+  }
   if (effect.action.kind === "gain_stars") {
     const amount = resolveDeclaredActionInteger(
       effect.action.amount,

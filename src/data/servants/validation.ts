@@ -331,7 +331,9 @@ export function assertValidServantDefinition(
       stableIds,
     );
     assertNonEmpty(skill.name, `activeSkills[${index}].name`);
-    assertNonEmpty(skill.rank, `activeSkills[${index}].rank`);
+    if (skill.rank !== undefined) {
+      assertNonEmpty(skill.rank, `activeSkills[${index}].rank`);
+    }
     if (skill.slot !== index + 1) {
       throw new RangeError("active skill slots must be 1, 2, and 3 in order");
     }

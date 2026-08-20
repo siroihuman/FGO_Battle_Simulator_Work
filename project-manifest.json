@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "content-addition-sen-no-rikyu-accepted",
+  "status": "content-addition-mother-mary-awaiting-acceptance",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -627,10 +627,40 @@
       ],
       "originalServantDataIdsInCollectionNumberOrder": [
         "domination-foreigner",
-        "lucifera"
+        "lucifera",
+        "mother-mary"
       ],
       "tabBrowseMutation": "none",
       "currentSelectionOutsideTabs": true
+    },
+    "servantAscensionVariantPolicy": {
+      "currentRegistration": "user_specified_stage_only",
+      "motherMaryStage": "final_ascension",
+      "futureStageSelection": "shared_feature_when_first_required",
+      "perServantAdHocSelector": false
+    },
+    "servantActiveSkillRankMayBeOmittedWhenSourceOmits": true,
+    "declaredStagedHealHp": {
+      "supportedScalings": [
+        "fixed",
+        "noble_phantasm_level",
+        "overcharge"
+      ],
+      "resolutionSource": "engine_action_context",
+      "uiRecalculation": false,
+      "saveSchemaChange": false,
+      "dataSchemaChange": false
+    },
+    "enemySingleTargetFocus": {
+      "effectType": "target_focus",
+      "candidateScope": "living_ally_frontline",
+      "positiveValuesOnly": true,
+      "singleCandidateRngDraws": 0,
+      "multipleCandidatePolicy": "existing_action_target_policy",
+      "customSelectorOverridden": true,
+      "allTargetUnaffected": true,
+      "saveSchemaChange": false,
+      "dataSchemaChange": false
     },
     "preciseDebuffSuccessModifier": {
       "effectType": "debuff_success_basis_points",
@@ -680,6 +710,23 @@
         "activeSkillCount": 3,
         "classSkillCount": 4,
         "noblePhantasmCount": 1,
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
+        "name": "聖母マリア",
+        "collectionNo": 70,
+        "dataId": "mother-mary",
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "ascensionStage": "final",
+        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "source": "https://w.atwiki.jp/siroi_human/pages/781.html",
+        "sourceCheckedAt": "2026-08-15",
+        "activeSkillCount": 3,
+        "classSkillCount": 5,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "final_ascension_upgraded_only",
         "battleSuspendSchemaVersion": 4,
         "dataSchemaVersion": "1.38.0"
       }

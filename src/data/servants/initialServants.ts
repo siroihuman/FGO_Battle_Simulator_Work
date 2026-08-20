@@ -9,6 +9,7 @@ import {
   type ServantDefinition,
 } from "./schema";
 import { DOMINATION_FOREIGNER } from "./dominationForeigner";
+import { MOTHER_MARY } from "./motherMary";
 import { SEN_NO_RIKYU } from "./senNoRikyu";
 
 const PASSIVE = {
@@ -210,6 +211,7 @@ export const OFFICIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
 export const ORIGINAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
   DOMINATION_FOREIGNER,
   LUCIFERA,
+  MOTHER_MARY,
 ].sort(byCollectionNumber);
 
 export const INITIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
