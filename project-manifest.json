@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "content-addition-mother-mary-awaiting-acceptance",
+  "status": "content-addition-mother-mary-accepted",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -222,8 +222,8 @@
     },
     "completedUiSpecification": {
       "decisionRange": "D-077-D-085",
-      "acceptanceRevision": "D-096",
-      "implementationStatus": "implemented_awaiting_user_acceptance",
+      "acceptanceRevision": "D-097",
+      "implementationStatus": "accepted",
       "setupTabs": [
         "ally_formation",
         "wave_enemy",
@@ -749,7 +749,7 @@
         "schemaVersion": 1,
         "contentRevision": "current_upgraded_only",
         "ascensionStage": "final",
-        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "implementationStatus": "implemented_and_accepted",
         "source": "https://w.atwiki.jp/siroi_human/pages/781.html",
         "sourceCheckedAt": "2026-08-15",
         "activeSkillCount": 3,

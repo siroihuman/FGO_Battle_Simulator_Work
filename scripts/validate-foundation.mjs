@@ -389,7 +389,7 @@ if (manifest) {
   assert(
     motherMary?.collectionNo === 70
       && motherMary?.ascensionStage === "final"
-      && motherMary?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && motherMary?.implementationStatus === "implemented_and_accepted"
       && motherMary?.activeSkillCount === 3
       && motherMary?.classSkillCount === 5
       && motherMary?.noblePhantasmCount === 1
@@ -700,10 +700,10 @@ if (manifest) {
   );
   const completedUi = manifest.coreRules.completedUiSpecification;
   assert(
-    manifest.status === "content-addition-mother-mary-awaiting-acceptance"
+    manifest.status === "content-addition-mother-mary-accepted"
       && completedUi.decisionRange === "D-077-D-085"
-      && completedUi.acceptanceRevision === "D-096"
-      && completedUi.implementationStatus === "implemented_awaiting_user_acceptance"
+      && completedUi.acceptanceRevision === "D-097"
+      && completedUi.implementationStatus === "accepted"
       && manifest.coreRules.servantDefaultDemeritApplicationRatePermille === 5000
       && manifest.coreRules.servantDefaultDemeritRateAppliesWhenSourceRateMissing === true
       && manifest.coreRules.servantDemeritUsesDebuffResistanceAndImmunity === true
@@ -1219,8 +1219,8 @@ assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
     && startHere.includes("No.070「聖母マリア」")
     && startHere.includes("最終再臨版")
-    && startHere.includes("ユーザー実画面受入待ち")
-    && startHere.includes("PC・スマートフォン実画面で確認"),
+    && startHere.includes("2026-08-21にユーザー実画面受入を完了")
+    && startHere.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
   "作業開始ページに聖母マリアの実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
@@ -1271,7 +1271,8 @@ assert(
     && implementationStatus.includes("右上スキップ")
     && implementationStatus.includes("`天の力`特性")
     && implementationStatus.includes("`Tauntup`")
-    && implementationStatus.includes("ユーザー実画面受入待ち")
+    && implementationStatus.includes("2026-08-21にユーザー実画面受入を完了")
+    && implementationStatus.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
   "実装状況にUI完成範囲、聖母マリア、検査記録がありません"
 );
@@ -1344,6 +1345,12 @@ assert(
     && decisionLog.includes("22401／24871／27316"),
   "決定記録に演出スキップと聖母マリア宝具ダメージ訂正がありません"
 );
+assert(
+  decisionLog.includes("## D-097 No.070「聖母マリア」を最終受入とする")
+    && decisionLog.includes("PR #69")
+    && decisionLog.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
+  "決定記録に聖母マリアの最終受入がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1367,7 +1374,8 @@ const motherMaryAcceptance = await readText(
   "docs/qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md"
 );
 assert(
-  motherMaryAcceptance.includes("判定: 自動検査完了・ユーザー実画面受入待ち")
+  motherMaryAcceptance.includes("判定: 最終合格")
+    && motherMaryAcceptance.includes("最終実画面受入日: 2026-08-21")
     && motherMaryAcceptance.includes("最終再臨")
     && motherMaryAcceptance.includes("54ファイル・551テスト")
     && motherMaryAcceptance.includes("HPフォウ・ATKフォウ")
@@ -1376,7 +1384,9 @@ assert(
     && motherMaryAcceptance.includes("`Tauntup`")
     && motherMaryAcceptance.includes("`skill-hp-heal-per-turn`")
     && motherMaryAcceptance.includes("`Specialinvincible`")
-    && motherMaryAcceptance.includes("PRを`main`へマージしない"),
+    && motherMaryAcceptance.includes("未確認の受入項目はない")
+    && motherMaryAcceptance.includes("PR #69")
+    && motherMaryAcceptance.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
   "聖母マリアの受入報告が正本と一致しません"
 );
 
