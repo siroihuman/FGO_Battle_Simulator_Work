@@ -128,6 +128,7 @@ describe("initial enemy format 1 data", () => {
     });
     expect(RADIANT_ARM_OF_DAWN_SABER.dataId).not.toContain("9933710");
     expect(RADIANT_ARM_OF_DAWN_SABER.traits).toEqual([
+      "天の力",
       "demon_unused",
       "bonus_enemy",
       "hand_or_door",

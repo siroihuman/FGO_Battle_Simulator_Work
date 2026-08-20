@@ -702,8 +702,8 @@ if (manifest) {
   assert(
     manifest.status === "content-addition-mother-mary-awaiting-acceptance"
       && completedUi.decisionRange === "D-077-D-085"
-      && completedUi.acceptanceRevision === "D-088"
-      && completedUi.implementationStatus === "accepted"
+      && completedUi.acceptanceRevision === "D-096"
+      && completedUi.implementationStatus === "implemented_awaiting_user_acceptance"
       && manifest.coreRules.servantDefaultDemeritApplicationRatePermille === 5000
       && manifest.coreRules.servantDefaultDemeritRateAppliesWhenSourceRateMissing === true
       && manifest.coreRules.servantDemeritUsesDebuffResistanceAndImmunity === true
@@ -726,6 +726,9 @@ if (manifest) {
       && completedUi.allyNpChangePresentation === "animated_bars_from_confirmed_before_and_after_np"
       && completedUi.confirmedLogPlaybackOnly === true
       && completedUi.playbackNavigation === "manual_previous_next"
+      && completedUi.playbackSkipPosition === "upper_right"
+      && completedUi.playbackSkipResult === "show_already_resolved_final_session_and_return_to_input_or_result"
+      && completedUi.playbackSkipRecalculatesOrMutatesBattle === false
       && completedUi.playbackAutomaticAdvance === false
       && completedUi.playbackStateSaved === false
       && completedUi.servantWikiLinks === "registered_wiki_source_only_in_setup_and_battle"
@@ -733,6 +736,15 @@ if (manifest) {
       && completedUi.battleSuspendSchemaChange === false
       && completedUi.dataSchemaChange === false,
     "UI完成仕様の実装状態が一致しません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.initialAttributeAffinitiesPermille)
+      === JSON.stringify({
+        earth: { sky: 900, human: 1100 },
+        sky: { earth: 1100, human: 900 },
+        human: { sky: 1100, earth: 900 },
+      }),
+    "初期戦闘の天地人相性表が一致しません"
   );
   assert(
     manifest.coreRules.noblePhantasmCardTypeChangeCategory === "buff",
@@ -1038,6 +1050,7 @@ if (manifest) {
   );
   assert(
     JSON.stringify(radiantArm.traits) === JSON.stringify([
+      "天の力",
       "demon_unused",
       "bonus_enemy",
       "hand_or_door",
@@ -1253,8 +1266,10 @@ assert(
   implementationStatus.includes("D-077～D-085のUI完成仕様")
     && implementationStatus.includes("v1.0初期完成範囲へ追加")
     && implementationStatus.includes("No.070「聖母マリア」")
-    && implementationStatus.includes("54ファイル・548テスト")
+    && implementationStatus.includes("54ファイル・551テスト")
     && implementationStatus.includes("HPフォウ・ATKフォウ")
+    && implementationStatus.includes("右上スキップ")
+    && implementationStatus.includes("`天の力`特性")
     && implementationStatus.includes("`Tauntup`")
     && implementationStatus.includes("ユーザー実画面受入待ち")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
@@ -1323,6 +1338,12 @@ assert(
     && decisionLog.includes("`skill-hp-heal-per-turn`"),
   "決定記録に編成フォウ入力と聖母マリアのアイコン訂正がありません"
 );
+assert(
+  decisionLog.includes("## D-096 確定結果演出のスキップと初期戦闘の天地人・天特性を接続する")
+    && decisionLog.includes("`powerFactorPermille: 1300`")
+    && decisionLog.includes("22401／24871／27316"),
+  "決定記録に演出スキップと聖母マリア宝具ダメージ訂正がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1348,8 +1369,10 @@ const motherMaryAcceptance = await readText(
 assert(
   motherMaryAcceptance.includes("判定: 自動検査完了・ユーザー実画面受入待ち")
     && motherMaryAcceptance.includes("最終再臨")
-    && motherMaryAcceptance.includes("54ファイル・548テスト")
+    && motherMaryAcceptance.includes("54ファイル・551テスト")
     && motherMaryAcceptance.includes("HPフォウ・ATKフォウ")
+    && motherMaryAcceptance.includes("右上スキップ")
+    && motherMaryAcceptance.includes("22401／24871／27316")
     && motherMaryAcceptance.includes("`Tauntup`")
     && motherMaryAcceptance.includes("`skill-hp-heal-per-turn`")
     && motherMaryAcceptance.includes("`Specialinvincible`")
@@ -1510,6 +1533,8 @@ assert(
     && /@media \(min-width: 44rem\)[\s\S]*?\.normal-command-card-grid\s*\{\s*grid-template-columns:\s*repeat\(5/.test(uiStyles)
     && /\.modal-backdrop,[\s\S]*?position:\s*fixed/.test(uiStyles)
     && /\.playback-blocker\s*\{[\s\S]*?z-index:\s*120/.test(uiStyles)
+    && /\.playback-heading-row\s*\{[\s\S]*?grid-template-columns:\s*1fr auto/.test(uiStyles)
+    && uiStyles.includes(".playback-skip-button")
     && /\.animated-hp-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles)
     && /\.animated-np-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles)
     && uiStyles.includes(".effect-expiry-badge")
@@ -1519,6 +1544,9 @@ assert(
 assert(
   appSource.includes("前へ")
     && appSource.includes("次へ（操作へ戻る）")
+    && appSource.includes("確定結果演出をスキップ")
+    && appSource.includes("onSkip={skipPlayback}")
+    && appSource.includes("finishPlayback(\"確定結果の演出をスキップしました。\")")
     && appSource.includes("confirmedHpTransitions")
     && appSource.includes("confirmedNpTransitions")
     && appSource.includes("confirmedAttackDamageAmounts")
@@ -1550,6 +1578,7 @@ assert(initialContent.includes("カレイドスコープ"), "初期データ仕�
 assert(initialContent.includes("黒の聖杯"), "初期データ仕様に黒の聖杯がありません");
 assert(initialContent.includes("同じ概念礼装`dataId`を複数"), "初期データ仕様に概念礼装の重複装備規則がありません");
 assert(initialContent.includes("radiant-arm-of-dawn-saber"), "初期データ仕様に黎明の炎腕（剣）の安定IDがありません");
+assert(initialContent.includes("条件付き効果が使う正式な日本語特性`天の力`"), "初期敵仕様に天の力特性がありません");
 assert(initialContent.includes("136,216"), "初期データ仕様に極級Wave 3のHPがありません");
 assert(initialContent.includes("敵ターン終了時"), "初期データ仕様に敵通常チャージの時期がありません");
 assert(
@@ -1594,6 +1623,12 @@ assert(
     && motherMary.includes('amount: { scaling: "overcharge"')
     && motherMary.includes('url: "https://w.atwiki.jp/siroi_human/pages/781.html"'),
   "聖母マリアの登録データ、ターゲット集中、段階式回復がありません"
+);
+assert(
+  initialBattleUi.includes("export const INITIAL_ATTACK_AFFINITIES")
+    && initialBattleUi.includes("earth: { sky: 900, human: 1_100 }")
+    && (await readText("src/data/enemies/initialEnemies.ts")).includes('\"天の力\"'),
+  "初期戦闘に天地人相性表または黎明の炎腕の天の力特性がありません"
 );
 const initialServants = await readText("src/data/servants/initialServants.ts");
 const servantSchema = await readText("src/data/servants/schema.ts");

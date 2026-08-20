@@ -27,6 +27,7 @@ import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
 import { applyEffect, createEffectRuntimeCounters } from "../src/effects/runtime";
 import { resolveAllySkillUse } from "../src/effects/skillExecution";
 import { resolveSideTurnEnd } from "../src/effects/turnEnd";
+import { calculateDamage } from "../src/formulas/damage";
 import { presentNoblePhantasmDetail, registeredServantWikiUrl } from "../src/ui/battleUi";
 import {
   registeredSkillIconPath,
@@ -356,6 +357,8 @@ describe("No.070 聖母マリア", () => {
       },
     });
     if (detail.outcome !== "resolved") return;
+    expect(detail.resolution.attack?.attack.targets[0]?.damageBreakdown)
+      .toMatchObject({ powerFactorPermille: 1_300 });
     expect(detail.declaredEffects.map(({ phase }) => phase))
       .toEqual(["before_attack", "after_attack"]);
     expect(detail.declaredEffects[0]?.result.effects.map(({ effectStableId }) => effectStableId))
@@ -389,6 +392,101 @@ describe("No.070 聖母マリア", () => {
       .toMatchObject({ hp: 9_500, maxHp: 15_095, np: 2_000 });
     expect(findUnitLocation(finalState.formation, "ordinary-ally")?.unit)
       .toMatchObject({ hp: 5_000, maxHp: 13_081, np: 0 });
+  });
+
+  it("applies pre-attack NP power, Earth-Sky disadvantage, and Sky special attack in the initial battle", () => {
+    const setup = {
+      ...createEmptyInitialBattleSetup(),
+      frontline: [
+        initialAllySelectionForServant(MOTHER_MARY.dataId),
+        initialAllySelectionForServant(DOMINATION_FOREIGNER.dataId),
+        initialAllySelectionForServant(LIGHT_KOYANSKAYA.dataId),
+      ],
+      reserve: [emptyInitialAllySlot(), emptyInitialAllySlot(), emptyInitialAllySlot()],
+      seedMode: "fixed" as const,
+      seed: "mary-initial-oc1-damage",
+      mysticCodeDataId: "normal-chaldea-uniform",
+    };
+    const started = createInitialBattleSession(setup);
+    const source = findUnitLocation(
+      started.loop.state.formation,
+      "ally-frontline-1",
+    )?.unit;
+    if (!source || !started.actionEffectRegistry) {
+      throw new Error("初期戦闘の聖母マリアまたは効果レジストリがありません");
+    }
+    const state = {
+      ...started.loop.state,
+      formation: replaceUnit(started.loop.state.formation, {
+        ...source,
+        np: 10_000,
+      }),
+    };
+    const enemy = findUnitLocation(state.formation, "enemy-w1-1")?.unit;
+    expect(enemy?.traits).toContain("天の力");
+    expect(started.registry.affinities.attribute.earth?.sky).toBe(900);
+
+    const np = listCommandCardChoices(state).find(({ card }) =>
+      card.kind === "noble_phantasm"
+        && card.ownerInstanceId === "ally-frontline-1"
+    )?.card;
+    if (!np) throw new Error("初期戦闘の聖母マリア宝具カードがありません");
+    const selected = selectCommandCards(state, [
+      np.cardId,
+      ...state.commandDeck.currentHand.slice(0, 2).map(({ cardId }) => cardId),
+    ]);
+    if (!selected.accepted) throw new Error("初期戦闘のカード選択に失敗しました");
+    const random = new BattleRng("mary-initial-oc1-damage-resolution");
+    const resolved = resolveAllyCommandAttacks({
+      state,
+      selection: selected.selection,
+      registry: started.registry,
+      actionEffectRegistry: started.actionEffectRegistry,
+      counters: started.loop.counters,
+      rng: {
+        effects: random.stream("effects"),
+        critical: random.stream("critical"),
+        damage: random.stream("damage"),
+        stars: random.stream("stars"),
+      },
+      requestedTargetInstanceId: "enemy-w1-1",
+    });
+    expect(resolved.sequence.accepted).toBe(true);
+    if (!resolved.sequence.accepted) return;
+    const detail = resolved.sequence.result.actions[0]
+      ?.resolverDetail as AllyCommandAttackDetail;
+    expect(detail).toMatchObject({
+      outcome: "resolved",
+      overchargeStage: 1,
+      calculation: {
+        npDamageMultiplierPermille: 6_000,
+        npSpecialAttackPermille: 1_500,
+      },
+    });
+    if (detail.outcome !== "resolved") return;
+    const target = detail.resolution.attack?.attack.targets.find(
+      ({ targetInstanceId }) => targetInstanceId === "enemy-w1-1",
+    );
+    expect(target?.damageBreakdown).toMatchObject({
+      powerFactorPermille: 1_300,
+    });
+    expect(target?.totalDamage).toBeGreaterThanOrEqual(22_401);
+    expect(target?.totalDamage).toBeLessThanOrEqual(27_316);
+    expect([900, 1_000, 1_099].map((randomModifierPermille) =>
+      calculateDamage({
+        attack: 10_197,
+        isNoblePhantasm: true,
+        npDamageMultiplierPermille: 6_000,
+        cardDamageValuePermille: 1_000,
+        classAttackCoefficientPermille: 1_000,
+        classAffinityPermille: 1_000,
+        attributeAffinityPermille: 900,
+        randomModifierPermille,
+        npDamageModPermille: 300,
+        npSpecialAttackPermille: 1_500,
+        fixedDamage: 175,
+      }).damage
+    )).toEqual([22_401, 24_871, 27_316]);
   });
 
   it("preserves Skill 2 states through schema-4 save, restore, and replay", () => {

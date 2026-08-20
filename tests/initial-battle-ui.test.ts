@@ -133,6 +133,18 @@ describe("minimum initial battle UI adapter", () => {
     expect(session.loop.rng.seed).toBe("generated-replay-seed");
   });
 
+  it("connects the initial Earth-Sky-Human affinity table to the engine registry", () => {
+    const session = createInitialBattleSession(completeSetup("initial-affinities"));
+    expect(session.registry.affinities).toEqual({
+      class: {},
+      attribute: {
+        earth: { sky: 900, human: 1_100 },
+        sky: { earth: 1_100, human: 900 },
+        human: { sky: 1_100, earth: 900 },
+      },
+    });
+  });
+
   it("migrates stored setup slots created before Fou fields existed to zero", () => {
     const legacy = JSON.parse(JSON.stringify(completeSetup("legacy-setup")));
     for (const slot of [...legacy.frontline, ...legacy.reserve]) {

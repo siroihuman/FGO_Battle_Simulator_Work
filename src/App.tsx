@@ -1197,7 +1197,7 @@ function ResourceTransitionBars({
   );
 }
 
-function PlaybackOverlay({ notice, summaries, hpTransitions, npTransitions, damageAmounts, index, total, onPrevious, onNext }: { notice: string; summaries: BattleLogSummary[]; hpTransitions: ConfirmedHpTransition[]; npTransitions: ConfirmedNpTransition[]; damageAmounts: ConfirmedAttackDamage[]; index: number; total: number; onPrevious: () => void; onNext: () => void }) {
+export function PlaybackOverlay({ notice, summaries, hpTransitions, npTransitions, damageAmounts, index, total, onPrevious, onNext, onSkip }: { notice: string; summaries: BattleLogSummary[]; hpTransitions: ConfirmedHpTransition[]; npTransitions: ConfirmedNpTransition[]; damageAmounts: ConfirmedAttackDamage[]; index: number; total: number; onPrevious: () => void; onNext: () => void; onSkip: () => void }) {
   return (
     <div className="playback-blocker" role="presentation">
       <section className="playback-notice" role="dialog" aria-modal="true" aria-labelledby="playback-heading" onKeyDown={(event) => {
@@ -1214,7 +1214,10 @@ function PlaybackOverlay({ notice, summaries, hpTransitions, npTransitions, dama
           first.focus();
         }
       }}>
-        <p className="playback-counter">{index + 1} / {total}</p>
+        <div className="playback-heading-row">
+          <p className="playback-counter">{index + 1} / {total}</p>
+          <button className="playback-skip-button" type="button" aria-label="確定結果演出をスキップ" onClick={onSkip}>スキップ</button>
+        </div>
         <strong id="playback-heading" aria-live="polite">{notice}</strong>
         <ResourceTransitionBars hpTransitions={hpTransitions} npTransitions={npTransitions} damageAmounts={damageAmounts} />
         {summaries.slice(0, 4).map((summary) => <span key={summary.id}>{summary.title}{summary.changes.length ? `：${summary.changes.join(" / ")}` : summary.actualHpLoss !== null ? `：HP -${summary.actualHpLoss.toLocaleString()}` : ""}</span>)}
@@ -1390,11 +1393,20 @@ export function BattleScreen({
       setPlayback({ ...playback, index: playback.index + 1 });
       return;
     }
+    finishPlayback("確定結果の確認が完了しました。");
+  }
+
+  function finishPlayback(message: string) {
+    if (!playback) return;
     onSessionChange(playback.finalSession);
     setSelectedCardIds([]);
     setTargetInstanceId(firstLivingEnemyId(playback.finalSession));
-    setOperationMessage("確定結果の確認が完了しました。");
+    setOperationMessage(message);
     setPlayback(null);
+  }
+
+  function skipPlayback() {
+    finishPlayback("確定結果の演出をスキップしました。");
   }
 
   function executeTurn() {
@@ -1572,7 +1584,7 @@ export function BattleScreen({
 
       {detail && <DetailModal detail={detail} onClose={() => setDetail(null)} />}
       {pendingSkill && <SkillTargetModal pending={pendingSkill} session={session} onConfirm={(targetId, orderChange) => resolveSkill(pendingSkill.skill, targetId, orderChange)} onClose={() => setPendingSkill(null)} />}
-      {playbackFrame && playback && <PlaybackOverlay key={playback.index} notice={playbackFrame.notice} summaries={playbackFrame.summaries} hpTransitions={playbackFrame.hpTransitions} npTransitions={playbackFrame.npTransitions} damageAmounts={playbackFrame.damageAmounts} index={playback.index} total={playback.frames.length} onPrevious={showPreviousPlaybackFrame} onNext={showNextPlaybackFrame} />}
+      {playbackFrame && playback && <PlaybackOverlay key={playback.index} notice={playbackFrame.notice} summaries={playbackFrame.summaries} hpTransitions={playbackFrame.hpTransitions} npTransitions={playbackFrame.npTransitions} damageAmounts={playbackFrame.damageAmounts} index={playback.index} total={playback.frames.length} onPrevious={showPreviousPlaybackFrame} onNext={showNextPlaybackFrame} onSkip={skipPlayback} />}
       {state.outcome !== "ongoing" && !playback && <ResultOverlay session={session} onReturn={onReturnToSetup} onFixedSeed={() => onFixedSeedToSetup(session.loop.rng.seed)} onCopy={() => copySeed(session.loop.rng.seed, setOperationMessage)} />}
     </main>
   );

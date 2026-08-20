@@ -1,5 +1,6 @@
 import {
   createBattleAttackDataRegistry,
+  type AttackAffinityTables,
 } from "../core/battle/actionData";
 import {
   initializeBattleLoadout,
@@ -42,6 +43,15 @@ export const INITIAL_ENEMY_ENCOUNTER_DATA_ID =
 
 export const SERVANT_FOU_MIN = 0;
 export const SERVANT_FOU_MAX = 3_000;
+
+export const INITIAL_ATTACK_AFFINITIES: AttackAffinityTables = {
+  class: {},
+  attribute: {
+    earth: { sky: 900, human: 1_100 },
+    sky: { earth: 1_100, human: 900 },
+    human: { sky: 1_100, earth: 900 },
+  },
+};
 
 export const INITIAL_SERVANT_REGISTRY = createServantDataRegistry(
   INITIAL_SERVANT_DEFINITIONS,
@@ -364,7 +374,7 @@ export function createInitialBattleSession(
   const attackRegistry = createBattleAttackDataRegistry([
     ...allyInstances.map(({ attackData }) => attackData),
     ...enemyBattleData.attackData,
-  ]);
+  ], INITIAL_ATTACK_AFFINITIES);
   const actionEffectRegistry = createBattleActionEffectDataRegistry([
     ...allyInstances.map(({ actionEffectData }) => actionEffectData),
     ...enemyBattleData.actionEffectData,

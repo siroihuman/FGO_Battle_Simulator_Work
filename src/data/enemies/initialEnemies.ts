@@ -25,6 +25,7 @@ export const RADIANT_ARM_OF_DAWN_SABER: EnemyDefinition = {
   attributeKey: "sky",
   classAttackCoefficientPermille: 1_000,
   traits: [
+    "天の力",
     "demon_unused",
     "bonus_enemy",
     "hand_or_door",

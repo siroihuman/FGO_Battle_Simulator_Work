@@ -215,10 +215,15 @@
     "servantDefaultDemeritApplicationRatePermille": 5000,
     "servantDefaultDemeritRateAppliesWhenSourceRateMissing": true,
     "servantDemeritUsesDebuffResistanceAndImmunity": true,
+    "initialAttributeAffinitiesPermille": {
+      "earth": { "sky": 900, "human": 1100 },
+      "sky": { "earth": 1100, "human": 900 },
+      "human": { "sky": 1100, "earth": 900 }
+    },
     "completedUiSpecification": {
       "decisionRange": "D-077-D-085",
-      "acceptanceRevision": "D-088",
-      "implementationStatus": "accepted",
+      "acceptanceRevision": "D-096",
+      "implementationStatus": "implemented_awaiting_user_acceptance",
       "setupTabs": [
         "ally_formation",
         "wave_enemy",
@@ -282,6 +287,9 @@
       "battleServantWikiLinkPosition": "ally_name",
       "confirmedLogPlaybackOnly": true,
       "playbackNavigation": "manual_previous_next",
+      "playbackSkipPosition": "upper_right",
+      "playbackSkipResult": "show_already_resolved_final_session_and_return_to_input_or_result",
+      "playbackSkipRecalculatesOrMutatesBattle": false,
       "playbackStageOrder": [
         "chain",
         "confirmed_ally_and_enemy_hp_and_ally_np_changes",
@@ -858,6 +866,7 @@
         "attributeKey": "sky",
         "classAttackCoefficientPermille": 1000,
         "traits": [
+          "天の力",
           "demon_unused",
           "bonus_enemy",
           "hand_or_door",
