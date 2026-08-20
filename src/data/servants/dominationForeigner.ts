@@ -130,7 +130,7 @@ export const DOMINATION_FOREIGNER: ServantDefinition = {
           order: 2,
           description: "＋自身を除く味方全体に毎ターンNP獲得状態を付与[Lv](5T)：5%",
           target: { relation: "allies", selection: "all", excludeSource: true },
-          action: { kind: "apply_effects", effects: [{ template: { stableId: "domination-foreigner-picture-recurring-np-state", name: "毎ターンNP獲得", effectType: COMMON_EFFECT_TYPES.recurringNpGain, category: "buff", value: 50, remainingTurns: 5, trigger: { timing: "turn_end", actions: [{ target: { relation: "self", selection: "single" }, action: { kind: "change_np", amount: 500 } }] } } }] },
+          action: { kind: "apply_effects", effects: [{ template: { stableId: "domination-foreigner-picture-recurring-np-state", name: "毎ターンNP獲得", effectType: COMMON_EFFECT_TYPES.recurringNpGain, category: "buff", value: 50, remainingTurns: 5, durationTick: "opponent_turn_end", trigger: { timing: "turn_end", actions: [{ target: { relation: "self", selection: "single" }, action: { kind: "change_np", amount: 500 } }] } } }] },
         },
         {
           kind: "effect",
@@ -138,7 +138,7 @@ export const DOMINATION_FOREIGNER: ServantDefinition = {
           order: 3,
           description: "＆毎ターンスター獲得状態を付与[Lv](5T)：10個",
           target: { relation: "allies", selection: "all", excludeSource: true },
-          action: { kind: "apply_effects", effects: [{ template: { stableId: "domination-foreigner-picture-recurring-stars-state", name: "毎ターンスター獲得", effectType: COMMON_EFFECT_TYPES.recurringStarGain, category: "buff", value: 10, remainingTurns: 5, trigger: { timing: "turn_end", actions: [{ target: { relation: "self", selection: "single" }, action: { kind: "gain_stars", amount: 10, destination: "next_command" } }] } } }] },
+          action: { kind: "apply_effects", effects: [{ template: { stableId: "domination-foreigner-picture-recurring-stars-state", name: "毎ターンスター獲得", effectType: COMMON_EFFECT_TYPES.recurringStarGain, category: "buff", value: 10, remainingTurns: 5, durationTick: "opponent_turn_end", trigger: { timing: "turn_end", actions: [{ target: { relation: "self", selection: "single" }, action: { kind: "gain_stars", amount: 10, destination: "next_command" } }] } } }] },
         },
       ],
     },

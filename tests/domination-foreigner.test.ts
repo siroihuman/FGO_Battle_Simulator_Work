@@ -332,6 +332,19 @@ describe("No.024’ 支配のフォーリナー", () => {
     expect(findUnitLocation(ended.formation, "other-ally")?.unit.np)
       .toBe(500);
     expect(findUnitLocation(ended.formation, "domination")?.unit.np).toBe(0);
+    expect(findUnitLocation(ended.formation, "selected-ally")?.unit.effects)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          effectType: COMMON_EFFECT_TYPES.recurringNpGain,
+          remainingTurns: 5,
+          durationTick: "opponent_turn_end",
+        }),
+        expect.objectContaining({
+          effectType: COMMON_EFFECT_TYPES.recurringStarGain,
+          remainingTurns: 5,
+          durationTick: "opponent_turn_end",
+        }),
+      ]));
     expect(ended.activations.flatMap(({ actions }) => actions)
       .filter(({ starGainRequest }) => starGainRequest)
       .map(({ starGainRequest }) => starGainRequest?.requested))

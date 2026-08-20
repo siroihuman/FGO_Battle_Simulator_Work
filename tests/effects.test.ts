@@ -12,6 +12,7 @@ import {
 } from "../src/effects/classification";
 import { removeEffects } from "../src/effects/removal";
 import {
+  advanceEffectDurationsAtTurnEnd,
   advanceOwnerTurnEnd,
   applyEffect,
   createEffectRuntimeCounters,
@@ -267,6 +268,64 @@ describe("effect duration and removal", () => {
     const ended = advanceOwnerTurnEnd(applied, "ally", false);
     expect(ended.unit.effects).toEqual([]);
     expect(ended.removed[0].reason).toBe("expired_turns");
+  });
+
+  it("ticks opponent-boundary effects only after the opposing side's turn", () => {
+    const applied = applyEffect(
+      unit("ally-a", "ally"),
+      {
+        ...attackUp,
+        stableId: "opponent-boundary",
+        remainingTurns: 1,
+        durationTick: "opponent_turn_end",
+      },
+      null,
+      createEffectRuntimeCounters(),
+    ).unit;
+
+    const allyEnd = advanceEffectDurationsAtTurnEnd(
+      applied,
+      "ally",
+      false,
+    );
+    expect(allyEnd.unit.effects).toHaveLength(1);
+    expect(allyEnd.unit.effects[0].remainingTurns).toBe(1);
+
+    const enemyEnd = advanceEffectDurationsAtTurnEnd(
+      allyEnd.unit,
+      "enemy",
+      false,
+    );
+    expect(enemyEnd.unit.effects).toEqual([]);
+    expect(enemyEnd.removed[0]).toMatchObject({
+      effect: {
+        stableId: "opponent-boundary",
+        durationTick: "opponent_turn_end",
+      },
+      reason: "expired_turns",
+    });
+
+    const enemyApplied = applyEffect(
+      unit("enemy-a", "enemy"),
+      {
+        ...attackUp,
+        stableId: "enemy-opponent-boundary",
+        remainingTurns: 1,
+        durationTick: "opponent_turn_end",
+      },
+      null,
+      createEffectRuntimeCounters(),
+    ).unit;
+    expect(advanceEffectDurationsAtTurnEnd(
+      enemyApplied,
+      "enemy",
+      false,
+    ).unit.effects).toHaveLength(1);
+    expect(advanceEffectDurationsAtTurnEnd(
+      enemyApplied,
+      "ally",
+      false,
+    ).unit.effects).toEqual([]);
   });
 
   it("does not tick effects registered during the current end phase", () => {

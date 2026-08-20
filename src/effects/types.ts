@@ -7,7 +7,10 @@ import type { TargetSelector } from "./targeting";
 
 export type EffectCategory = "buff" | "debuff" | "other";
 export type EffectRemovalPolicy = "removable" | "id_only" | "unremovable";
-export type EffectDurationTick = "owner_turn_end" | "manual";
+export type EffectDurationTick =
+  | "owner_turn_end"
+  | "opponent_turn_end"
+  | "manual";
 export type EffectClassification = string;
 
 export type TriggerTiming =

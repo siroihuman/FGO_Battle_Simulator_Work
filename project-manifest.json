@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "content-addition-mother-mary-accepted",
+  "status": "effect-duration-boundary-fix-implemented",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -480,6 +480,32 @@
       ],
       "uiRecalculates": false,
       "implementationStatus": "implemented_and_accepted"
+    },
+    "effectDurationBoundaries": {
+      "status": "implemented",
+      "values": [
+        "owner_turn_end",
+        "opponent_turn_end",
+        "manual"
+      ],
+      "offensiveBuff": "owner_turn_end",
+      "defensiveBuff": "opponent_turn_end",
+      "otherBuff": "opponent_turn_end",
+      "defaultDebuff": "owner_turn_end",
+      "turnEndTriggerActivation": "owner_side_only",
+      "durationCandidateSnapshot": "both_living_frontlines_at_turn_end_start",
+      "durationLogOrder": [
+        "ending_side_frontline",
+        "opposing_side_frontline"
+      ],
+      "reserveProgression": "paused",
+      "newlyRegisteredDuringPhaseProgression": "deferred",
+      "battleSuspendSchemaChange": false,
+      "dataSchemaChange": false,
+      "battleLogSchemaChange": false,
+      "battleTurnLogSchemaChange": false,
+      "rngSequenceChange": false,
+      "uiRecalculates": false
     },
     "noblePhantasmCardTypeChangeCategory": "buff",
     "noblePhantasmCardTypeChangeMutatesIntrinsicType": false,

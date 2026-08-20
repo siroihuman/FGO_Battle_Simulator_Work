@@ -265,6 +265,7 @@ describe("No.362 千利休", () => {
             stableId: "sen-no-rikyu-flower-invincibility-state",
             remainingTurns: 3,
             remainingUses: 1,
+            durationTick: "opponent_turn_end",
           }),
         ]),
       });

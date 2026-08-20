@@ -2,12 +2,20 @@ import { describe, expect, it } from "vitest";
 import { createBattleAttackDataRegistry } from "../src/core/battle/actionData";
 import { findUnitLocation, replaceUnit } from "../src/core/battle/formation";
 import {
+  beginAllyTurnEnd,
+  beginEnemyTurnEnd,
+} from "../src/core/battle/progression";
+import {
   createBattleSuspendSave,
   replayBattleSession,
   resolveBattleSessionAllySkill,
   restoreBattleSession,
 } from "../src/core/battle/session";
 import { createBattleState } from "../src/core/battle/state";
+import {
+  resolveAllyTurnEnd,
+  resolveEnemyTurnEnd,
+} from "../src/core/battle/turnEndCoordinator";
 import { BattleRng } from "../src/core/rng";
 import {
   resolveAllyCommandAttacks,
@@ -227,7 +235,7 @@ describe("No.070 聖母マリア", () => {
     expect(findUnitLocation(ended.formation, "ordinary-ally")?.unit.hp).toBe(6_000);
   });
 
-  it("applies target focus and solemn defense from Skill 2", () => {
+  it("keeps Skill 2 target focus and solemn defense through the enemy action window", () => {
     const source = mary("mary");
     const state = createBattleState({
       ally: { frontline: [source.unit, unit("ally-b", "ally"), unit("ally-c", "ally")], reserve: [] },
@@ -252,14 +260,50 @@ describe("No.070 聖母マリア", () => {
           effectType: COMMON_EFFECT_TYPES.targetFocus,
           value: 3_000,
           remainingTurns: 1,
+          durationTick: "opponent_turn_end",
         }),
         expect.objectContaining({
           effectType: COMMON_EFFECT_TYPES.solemnDefense,
           remainingTurns: 1,
+          durationTick: "opponent_turn_end",
         }),
       ]),
     });
     expect(unspecifiedEffectNames(effectsOf(result.state, "mary"))).toEqual([]);
+
+    const allyEnd = resolveAllyTurnEnd(
+      beginAllyTurnEnd(result.state),
+      result.counters,
+      new BattleRng("mary-skill-two-ally-end").stream("effects"),
+    );
+    expect(effectsOf(allyEnd.state, "mary")).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        effectType: COMMON_EFFECT_TYPES.targetFocus,
+        remainingTurns: 1,
+      }),
+      expect.objectContaining({
+        effectType: COMMON_EFFECT_TYPES.solemnDefense,
+        remainingTurns: 1,
+      }),
+    ]));
+    expect(allyEnd.durations.durations.flatMap(({ removed }) => removed))
+      .toEqual([]);
+
+    const enemyEnd = resolveEnemyTurnEnd(
+      beginEnemyTurnEnd(allyEnd.state),
+      allyEnd.counters,
+      new BattleRng("mary-skill-two-enemy-end").stream("effects"),
+    );
+    expect(effectsOf(enemyEnd.state, "mary").filter(({ effectType }) =>
+      effectType === COMMON_EFFECT_TYPES.targetFocus
+      || effectType === COMMON_EFFECT_TYPES.solemnDefense
+    )).toEqual([]);
+    expect(enemyEnd.durations.durations.flatMap(({ removed }) =>
+      removed.map(({ effect }) => effect.stableId)
+    )).toEqual([
+      "mother-mary-holy-virgin-target-focus-state",
+      "mother-mary-holy-virgin-solemn-defense-state",
+    ]);
   });
 
   it("resolves the final-ascension strengthened NP at OC3 in source order", () => {
@@ -518,8 +562,14 @@ describe("No.070 聖母マリア", () => {
     expect(replayed.operationHistory).toEqual(restored.operationHistory);
     expect(effectsOf(restored.loop.state, "ally-frontline-1"))
       .toEqual(expect.arrayContaining([
-        expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.targetFocus }),
-        expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.solemnDefense }),
+        expect.objectContaining({
+          effectType: COMMON_EFFECT_TYPES.targetFocus,
+          durationTick: "opponent_turn_end",
+        }),
+        expect.objectContaining({
+          effectType: COMMON_EFFECT_TYPES.solemnDefense,
+          durationTick: "opponent_turn_end",
+        }),
       ]));
   });
 

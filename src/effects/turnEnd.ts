@@ -1,5 +1,6 @@
 import {
   findUnitLocation,
+  oppositeSide,
   orderedLocations,
   replaceUnit,
 } from "../core/battle/formation";
@@ -18,7 +19,7 @@ import {
   type TurnEndHpSettlementResult,
 } from "./hp";
 import {
-  advanceOwnerTurnEnd,
+  advanceEffectDurationsAtTurnEnd,
   consumeUnitEffectUse,
 } from "./runtime";
 import { slipDamageAmplifierPermille } from "./slipDamage";
@@ -155,6 +156,10 @@ export function createSideTurnEndSnapshot(
   endingSide: BattleSide,
 ): SideTurnEndSnapshot {
   const owners = orderedLocations(formation, endingSide, false);
+  const durationOwners = [
+    ...owners,
+    ...orderedLocations(formation, oppositeSide(endingSide), false),
+  ];
   return {
     side: endingSide,
     registrationCutoff: latestRegistrationOrder(formation),
@@ -162,7 +167,9 @@ export function createSideTurnEndSnapshot(
       owners,
       { timing: "turn_end" },
     ),
-    durationOwnerInstanceIds: owners.map(({ unit }) => unit.instanceId),
+    durationOwnerInstanceIds: durationOwners.map(
+      ({ unit }) => unit.instanceId,
+    ),
   };
 }
 
@@ -178,8 +185,8 @@ export function advanceSideTurnEndDurations(
   const durations: TurnEndDurationResult[] = [];
   for (const ownerInstanceId of snapshot.durationOwnerInstanceIds) {
     const location = findUnitLocation(currentFormation, ownerInstanceId);
-    if (!location || location.side !== endingSide) continue;
-    const duration = advanceOwnerTurnEnd(
+    if (!location || location.area !== "frontline") continue;
+    const duration = advanceEffectDurationsAtTurnEnd(
       location.unit,
       endingSide,
       false,
@@ -330,8 +337,9 @@ function queueHpSettlement(
 }
 
 /**
- * Resolves the recurring effects owned by one side, then decreases durations
- * for that side's frontline. Reserve units neither activate nor tick.
+ * Resolves the recurring effects owned by one side, then decreases matching
+ * owner-turn or opponent-turn durations across both frontlines. Reserve units
+ * neither activate nor tick.
  *
  * The activation list and registration cutoff are snapshotted at phase start.
  * Effects added during this phase therefore wait until the next matching turn
