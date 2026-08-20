@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { App } from "../src/App";
+import { App, normalizeStoredSetup } from "../src/App";
 import {
   parseBattleSuspendSave,
   resolveBattleSessionTurn,
@@ -47,6 +47,8 @@ function ally(
     servantDataId,
     level,
     noblePhantasmLevel,
+    hpFou: 0,
+    attackFou: 0,
     craftEssenceDataId,
   };
 }
@@ -116,6 +118,8 @@ describe("minimum initial battle UI adapter", () => {
       servantDataId: LIGHT_KOYANSKAYA.dataId,
       level: 90,
       noblePhantasmLevel: 1,
+      hpFou: 0,
+      attackFou: 0,
     });
     const random = completeSetup();
     random.seedMode = "random";
@@ -127,6 +131,22 @@ describe("minimum initial battle UI adapter", () => {
       () => "generated-replay-seed",
     );
     expect(session.loop.rng.seed).toBe("generated-replay-seed");
+  });
+
+  it("migrates stored setup slots created before Fou fields existed to zero", () => {
+    const legacy = JSON.parse(JSON.stringify(completeSetup("legacy-setup")));
+    for (const slot of [...legacy.frontline, ...legacy.reserve]) {
+      delete slot.hpFou;
+      delete slot.attackFou;
+    }
+
+    const normalized = normalizeStoredSetup(legacy);
+    expect(normalized).not.toBeNull();
+    expect([
+      ...normalized!.frontline,
+      ...normalized!.reserve,
+    ].every(({ hpFou, attackFou }) => hpFou === 0 && attackFou === 0))
+      .toBe(true);
   });
 
   it("rejects incomplete or unregistered setup before constructing a session", () => {
@@ -146,12 +166,30 @@ describe("minimum initial battle UI adapter", () => {
     );
   });
 
+  it("rejects HP and ATK Fou values outside the independent 0 through 3000 integer range", () => {
+    const setup = completeSetup("invalid-fou");
+    setup.frontline[0] = { ...setup.frontline[0], hpFou: -1 };
+    setup.frontline[1] = { ...setup.frontline[1], attackFou: 3_001 };
+    setup.frontline[2] = { ...setup.frontline[2], hpFou: 1.5 };
+
+    expect(validateInitialBattleSetup(setup).errors).toEqual(
+      expect.arrayContaining([
+        "前衛1のHPフォウを0～3000の整数で入力してください。",
+        "前衛2のATKフォウを0～3000の整数で入力してください。",
+        "前衛3のHPフォウを0～3000の整数で入力してください。",
+      ]),
+    );
+    expect(() => createInitialBattleSession(setup)).toThrow(
+      "前衛1のHPフォウを0～3000の整数で入力してください。",
+    );
+  });
+
   it("keeps duplicate servant instances and each Lv, NP level, and Craft Essence independent", () => {
     const setup = completeSetup("duplicate-instances");
     setup.frontline = [
       ally(LIGHT_KOYANSKAYA.dataId, 90, 1, null),
-      ally(LIGHT_KOYANSKAYA.dataId, 100, 3, "kaleidoscope"),
-      ally(LIGHT_KOYANSKAYA.dataId, 120, 5, "kaleidoscope"),
+      { ...ally(LIGHT_KOYANSKAYA.dataId, 100, 3, "kaleidoscope"), hpFou: 1_000, attackFou: 2_000 },
+      { ...ally(LIGHT_KOYANSKAYA.dataId, 120, 5, "kaleidoscope"), hpFou: 3_000, attackFou: 3_000 },
     ];
     const session = createInitialBattleSession(setup);
     const units = session.loop.state.formation.ally.frontline;
@@ -167,8 +205,13 @@ describe("minimum initial battle UI adapter", () => {
     expect(units.map((unit) => unit?.noblePhantasm?.level)).toEqual([1, 3, 5]);
     expect(units.map((unit) => unit?.np)).toEqual([0, 10_000, 10_000]);
     expect(session.registry.byInstanceId["ally-frontline-1"].attack).toBe(11_616);
-    expect(session.registry.byInstanceId["ally-frontline-2"].attack).toBe(14_715);
-    expect(session.registry.byInstanceId["ally-frontline-3"].attack).toBe(16_925);
+    expect(session.registry.byInstanceId["ally-frontline-2"].attack).toBe(16_715);
+    expect(session.registry.byInstanceId["ally-frontline-3"].attack).toBe(19_925);
+    expect(units.map((unit) => unit?.baseMaxHp)).toEqual([
+      LIGHT_KOYANSKAYA.levelStats.find(({ level }) => level === 90)!.hp,
+      LIGHT_KOYANSKAYA.levelStats.find(({ level }) => level === 100)!.hp + 1_000,
+      LIGHT_KOYANSKAYA.levelStats.find(({ level }) => level === 120)!.hp + 3_000,
+    ]);
     expect(session.loop.state.loadout.craftEssencesByInstanceId).toMatchObject({
       "ally-frontline-2": { dataId: "kaleidoscope" },
       "ally-frontline-3": { dataId: "kaleidoscope" },
@@ -207,6 +250,11 @@ describe("minimum initial battle UI adapter", () => {
       1,
       "kaleidoscope",
     );
+    setup.frontline[0] = {
+      ...setup.frontline[0],
+      hpFou: 3_000,
+      attackFou: 2_500,
+    };
     const session = createInitialBattleSession(setup);
 
     expect(session.initial.state.loadout.initialized).toBe(true);
@@ -333,6 +381,11 @@ describe("minimum initial battle UI adapter", () => {
       1,
       "kaleidoscope",
     );
+    setup.frontline[0] = {
+      ...setup.frontline[0],
+      hpFou: 3_000,
+      attackFou: 2_500,
+    };
     const started = createInitialBattleSession(setup);
     const progressed = resolveBattleSessionTurn(started, {
       cardIds: firstThreeCardIds(started),
@@ -352,6 +405,15 @@ describe("minimum initial battle UI adapter", () => {
       progressed.loop.state.formation,
       "ally-frontline-1",
     )?.unit.np);
+    expect(restored.registry.byInstanceId["ally-frontline-1"].attack)
+      .toBe(progressed.registry.byInstanceId["ally-frontline-1"].attack);
+    expect(findUnitLocation(
+      restored.loop.state.formation,
+      "ally-frontline-1",
+    )?.unit.baseMaxHp).toBe(findUnitLocation(
+      progressed.loop.state.formation,
+      "ally-frontline-1",
+    )?.unit.baseMaxHp);
 
     expect(() => parseBattleSuspendSave("not-json")).toThrow(
       "battle suspend save is not valid JSON",
@@ -379,6 +441,11 @@ describe("minimum initial battle UI adapter", () => {
     expect(markup).toContain("戦闘設定");
     expect(markup).toContain("最終確認");
     expect(markup).toContain("ランダムシード");
+    expect(markup).toContain("HPフォウ");
+    expect(markup).toContain("ATKフォウ");
+    expect(markup).toContain("各0～3000の整数で指定します。");
+    expect(markup).toContain('min="0"');
+    expect(markup).toContain('max="3000"');
     expect(markup).toContain("次へ");
     expect(markup).toContain("disabled");
   });

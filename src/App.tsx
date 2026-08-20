@@ -75,6 +75,8 @@ import {
   createInitialBattleSession,
   emptyInitialAllySlot,
   initialAllySelectionForServant,
+  SERVANT_FOU_MAX,
+  SERVANT_FOU_MIN,
   validateInitialBattleSetup,
   type InitialAllySlotSelection,
   type InitialBattleSetup,
@@ -147,15 +149,21 @@ export function mysticCodeSkillUsesSelectedUnitInput(
   );
 }
 
-function normalizeStoredSetup(value: unknown): InitialBattleSetup | null {
+export function normalizeStoredSetup(value: unknown): InitialBattleSetup | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const candidate = value as Partial<InitialBattleSetup>;
-  const isSlot = (slot: unknown): slot is InitialAllySlotSelection => {
+  type StoredAllySlot = Omit<
+    InitialAllySlotSelection,
+    "hpFou" | "attackFou"
+  > & Partial<Pick<InitialAllySlotSelection, "hpFou" | "attackFou">>;
+  const isSlot = (slot: unknown): slot is StoredAllySlot => {
     if (!slot || typeof slot !== "object" || Array.isArray(slot)) return false;
     const current = slot as Partial<InitialAllySlotSelection>;
     return (current.servantDataId === null || typeof current.servantDataId === "string")
       && (current.level === null || typeof current.level === "number")
       && (current.noblePhantasmLevel === null || typeof current.noblePhantasmLevel === "number")
+      && (current.hpFou === undefined || typeof current.hpFou === "number")
+      && (current.attackFou === undefined || typeof current.attackFou === "number")
       && (current.craftEssenceDataId === null || typeof current.craftEssenceDataId === "string");
   };
   if (
@@ -169,9 +177,14 @@ function normalizeStoredSetup(value: unknown): InitialBattleSetup | null {
     || typeof candidate.enemyEncounterDataId !== "string"
     || typeof candidate.seed !== "string"
   ) return null;
+  const normalizeSlot = (slot: StoredAllySlot): InitialAllySlotSelection => ({
+    ...slot,
+    hpFou: slot.hpFou ?? SERVANT_FOU_MIN,
+    attackFou: slot.attackFou ?? SERVANT_FOU_MIN,
+  });
   return {
-    frontline: candidate.frontline,
-    reserve: candidate.reserve,
+    frontline: candidate.frontline.map(normalizeSlot),
+    reserve: candidate.reserve.map(normalizeSlot),
     mysticCodeDataId: candidate.mysticCodeDataId ?? null,
     enemyEncounterDataId: candidate.enemyEncounterDataId,
     seedMode: candidate.seedMode === "random" || candidate.seedMode === "fixed"
@@ -330,6 +343,47 @@ export function AllySlotEditor({
           </select>
         </label>
       </div>
+      <div className="inline-fields fou-fields">
+        <label>
+          HPフォウ
+          <input
+            aria-label={`${label} HPフォウ`}
+            type="number"
+            inputMode="numeric"
+            min={SERVANT_FOU_MIN}
+            max={SERVANT_FOU_MAX}
+            step={1}
+            disabled={!definition}
+            value={selection.hpFou}
+            onChange={(event) => onChange({
+              ...selection,
+              hpFou: event.target.value === ""
+                ? SERVANT_FOU_MIN
+                : Number(event.target.value),
+            })}
+          />
+        </label>
+        <label>
+          ATKフォウ
+          <input
+            aria-label={`${label} ATKフォウ`}
+            type="number"
+            inputMode="numeric"
+            min={SERVANT_FOU_MIN}
+            max={SERVANT_FOU_MAX}
+            step={1}
+            disabled={!definition}
+            value={selection.attackFou}
+            onChange={(event) => onChange({
+              ...selection,
+              attackFou: event.target.value === ""
+                ? SERVANT_FOU_MIN
+                : Number(event.target.value),
+            })}
+          />
+        </label>
+      </div>
+      <p className="setup-field-note">各0～3000の整数で指定します。</p>
       <label>
         概念礼装
         <select

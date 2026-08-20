@@ -40,6 +40,9 @@ import type { NoblePhantasmLevel } from "../formulas/np";
 export const INITIAL_ENEMY_ENCOUNTER_DATA_ID =
   EMBER_GATHERING_SABER_EXTREME.dataId;
 
+export const SERVANT_FOU_MIN = 0;
+export const SERVANT_FOU_MAX = 3_000;
+
 export const INITIAL_SERVANT_REGISTRY = createServantDataRegistry(
   INITIAL_SERVANT_DEFINITIONS,
 );
@@ -48,6 +51,8 @@ export interface InitialAllySlotSelection {
   servantDataId: string | null;
   level: ServantLevel | null;
   noblePhantasmLevel: NoblePhantasmLevel | null;
+  hpFou: number;
+  attackFou: number;
   craftEssenceDataId: string | null;
 }
 
@@ -70,6 +75,8 @@ interface CompleteAllySelection {
   servantDataId: string;
   level: ServantLevel;
   noblePhantasmLevel: NoblePhantasmLevel;
+  hpFou: number;
+  attackFou: number;
   craftEssenceDataId: string | null;
 }
 
@@ -78,6 +85,8 @@ export function emptyInitialAllySlot(): InitialAllySlotSelection {
     servantDataId: null,
     level: null,
     noblePhantasmLevel: null,
+    hpFou: SERVANT_FOU_MIN,
+    attackFou: SERVANT_FOU_MIN,
     craftEssenceDataId: null,
   };
 }
@@ -111,6 +120,8 @@ export function initialAllySelectionForServant(
     servantDataId,
     level: finalAscensionLevelForServant(servantDataId),
     noblePhantasmLevel: 1,
+    hpFou: SERVANT_FOU_MIN,
+    attackFou: SERVANT_FOU_MIN,
     craftEssenceDataId: null,
   };
 }
@@ -153,6 +164,8 @@ function validateAllySlot(
     if (
       slot.level !== null
       || slot.noblePhantasmLevel !== null
+      || slot.hpFou !== SERVANT_FOU_MIN
+      || slot.attackFou !== SERVANT_FOU_MIN
       || slot.craftEssenceDataId !== null
     ) {
       errors.push(`${label}はサーヴァント未選択のため、個体設定を保持できません。`);
@@ -180,6 +193,20 @@ function validateAllySlot(
     || !([1, 2, 3, 4, 5] as const).includes(slot.noblePhantasmLevel)
   ) {
     errors.push(`${label}の宝具Lvを1～5から選択してください。`);
+  }
+  if (
+    !Number.isSafeInteger(slot.hpFou)
+    || slot.hpFou < SERVANT_FOU_MIN
+    || slot.hpFou > SERVANT_FOU_MAX
+  ) {
+    errors.push(`${label}のHPフォウを0～3000の整数で入力してください。`);
+  }
+  if (
+    !Number.isSafeInteger(slot.attackFou)
+    || slot.attackFou < SERVANT_FOU_MIN
+    || slot.attackFou > SERVANT_FOU_MAX
+  ) {
+    errors.push(`${label}のATKフォウを0～3000の整数で入力してください。`);
   }
   if (
     slot.craftEssenceDataId !== null
@@ -249,6 +276,8 @@ function completeAllySelections(
       servantDataId: slot.servantDataId,
       level: slot.level,
       noblePhantasmLevel: slot.noblePhantasmLevel,
+      hpFou: slot.hpFou,
+      attackFou: slot.attackFou,
       craftEssenceDataId: slot.craftEssenceDataId,
     });
   });
@@ -262,6 +291,8 @@ function completeAllySelections(
       servantDataId: slot.servantDataId,
       level: slot.level,
       noblePhantasmLevel: slot.noblePhantasmLevel,
+      hpFou: slot.hpFou,
+      attackFou: slot.attackFou,
       craftEssenceDataId: slot.craftEssenceDataId,
     });
   });
@@ -297,6 +328,8 @@ export function createInitialBattleSession(
       instanceId: selection.instanceId,
       level: selection.level,
       noblePhantasmLevel: selection.noblePhantasmLevel,
+      maxHpAdjustment: selection.hpFou,
+      attackAdjustment: selection.attackFou,
     });
     if (instance.unresolvedEffectStableIds.length > 0) {
       throw new RangeError(

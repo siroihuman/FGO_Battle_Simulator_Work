@@ -37,6 +37,8 @@ function ally(
     servantDataId,
     level: 120,
     noblePhantasmLevel: 1,
+    hpFou: 0,
+    attackFou: 0,
     craftEssenceDataId: null,
   };
 }

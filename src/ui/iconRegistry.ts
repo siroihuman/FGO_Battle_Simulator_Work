@@ -46,7 +46,7 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "呪い": "Curse",
   "毎ターンHP回復": "Hpregen",
   "最大HPアップ": "Maxhpup",
-  "ターゲット集中": "Enemyfocus",
+  "ターゲット集中": "Tauntup",
   "対粛清防御": "Specialinvincible",
 };
 

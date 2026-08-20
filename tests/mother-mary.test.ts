@@ -451,7 +451,7 @@ describe("No.070 聖母マリア", () => {
       registrationOrder: 1,
     };
     expect(registeredStatusIconPath(iconEffect))
-      .toBe("/FGO_Battle_Simulator_Work/assets/status-icons/Enemyfocus.webp");
+      .toBe("/FGO_Battle_Simulator_Work/assets/status-icons/Tauntup.webp");
     expect(registeredStatusIconPath({
       ...iconEffect,
       name: "対粛清防御",

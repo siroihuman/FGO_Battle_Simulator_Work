@@ -228,6 +228,12 @@ h3 {
   margin-top: 0.8rem;
 }
 
+.setup-field-note {
+  margin: 0.45rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
 .setup-options {
   display: grid;
   gap: 0.8rem;

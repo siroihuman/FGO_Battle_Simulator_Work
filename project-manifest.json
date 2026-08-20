@@ -633,6 +633,21 @@
       "tabBrowseMutation": "none",
       "currentSelectionOutsideTabs": true
     },
+    "servantFouSetup": {
+      "hpField": "hpFou",
+      "attackField": "attackFou",
+      "independentPerBattleInstance": true,
+      "minimum": 0,
+      "maximum": 3000,
+      "integerOnly": true,
+      "default": 0,
+      "legacyStoredMissingValue": 0,
+      "applicationOrder": "selected_level_stats_then_fou_then_craft_essence",
+      "uiRecalculation": false,
+      "rngDraws": 0,
+      "battleSuspendSchemaChange": false,
+      "dataSchemaChange": false
+    },
     "servantAscensionVariantPolicy": {
       "currentRegistration": "user_specified_stage_only",
       "motherMaryStage": "final_ascension",
@@ -661,6 +676,12 @@
       "allTargetUnaffected": true,
       "saveSchemaChange": false,
       "dataSchemaChange": false
+    },
+    "motherMaryIconCorrections": {
+      "targetFocus": "Tauntup",
+      "enemySpecialTargetFocusReserved": "Enemyfocus",
+      "enemySpecialTargetFocusUseRequiresExplicitUserSpecification": true,
+      "knowledgeOfHereticSkill": "skill-hp-heal-per-turn"
     },
     "preciseDebuffSuccessModifier": {
       "effectType": "debuff_success_basis_points",

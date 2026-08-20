@@ -334,6 +334,7 @@ if (manifest) {
   );
   const attackTargetRestriction = manifest.coreRules.attackTriggerEventTargetRestriction;
   const servantOriginTabs = manifest.coreRules.servantSetupOriginTabs;
+  const servantFouSetup = manifest.coreRules.servantFouSetup;
   assert(
     attackTargetRestriction.property === "targetAttackEventTargets"
       && attackTargetRestriction.allowedSelector === "non_self_all"
@@ -354,6 +355,22 @@ if (manifest) {
       && servantOriginTabs.tabBrowseMutation === "none"
       && servantOriginTabs.currentSelectionOutsideTabs === true,
     "編成の公式／オリジナル区分とNo.順が一致しません"
+  );
+  assert(
+    servantFouSetup.hpField === "hpFou"
+      && servantFouSetup.attackField === "attackFou"
+      && servantFouSetup.independentPerBattleInstance === true
+      && servantFouSetup.minimum === 0
+      && servantFouSetup.maximum === 3000
+      && servantFouSetup.integerOnly === true
+      && servantFouSetup.default === 0
+      && servantFouSetup.legacyStoredMissingValue === 0
+      && servantFouSetup.applicationOrder === "selected_level_stats_then_fou_then_craft_essence"
+      && servantFouSetup.uiRecalculation === false
+      && servantFouSetup.rngDraws === 0
+      && servantFouSetup.battleSuspendSchemaChange === false
+      && servantFouSetup.dataSchemaChange === false,
+    "編成のHP／ATKフォウ入力規則が一致しません"
   );
   const specifiedServants = manifest.specifiedContent?.servants ?? [];
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
@@ -385,6 +402,7 @@ if (manifest) {
   );
   const stagedHeal = manifest.coreRules.declaredStagedHealHp;
   const targetFocus = manifest.coreRules.enemySingleTargetFocus;
+  const motherMaryIcons = manifest.coreRules.motherMaryIconCorrections;
   assert(
     JSON.stringify(stagedHeal?.supportedScalings) === JSON.stringify(["fixed", "noble_phantasm_level", "overcharge"])
       && stagedHeal?.resolutionSource === "engine_action_context"
@@ -404,6 +422,13 @@ if (manifest) {
       && targetFocus?.saveSchemaChange === false
       && targetFocus?.dataSchemaChange === false,
     "敵単体攻撃のターゲット集中規則が一致しません"
+  );
+  assert(
+    motherMaryIcons?.targetFocus === "Tauntup"
+      && motherMaryIcons?.enemySpecialTargetFocusReserved === "Enemyfocus"
+      && motherMaryIcons?.enemySpecialTargetFocusUseRequiresExplicitUserSpecification === true
+      && motherMaryIcons?.knowledgeOfHereticSkill === "skill-hp-heal-per-turn",
+    "聖母マリアの指定アイコン規則が一致しません"
   );
   assert(
     manifest.coreRules.battleTurnLogSchemaVersion === 2,
@@ -1203,6 +1228,7 @@ const requiredUiAssets = [
     "skill-immune-invincibility", "skill-np-charge",
     "skill-unique-command-shuffle", "skill-unique-order-change",
     "skill-card-quick-up", "skill-np-damafe-up", "skill-crit-damage-up",
+    "skill-hp-heal-per-turn",
   ].map((name) => `public/assets/skill-icons/${name}.png`),
   ...[
     "Artsupstatus", "Attackdown", "Attackup", "Buffatk", "Busterupstatus",
@@ -1213,7 +1239,7 @@ const requiredUiAssets = [
     "Starabsoprtdown", "Stargainup", "Statusdown", "Statusup",
     "Npgainturn", "Stargainturn", "NPOvercharge", "Npchargeup", "NPGainUpDmg",
     "QuickNpGainUp", "Quickdamageup", "Curse", "Defensedown",
-    "Defenseup", "Npseal", "Enemyfocus", "Hpregen", "Maxhpup", "Specialinvincible",
+    "Defenseup", "Npseal", "Tauntup", "Hpregen", "Maxhpup", "Specialinvincible",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
@@ -1227,7 +1253,9 @@ assert(
   implementationStatus.includes("D-077～D-085のUI完成仕様")
     && implementationStatus.includes("v1.0初期完成範囲へ追加")
     && implementationStatus.includes("No.070「聖母マリア」")
-    && implementationStatus.includes("54ファイル・546テスト")
+    && implementationStatus.includes("54ファイル・548テスト")
+    && implementationStatus.includes("HPフォウ・ATKフォウ")
+    && implementationStatus.includes("`Tauntup`")
     && implementationStatus.includes("ユーザー実画面受入待ち")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
   "実装状況にUI完成範囲、聖母マリア、検査記録がありません"
@@ -1288,6 +1316,13 @@ assert(
     && decisionLog.includes("実画面受入待ち"),
   "決定記録に聖母マリアと再臨段階の実装方針がありません"
 );
+assert(
+  decisionLog.includes("## D-095 編成フォウ入力と聖母マリアの正式アイコンを追加・訂正する")
+    && decisionLog.includes("0～3000の整数")
+    && decisionLog.includes("`Tauntup`")
+    && decisionLog.includes("`skill-hp-heal-per-turn`"),
+  "決定記録に編成フォウ入力と聖母マリアのアイコン訂正がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1313,8 +1348,10 @@ const motherMaryAcceptance = await readText(
 assert(
   motherMaryAcceptance.includes("判定: 自動検査完了・ユーザー実画面受入待ち")
     && motherMaryAcceptance.includes("最終再臨")
-    && motherMaryAcceptance.includes("54ファイル・546テスト")
-    && motherMaryAcceptance.includes("`Enemyfocus`")
+    && motherMaryAcceptance.includes("54ファイル・548テスト")
+    && motherMaryAcceptance.includes("HPフォウ・ATKフォウ")
+    && motherMaryAcceptance.includes("`Tauntup`")
+    && motherMaryAcceptance.includes("`skill-hp-heal-per-turn`")
     && motherMaryAcceptance.includes("`Specialinvincible`")
     && motherMaryAcceptance.includes("PRを`main`へマージしない"),
   "聖母マリアの受入報告が正本と一致しません"
@@ -1388,6 +1425,7 @@ const uiStyles = await readText("src/styles.css");
 const appSource = await readText("src/App.tsx");
 const effectPresentation = await readText("src/ui/effectPresentation.ts");
 const iconRegistry = await readText("src/ui/iconRegistry.ts");
+const initialBattleUi = await readText("src/ui/initialBattle.ts");
 const battleUi = await readText("src/ui/battleUi.ts");
 assert(
   uiAndStorage.includes("敵宝具の任意の宝具Lv・OC文脈")
@@ -1422,6 +1460,20 @@ assert(
   "編成UIに公式／オリジナル区分、No.順、選択維持がありません"
 );
 assert(
+  uiAndStorage.includes("HPフォウとATKフォウ")
+    && uiAndStorage.includes("それぞれ0～3000の整数、初期値0")
+    && uiAndStorage.includes("欠落したHPフォウ・ATKフォウをそれぞれ0")
+    && calculationsAndRng.includes("選択LvのHP・ATKへそれぞれ加算した後、概念礼装")
+    && initialBattleUi.includes("export const SERVANT_FOU_MIN = 0")
+    && initialBattleUi.includes("export const SERVANT_FOU_MAX = 3_000")
+    && initialBattleUi.includes("maxHpAdjustment: selection.hpFou")
+    && initialBattleUi.includes("attackAdjustment: selection.attackFou")
+    && appSource.includes("normalizeStoredSetup")
+    && appSource.includes("hpFou: slot.hpFou ?? SERVANT_FOU_MIN")
+    && appSource.includes("attackFou: slot.attackFou ?? SERVANT_FOU_MIN"),
+  "編成UI・計算仕様・実装にHP／ATKフォウ入力と旧保存互換がありません"
+);
+assert(
   iconRegistry.includes('"NP獲得量アップ": "Npchargeup"')
     && iconRegistry.includes('"被ダメージ時NP獲得量アップ": "NPGainUpDmg"')
     && iconRegistry.includes('"Quickカードの威力アップ": "Quickdamageup"')
@@ -1429,6 +1481,12 @@ assert(
     && iconRegistry.includes('effect.effectType === COMMON_EFFECT_TYPES.criticalDamage')
     && iconRegistry.includes('effect.effectType === COMMON_EFFECT_TYPES.starFocus'),
   "状態アイコンのNP獲得量・色限定クリティカル・スター集中対応が一致しません"
+);
+assert(
+  iconRegistry.includes('"外道の知識（姉なるもの）": "skill-hp-heal-per-turn"')
+    && iconRegistry.includes('"ターゲット集中": "Tauntup"')
+    && !iconRegistry.includes('"ターゲット集中": "Enemyfocus"'),
+  "聖母マリアのスキル・ターゲット集中アイコン対応が一致しません"
 );
 assert(
   uiAndStorage.includes("実画面受入の資源・状態・カード表示追補（D-087）")
@@ -1516,7 +1574,8 @@ assert(
   initialContent.includes("### No.070 聖母マリア")
     && initialContent.includes("最終再臨")
     && initialContent.includes("OC別HP回復は共通`heal_hp`の段階値")
-    && initialContent.includes("`Enemyfocus`")
+    && initialContent.includes("`Tauntup`")
+    && initialContent.includes("`skill-hp-heal-per-turn`")
     && initialContent.includes("`Specialinvincible`"),
   "具体データ仕様に聖母マリアの採用範囲がありません"
 );
