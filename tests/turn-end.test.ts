@@ -152,7 +152,7 @@ function slipAmplifier(
 }
 
 describe("side turn-end integration", () => {
-  it("resolves only the ending side and decreases only that side's durations", () => {
+  it("resolves only the ending side and decreases matching owner-side durations", () => {
     let state = formation();
     state = withHp(state, "ally-a", 5_000);
     state = withHp(state, "enemy-a", 5_000);
@@ -226,6 +226,51 @@ describe("side turn-end integration", () => {
       effect: { stableId: "one-turn-heal" },
       reason: "expired_turns",
     });
+  });
+
+  it("keeps an ally opponent-boundary state through ally end and expires it at enemy end", () => {
+    const applied = register(
+      formation(),
+      "ally-a",
+      {
+        stableId: "ally-defense-window",
+        name: "味方防御期間",
+        effectType: "ally-defense-window",
+        category: "buff",
+        remainingTurns: 1,
+        durationTick: "opponent_turn_end",
+      },
+      createEffectRuntimeCounters(),
+    );
+
+    const allyEnd = resolveSideTurnEnd(
+      applied.formation,
+      "ally",
+      applied.counters,
+      new BattleRng("opponent-boundary-ally-end").stream("effects"),
+    );
+    expect(findUnitLocation(allyEnd.formation, "ally-a")?.unit.effects)
+      .toEqual([expect.objectContaining({
+        stableId: "ally-defense-window",
+        remainingTurns: 1,
+      })]);
+    expect(allyEnd.durations.flatMap(({ removed }) => removed)).toEqual([]);
+
+    const enemyEnd = resolveSideTurnEnd(
+      allyEnd.formation,
+      "enemy",
+      allyEnd.counters,
+      new BattleRng("opponent-boundary-enemy-end").stream("effects"),
+    );
+    expect(findUnitLocation(enemyEnd.formation, "ally-a")?.unit.effects)
+      .toEqual([]);
+    expect(enemyEnd.durations.flatMap(({ removed }) => removed))
+      .toEqual([expect.objectContaining({
+        effect: expect.objectContaining({
+          stableId: "ally-defense-window",
+        }),
+        reason: "expired_turns",
+      })]);
   });
 
   it("freezes reserve activation and duration even with a generic reserve flag", () => {

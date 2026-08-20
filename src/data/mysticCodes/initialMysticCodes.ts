@@ -48,6 +48,7 @@ export const ATLAS_ACADEMY_UNIFORM: MysticCodeDefinition = {
               effectType: COMMON_EFFECT_TYPES.invincibility,
               category: "buff",
               remainingTurns: 1,
+              durationTick: "opponent_turn_end",
             },
           }],
         },

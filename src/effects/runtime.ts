@@ -357,11 +357,35 @@ export function advanceOwnerTurnEnd(
   isReserve: boolean,
   registrationCutoff = Number.MAX_SAFE_INTEGER,
 ): { unit: BattleUnitState; removed: RemovedEffect[] } {
-  if (unit.side !== endingSide || isReserve) return { unit, removed: [] };
+  if (unit.side !== endingSide) return { unit, removed: [] };
+  return advanceEffectDurationsAtTurnEnd(
+    unit,
+    endingSide,
+    isReserve,
+    registrationCutoff,
+  );
+}
+
+/**
+ * Advances durations whose explicit boundary matches the side that ended.
+ * Frontline effects may tick at either their owner's or their opponent's turn
+ * end; reserve and manual effects remain frozen.
+ */
+export function advanceEffectDurationsAtTurnEnd(
+  unit: BattleUnitState,
+  endingSide: BattleSide,
+  isReserve: boolean,
+  registrationCutoff = Number.MAX_SAFE_INTEGER,
+): { unit: BattleUnitState; removed: RemovedEffect[] } {
+  if (isReserve) return { unit, removed: [] };
+  const durationTick =
+    unit.side === endingSide
+      ? "owner_turn_end"
+      : "opponent_turn_end";
   const removed: RemovedEffect[] = [];
   const effects = unit.effects.flatMap((effect) => {
     if (
-      effect.durationTick !== "owner_turn_end"
+      effect.durationTick !== durationTick
       || effect.remainingTurns === null
       || effect.registrationOrder > registrationCutoff
     ) {

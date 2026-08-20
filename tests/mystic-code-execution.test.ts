@@ -101,6 +101,7 @@ describe("Mystic Code skill execution", () => {
       .toEqual([expect.objectContaining({
         effectType: COMMON_EFFECT_TYPES.invincibility,
         remainingTurns: 1,
+        durationTick: "opponent_turn_end",
         sourceInstanceId: null,
       })]);
 

@@ -698,10 +698,43 @@ if (manifest) {
       && turnEndStarGain.implementationStatus === "implemented_and_accepted",
     "ターン終了トリガーのスター獲得仕様が一致しません"
   );
+  const effectDurationBoundaries =
+    manifest.coreRules.effectDurationBoundaries;
+  assert(
+    manifest.status === "effect-duration-boundary-fix-implemented"
+      && JSON.stringify(effectDurationBoundaries.values)
+        === JSON.stringify([
+          "owner_turn_end",
+          "opponent_turn_end",
+          "manual"
+        ])
+      && effectDurationBoundaries.offensiveBuff === "owner_turn_end"
+      && effectDurationBoundaries.defensiveBuff === "opponent_turn_end"
+      && effectDurationBoundaries.otherBuff === "opponent_turn_end"
+      && effectDurationBoundaries.defaultDebuff === "owner_turn_end"
+      && effectDurationBoundaries.turnEndTriggerActivation
+        === "owner_side_only"
+      && effectDurationBoundaries.durationCandidateSnapshot
+        === "both_living_frontlines_at_turn_end_start"
+      && JSON.stringify(effectDurationBoundaries.durationLogOrder)
+        === JSON.stringify([
+          "ending_side_frontline",
+          "opposing_side_frontline"
+        ])
+      && effectDurationBoundaries.reserveProgression === "paused"
+      && effectDurationBoundaries.newlyRegisteredDuringPhaseProgression
+        === "deferred"
+      && effectDurationBoundaries.battleSuspendSchemaChange === false
+      && effectDurationBoundaries.dataSchemaChange === false
+      && effectDurationBoundaries.battleLogSchemaChange === false
+      && effectDurationBoundaries.battleTurnLogSchemaChange === false
+      && effectDurationBoundaries.rngSequenceChange === false
+      && effectDurationBoundaries.uiRecalculates === false,
+    "状態期限の所持者側・相手側終了仕様が一致しません"
+  );
   const completedUi = manifest.coreRules.completedUiSpecification;
   assert(
-    manifest.status === "content-addition-mother-mary-accepted"
-      && completedUi.decisionRange === "D-077-D-085"
+    completedUi.decisionRange === "D-077-D-085"
       && completedUi.acceptanceRevision === "D-097"
       && completedUi.implementationStatus === "accepted"
       && manifest.coreRules.servantDefaultDemeritApplicationRatePermille === 5000
@@ -1217,11 +1250,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.070「聖母マリア」")
-    && startHere.includes("最終再臨版")
-    && startHere.includes("2026-08-21にユーザー実画面受入を完了")
-    && startHere.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
-  "作業開始ページに聖母マリアの実装状態と次作業がありません"
+    && startHere.includes("PR #70のサーヴァント分類一覧")
+    && startHere.includes("身籠る聖処女")
+    && startHere.includes("敵ターン終了で失効")
+    && startHere.includes("No.007「本多忠勝」")
+    && startHere.includes("具体データ確認・実装計画確定"),
+  "作業開始ページに期限修正とNo.007の次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1272,9 +1306,12 @@ assert(
     && implementationStatus.includes("`天の力`特性")
     && implementationStatus.includes("`Tauntup`")
     && implementationStatus.includes("2026-08-21にユーザー実画面受入を完了")
-    && implementationStatus.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する")
+    && implementationStatus.includes("有限ターン状態の明示的な期限境界")
+    && implementationStatus.includes("54ファイル・553テスト")
+    && implementationStatus.includes("No.007「本多忠勝」")
+    && implementationStatus.includes("具体データ確認・実装計画確定")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
-  "実装状況にUI完成範囲、聖母マリア、検査記録がありません"
+  "実装状況に期限修正、No.007の次作業、既存受入記録がありません"
 );
 const dominationForeignerAcceptance = await readText(
   "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md"
@@ -1351,6 +1388,13 @@ assert(
     && decisionLog.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
   "決定記録に聖母マリアの最終受入がありません"
 );
+assert(
+  decisionLog.includes("## D-098 有限ターン状態の期限を所持者側・相手側終了へ分離する")
+    && decisionLog.includes("`opponent_turn_end`")
+    && decisionLog.includes("身籠る聖処女")
+    && decisionLog.includes("No.007「本多忠勝」"),
+  "決定記録に状態期限境界の修正方針がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1368,8 +1412,23 @@ assert(
     && docsIndex.includes("qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md")
     && docsIndex.includes("qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md")
     && docsIndex.includes("qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md")
+    && docsIndex.includes("qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md")
     && docsIndex.includes("SERVANT_CLASSIFICATION.md"),
   "文書索引に最新の統合受入報告がありません"
+);
+const effectDurationAcceptance = await readText(
+  "docs/qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md"
+);
+assert(
+  effectDurationAcceptance.includes("判定: 自動検査合格")
+    && effectDurationAcceptance.includes("所持者側ターン終了、相手側ターン終了、手動の3種")
+    && effectDurationAcceptance.includes("身籠る聖処女")
+    && effectDurationAcceptance.includes("敵ターン終了で2状態とも失効")
+    && effectDurationAcceptance.includes("中断保存形式: 4のまま")
+    && effectDurationAcceptance.includes("データ版: 1.38.0のまま")
+    && effectDurationAcceptance.includes("54ファイル・553テスト成功")
+    && effectDurationAcceptance.includes("No.007「本多忠勝」の具体データ、他サーヴァント、敵、概念礼装、魔術礼装の追加は行っていません"),
+  "状態期限境界の受入記録が正本と一致しません"
 );
 const servantClassification = await readText("docs/SERVANT_CLASSIFICATION.md");
 assert(

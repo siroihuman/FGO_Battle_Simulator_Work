@@ -180,6 +180,7 @@ export const SEN_NO_RIKYU: ServantDefinition = {
                 classifications: ["defense"],
                 remainingTurns: 3,
                 remainingUses: 1,
+                durationTick: "opponent_turn_end",
               },
             }],
           },

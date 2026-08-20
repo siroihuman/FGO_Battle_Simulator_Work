@@ -5,15 +5,15 @@
 ## 現在地点
 
 - フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加
-- 状態: 初期完成範囲外の追加対象として、オリジナルNo.070「聖母マリア」の最終再臨版を登録した。編成フォウ0～3000、正式アイコン、初期戦闘の天地人相性と黎明の炎腕の`天の力`特性を接続し、OC1宝具の攻撃前宝具威力30%・属性不利・特攻を回帰固定した。確定結果演出には、確定済み最終状態へ即時遷移する右上スキップを追加した。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布は変更していない。2026-08-21にユーザー実画面受入を完了して最終合格とし、PR #69の`main`へのマージ許可を得た。
+- 状態: PR #70のサーヴァント分類一覧まで`main`へ統合済み。No.007「本多忠勝」の具体データ確認に先立ち、有限ターン状態を所持者側終了・相手側終了・手動へ分離した。聖母マリア「身籠る聖処女」のターゲット集中・対粛清防御は味方ターン終了後も敵行動中に残り、敵ターン終了で失効する。防御系・その他強化の既存代表データにも相手側終了を明示した。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布、6乱数列は変更していない。No.007は未実装のままである。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する。
+1. `SERVANT_CLASSIFICATION.md`のカテゴリ1・No.順に従い、未実装のNo.007「本多忠勝」の具体データ確認・実装計画確定へ進む。
 
-聖母マリアは[`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)、千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)を参照します。具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`](SERVANT_CLASSIFICATION.md)の確定済みカテゴリを確認します。
+期限境界の修正は[`qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md`](qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md)、聖母マリアは[`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)、千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)を参照します。具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`](SERVANT_CLASSIFICATION.md)の確定済みカテゴリを確認します。
 
 ## 最初に読むもの
 
