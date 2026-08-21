@@ -408,7 +408,7 @@ if (manifest) {
   assert(
     hondaTadakatsu?.collectionNo === 7
       && hondaTadakatsu?.classificationCategory === 1
-      && hondaTadakatsu?.implementationStatus === "implemented_awaiting_visual_reacceptance"
+      && hondaTadakatsu?.implementationStatus === "implemented_and_accepted"
       && hondaTadakatsu?.activeSkillCount === 3
       && hondaTadakatsu?.classSkillCount === 1
       && hondaTadakatsu?.noblePhantasmCount === 1
@@ -744,7 +744,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "honda-tadakatsu-continuation-hp-playback-fixed"
+    manifest.status === "honda-tadakatsu-implemented-and-accepted"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1305,10 +1305,9 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("連続通常攻撃修正は実画面合格済み")
-    && startHere.includes("確定結果ウィンドウ内へ敵HP欄を残し")
-    && startHere.includes("HP0→0／最大HPを表示し続ける")
-    && startHere.includes("確定結果ウィンドウ内の敵HP継続表示は自動検査完了・実画面再受入待ち")
+    && startHere.includes("Quick撃破後も同Artsを同じ対象へ完遂")
+    && startHere.includes("対象名・確定ダメージ・空のHPバー・HP0→0／最大HPを表示し続ける")
+    && startHere.includes("ユーザー実画面受入済みの最終合格")
     && startHere.includes("No.007「本多忠勝」")
     && startHere.includes("No.010「シグムンド」"),
   "作業開始ページに本多忠勝の実装状態と次作業がありません"
@@ -1474,7 +1473,9 @@ assert(
     && decisionLog.includes("空のHPバー、`0 → 0 / 最大HP`")
     && decisionLog.includes("確定結果フレームと敵HP欄を省略しない")
     && decisionLog.includes("攻撃完了直前の確定`BattleState`")
-    && decisionLog.includes("実画面再受入待ち"),
+    && decisionLog.includes("状態: 採用（ユーザー実画面合格）")
+    && decisionLog.includes("## D-102 No.007「本多忠勝」を最終受入とする")
+    && decisionLog.includes("PR #72"),
   "決定記録に同一戦闘個体の単体通常カード連続規則がありません"
 );
 
@@ -1553,8 +1554,8 @@ const hondaTadakatsuAcceptance = await readText(
   "docs/qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md"
 );
 assert(
-  hondaTadakatsuAcceptance.includes("本多忠勝データと連続通常攻撃修正は実画面合格")
-    && hondaTadakatsuAcceptance.includes("確定結果ウィンドウ内の敵HP0継続表示は自動検査合格・実画面再受入待ち")
+  hondaTadakatsuAcceptance.includes("判定: 最終合格（ユーザー実画面受入完了）")
+    && hondaTadakatsuAcceptance.includes("統合PR: #72")
     && hondaTadakatsuAcceptance.includes("https://w.atwiki.jp/siroi_human/pages/274.html")
     && hondaTadakatsuAcceptance.includes("Lv80・90は参照記録だけ")
     && hondaTadakatsuAcceptance.includes("攻撃後HP減少1000／1500／2000／2500／3000")

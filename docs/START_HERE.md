@@ -5,14 +5,13 @@
 ## 現在地点
 
 - フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加
-- 状態: No.007「本多忠勝」の具体データと、Quick撃破後も同Artsを同じ対象へ完遂してから退場・再選択する連続通常攻撃修正は実画面合格済み。連続攻撃中であることを明確にするため、同じ戦闘個体が戦闘不能対象へ攻撃している間は「連続攻撃中」の確定結果ウィンドウ内へ敵HP欄を残し、対象名・確定ダメージ・空のHPバー・HP0→0／最大HPを表示し続けるよう追補した。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布、6乱数列は変更していない。確定結果ウィンドウ内の敵HP継続表示は自動検査完了・実画面再受入待ちである。
+- 状態: No.007「本多忠勝」の具体データ、Quick撃破後も同Artsを同じ対象へ完遂してから退場・再選択する連続通常攻撃修正、連続攻撃中の確定結果ウィンドウへ対象名・確定ダメージ・空のHPバー・HP0→0／最大HPを表示し続ける追補は、いずれもユーザー実画面受入済みの最終合格である。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布、6乱数列は変更していない。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. ユーザー環境で本多忠勝Quick→同Arts→支配のフォーリナーBusterを再確認し、Artsの「連続攻撃中」ウィンドウ内に敵AのHP0→0／最大HPが残り、Foreigner Buster開始時に敵Aが退場して敵Bへ移ることを確認する。
-2. 再受入後、`SERVANT_CLASSIFICATION.md`のカテゴリ1・No.順に従い、次の未実装対象No.010「シグムンド」の具体データ確認へ進む。
+1. `SERVANT_CLASSIFICATION.md`のカテゴリ1・No.順に従い、次の未実装対象No.010「シグムンド」の具体データ確認・実装可能性確認へ進む。
 
 本多忠勝は[`qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md`](qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md)、期限境界の修正は[`qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md`](qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md)、聖母マリアは[`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)、千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)を参照します。具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`](SERVANT_CLASSIFICATION.md)の確定済みカテゴリを確認します。
 
