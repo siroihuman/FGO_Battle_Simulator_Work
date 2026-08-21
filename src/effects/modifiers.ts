@@ -9,6 +9,8 @@ export const COMMON_EFFECT_TYPES = {
   buffSuccess: "buff_success",
   damageCut: "damage_cut",
   defense: "defense",
+  defensiveClassAffinityOverride:
+    "defensive_class_affinity_override",
   debuffImmunity: "debuff_immunity",
   debuffRemovalResistance: "debuff_removal_resistance",
   debuffResistance: "debuff_resistance",

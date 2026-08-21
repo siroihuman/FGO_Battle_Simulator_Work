@@ -8,6 +8,7 @@ import { findUnitLocation } from "../src/core/battle/formation";
 import { BattleRng } from "../src/core/rng";
 import {
   INITIAL_SERVANT_DEFINITIONS,
+  AJISUKITAKAHIKONE_NO_KAMI,
   DOMINATION_FOREIGNER,
   HONDA_TADAKATSU,
   LIGHT_KOYANSKAYA,
@@ -63,6 +64,7 @@ describe("initial servant definitions", () => {
       "sen-no-rikyu",
       "honda-tadakatsu",
       "domination-foreigner",
+      "ajisukitakahikone-no-kami",
       "lucifera",
       "mother-mary",
     ]);
@@ -85,6 +87,11 @@ describe("initial servant definitions", () => {
       level: 120,
       hp: 15_133,
       attack: 11_449,
+    });
+    expect(AJISUKITAKAHIKONE_NO_KAMI.levelStats.at(-1)).toEqual({
+      level: 120,
+      hp: 21_242,
+      attack: 13_489,
     });
     expect(SEN_NO_RIKYU.levelStats.at(-1)).toEqual({
       level: 120,

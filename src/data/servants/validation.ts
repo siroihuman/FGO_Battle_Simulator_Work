@@ -164,6 +164,21 @@ function assertNpAttack(
       );
     }
   }
+  if (effect.additionalAttack) {
+    registerStableId(
+      effect.additionalAttack.stableId,
+      `${name}.additionalAttack.stableId`,
+      stableIds,
+    );
+    assertHitWeights(
+      effect.additionalAttack.hitWeights,
+      `${name}.additionalAttack.hitWeights`,
+    );
+    assertFiveMultipliers(
+      effect.additionalAttack.damageMultiplierPermilleByOvercharge,
+      `${name}.additionalAttack.damageMultiplierPermilleByOvercharge`,
+    );
+  }
 }
 
 function assertNoblePhantasmEffects(

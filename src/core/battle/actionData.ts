@@ -46,6 +46,19 @@ export interface NoblePhantasmAttackData {
   ];
   /** Every listed trait must be effective on the target at damage setup. */
   specialAttackRequiredTargetTraits?: readonly string[];
+  /** Optional second packet that always emits after the main NP attack. */
+  additionalAttack?: {
+    stableId: string;
+    hitWeights: readonly number[];
+    /** OC1 through OC5, in permille. Zero still emits every Hit. */
+    damageMultiplierPermilleByOvercharge: readonly [
+      number,
+      number,
+      number,
+      number,
+      number,
+    ];
+  };
 }
 
 export interface EnemyAttackActionData {
@@ -280,6 +293,20 @@ function validateCombatant(data: CombatantAttackData): void {
       validateTraitIds(
         noblePhantasm.specialAttackRequiredTargetTraits,
         `${data.instanceId}.${noblePhantasm.stableId}.specialAttackRequiredTargetTraits`,
+      );
+    }
+    if (noblePhantasm.additionalAttack) {
+      assertNonEmptyKey(
+        noblePhantasm.additionalAttack.stableId,
+        `${data.instanceId}.${noblePhantasm.stableId}.additionalAttack.stableId`,
+      );
+      validateHitWeights(
+        noblePhantasm.additionalAttack.hitWeights,
+        `${data.instanceId}.${noblePhantasm.stableId}.additionalAttack.hitWeights`,
+      );
+      validateMultiplierTuple(
+        noblePhantasm.additionalAttack.damageMultiplierPermilleByOvercharge,
+        `${data.instanceId}.${noblePhantasm.stableId}.additionalAttack.damageMultiplierPermilleByOvercharge`,
       );
     }
   }

@@ -258,6 +258,17 @@ export function createServantBattleInstance(
                   : {}),
               }
             : {}),
+          ...(npAttack.additionalAttack
+            ? {
+                additionalAttack: {
+                  stableId: npAttack.additionalAttack.stableId,
+                  hitWeights: npAttack.additionalAttack.hitWeights,
+                  damageMultiplierPermilleByOvercharge:
+                    npAttack.additionalAttack
+                      .damageMultiplierPermilleByOvercharge,
+                },
+              }
+            : {}),
         },
       ],
       enemyAttacks: [],

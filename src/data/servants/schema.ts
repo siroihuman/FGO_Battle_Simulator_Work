@@ -83,6 +83,23 @@ export interface ServantNoblePhantasmSpecialAttack {
   ];
 }
 
+/**
+ * A distinct damage packet emitted after the main NP attack. It is still part
+ * of the same NP action, but runs all listed Hits even when the retained target
+ * has already reached 0 HP during the main packet.
+ */
+export interface ServantNoblePhantasmAdditionalAttack {
+  stableId: string;
+  hitWeights: readonly number[];
+  damageMultiplierPermilleByOvercharge: readonly [
+    number,
+    number,
+    number,
+    number,
+    number,
+  ];
+}
+
 export interface ServantNoblePhantasmAttackEffect {
   kind: "attack";
   stableId: string;
@@ -97,6 +114,7 @@ export interface ServantNoblePhantasmAttackEffect {
     number,
   ];
   specialAttack?: ServantNoblePhantasmSpecialAttack;
+  additionalAttack?: ServantNoblePhantasmAdditionalAttack;
 }
 
 export type ServantNoblePhantasmEffect =

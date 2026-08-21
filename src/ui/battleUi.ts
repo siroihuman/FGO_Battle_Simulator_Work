@@ -389,7 +389,12 @@ export function presentNoblePhantasmDetail(
       const attack = effect.specialAttack
         ? `＆強力な攻撃[Lv]：${rateSeries(effect.damageMultiplierPermilleByLevel)}`
         : `＋${target}に強力な攻撃[Lv]：${rateSeries(effect.damageMultiplierPermilleByLevel)}`;
-      if (!effect.specialAttack) return [attack];
+      const additionalAttack = effect.additionalAttack
+        ? `＆オーバーチャージで追加で強力な攻撃<OC:威力UP>：${rateSeries(effect.additionalAttack.damageMultiplierPermilleByOvercharge)}`
+        : null;
+      if (!effect.specialAttack) {
+        return additionalAttack ? [attack, additionalAttack] : [attack];
+      }
       const traits = effect.specialAttack.requiredTargetTraits
         ?.map((trait) =>
           trait.endsWith("の力")
@@ -402,6 +407,7 @@ export function presentNoblePhantasmDetail(
         effect.specialAttack.multiplierPermille !== undefined
           ? `＆${traits}特攻：${effect.specialAttack.multiplierPermille / 10}%`
           : `＆${traits}特攻<OC:特攻威力UP>：${rateSeries(effect.specialAttack.multiplierPermilleByOvercharge ?? [])}`,
+        ...(additionalAttack ? [additionalAttack] : []),
       ];
     });
   return {

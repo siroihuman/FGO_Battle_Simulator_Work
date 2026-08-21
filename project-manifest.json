@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "honda-tadakatsu-implemented-and-accepted",
+  "status": "ajisukitakahikone-no-kami-implemented-and-accepted",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -679,6 +679,7 @@
       "originalServantDataIdsInCollectionNumberOrder": [
         "honda-tadakatsu",
         "domination-foreigner",
+        "ajisukitakahikone-no-kami",
         "lucifera",
         "mother-mary"
       ],
@@ -758,6 +759,39 @@
       "ignoreDefense": "Ignoredefense",
       "cardRestrictedNpGain": "Npchargeup"
     },
+    "noblePhantasmAdditionalAttack": {
+      "dataShape": "nested_after_primary_attack",
+      "packetOrder": "primary_then_additional",
+      "activation": "always_even_if_target_defeated_or_multiplier_zero",
+      "targetRetention": true,
+      "hitTriggerScope": "every_hit_in_every_packet",
+      "actionTriggerScope": "once_for_complete_noble_phantasm_action",
+      "sourceCountedModifierConsumption": "once_for_complete_noble_phantasm_action",
+      "battleLogPacketField": "optional_packets",
+      "battleLogSchemaVersion": 5,
+      "saveSchemaChange": false,
+      "dataSchemaChange": false
+    },
+    "countedSourceAttackModifiers": {
+      "attackBuffConsumption": "once_per_started_damaging_action",
+      "criticalBuffConsumption": "once_per_actual_critical_action",
+      "hitTargetAndPacketCountDoNotMultiplyConsumption": true,
+      "zeroDamageAfterAttackStartConsumes": true,
+      "noHitStartedDoesNotConsume": true
+    },
+    "defensiveClassAffinityOverride": {
+      "effectType": "defensive_class_affinity_override",
+      "resolution": "replace_incoming_class_affinity_with_fixed_permille",
+      "ajisukitakahikoneNoKamiValuePermille": 1500,
+      "uiRecalculation": false
+    },
+    "ajisukitakahikoneNoKamiIcons": {
+      "riding": "class-riding",
+      "divinity": "class-divinity",
+      "evade": "Avoid",
+      "busterResistanceDown": "Busterresistdown",
+      "defensiveClassAffinityOverride": "Changeclass"
+    },
     "preciseDebuffSuccessModifier": {
       "effectType": "debuff_success_basis_points",
       "unit": "0.01_percent",
@@ -807,6 +841,27 @@
         "classSkillCount": 5,
         "noblePhantasmCount": 1,
         "noblePhantasmRevision": "upgraded_only",
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
+        "name": "阿遅鉏高日子根神",
+        "collectionNo": 57,
+        "dataId": "ajisukitakahikone-no-kami",
+        "classificationCategory": 1,
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented_and_accepted",
+        "acceptancePullRequest": 73,
+        "source": "https://w.atwiki.jp/siroi_human/pages/50.html",
+        "sourceCheckedAt": "2026-08-21",
+        "activeSkillCount": 3,
+        "classSkillCount": 3,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "upgraded_only",
+        "noblePhantasmPrimaryHitCount": 9,
+        "noblePhantasmAdditionalHitCount": 9,
+        "noblePhantasmAdditionalAttackAlwaysActivates": true,
         "battleSuspendSchemaVersion": 4,
         "dataSchemaVersion": "1.38.0"
       },
