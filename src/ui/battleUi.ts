@@ -3,6 +3,8 @@ import type { BattleSession } from "../core/battle/session";
 import type { BattleLogBatch } from "../core/battle/log";
 import type { BattleTurnLog } from "../core/battle/turnLog";
 import type { CommandCardChainAnalysis } from "../core/cards/chain";
+import type { AllyCommandAttackDetail } from "../core/cards/commandAttack";
+import type { AllyCommandActionResolution } from "../core/cards/turnCoordinator";
 import type { BattleState } from "../core/battle/state";
 import { CRITICAL_RATE_CAP_PERMILLE } from "../core/cards/critical";
 import { npCap } from "../formulas/np";
@@ -219,6 +221,48 @@ export interface ConfirmedAttackDamage {
   instanceId: string;
   name: string;
   damage: number;
+}
+
+export interface ConfirmedAllyActionPlayback {
+  state: BattleState;
+  keepsDefeatedTargetVisible: boolean;
+}
+
+function isResolvedAllyCommandAttackDetail(
+  detail: unknown,
+): detail is Extract<AllyCommandAttackDetail, { outcome: "resolved" }> {
+  if (typeof detail !== "object" || detail === null) return false;
+  const candidate = detail as {
+    outcome?: unknown;
+    resolution?: unknown;
+  };
+  return candidate.outcome === "resolved"
+    && typeof candidate.resolution === "object"
+    && candidate.resolution !== null;
+}
+
+/**
+ * Selects only an engine-confirmed playback snapshot. A resolved continuation
+ * keeps its HP-0 target visible until that attack has been presented; every
+ * other action uses the completed action-boundary state.
+ */
+export function confirmedAllyActionPlayback(
+  action: AllyCommandActionResolution,
+): ConfirmedAllyActionPlayback {
+  if (
+    action.defeatedTargetContinuation
+    && action.resolverCalled
+    && isResolvedAllyCommandAttackDetail(action.resolverDetail)
+  ) {
+    return {
+      state: action.resolverDetail.resolution.state,
+      keepsDefeatedTargetVisible: true,
+    };
+  }
+  return {
+    state: action.boundary.state,
+    keepsDefeatedTargetVisible: false,
+  };
 }
 
 export interface NoblePhantasmDetailPresentation {

@@ -513,6 +513,9 @@ describe("ally command sequence coordinator", () => {
     expect(started.accepted).toBe(true);
     if (!started.accepted) return;
     expect(targets).toEqual(["enemy-b", "enemy-b", "enemy-c"]);
+    expect(started.result.actions.map(
+      ({ defeatedTargetContinuation }) => defeatedTargetContinuation,
+    )).toEqual([false, true, false]);
     expect(started.result.actions[0]?.boundary).toMatchObject({
       enemyReplacement: { departures: [] },
       nextEnemyTarget: {

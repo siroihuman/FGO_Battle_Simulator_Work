@@ -109,6 +109,8 @@ export type ExtraAttackExecutionResult =
 export interface AllyCommandActionResolution {
   action: AllyCommandSequenceAction;
   targetAtStart: EnemyTargetAnchor;
+  /** Engine-confirmed continuation against a target already at HP 0. */
+  defeatedTargetContinuation: boolean;
   preflight:
     | CommandCardExecutionResult
     | ExtraAttackExecutionResult;
@@ -454,6 +456,7 @@ export function resolveAllyCommandSequence(
     actions.push({
       action,
       targetAtStart,
+      defeatedTargetContinuation,
       preflight,
       resolverCalled,
       ...(resolverDetail === undefined

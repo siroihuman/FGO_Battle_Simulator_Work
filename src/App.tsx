@@ -45,6 +45,7 @@ import {
 } from "./ui/battlePresentation";
 import {
   confirmedAttackDamageAmounts,
+  confirmedAllyActionPlayback,
   confirmedPlaybackNotices,
   confirmedChainNotices,
   confirmedHpTransitions,
@@ -1439,13 +1440,22 @@ export function BattleScreen({
     const pushResourceChanges = (
       nextState: BattleState,
       summaries: BattleLogSummary[] = [],
+      options: {
+        displayState?: BattleState;
+        forceFrame?: boolean;
+        notice?: string;
+      } = {},
     ) => {
       const hpTransitions = confirmedHpTransitions(previousState, nextState);
       const npTransitions = confirmedNpTransitions(previousState, nextState);
-      if (hpTransitions.length > 0 || npTransitions.length > 0) {
+      if (
+        hpTransitions.length > 0
+        || npTransitions.length > 0
+        || options.forceFrame
+      ) {
         hpFrames.push({
-          notice: "敵・味方HP・NP増減",
-          state: nextState,
+          notice: options.notice ?? "敵・味方HP・NP増減",
+          state: options.displayState ?? nextState,
           summaries,
           hpTransitions,
           npTransitions,
@@ -1461,9 +1471,17 @@ export function BattleScreen({
       }
       const allySummaries = section("ally_action");
       sequence.actions.forEach((action, index) => {
+        const actionPlayback = confirmedAllyActionPlayback(action);
         pushResourceChanges(
           action.boundary.state,
           allySummaries[index] ? [allySummaries[index]] : [],
+          {
+            displayState: actionPlayback.state,
+            forceFrame: actionPlayback.keepsDefeatedTargetVisible,
+            notice: actionPlayback.keepsDefeatedTargetVisible
+              ? "連続攻撃中"
+              : undefined,
+          },
         );
       });
     }

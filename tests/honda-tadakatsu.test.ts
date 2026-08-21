@@ -29,7 +29,10 @@ import { initializeBattlePassives } from "../src/effects/actionExecution";
 import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
 import { applyEffect, createEffectRuntimeCounters } from "../src/effects/runtime";
 import { resolveAllySkillUse } from "../src/effects/skillExecution";
-import { registeredServantWikiUrl } from "../src/ui/battleUi";
+import {
+  confirmedAllyActionPlayback,
+  registeredServantWikiUrl,
+} from "../src/ui/battleUi";
 import {
   registeredSkillIconPath,
   registeredStatusIconPath,
@@ -497,6 +500,9 @@ describe("No.007 本多忠勝", () => {
     const actions = resolved.sequence.result.actions;
     expect(actions.map(({ targetAtStart }) => targetAtStart.instanceId))
       .toEqual(["enemy-a", "enemy-a", "enemy-b"]);
+    expect(actions.map(
+      ({ defeatedTargetContinuation }) => defeatedTargetContinuation,
+    )).toEqual([false, true, false]);
     expect(actions[0]?.boundary).toMatchObject({
       enemyReplacement: { departures: [] },
       nextEnemyTarget: { instanceId: "enemy-a" },
@@ -519,6 +525,22 @@ describe("No.007 本多忠勝", () => {
       },
       nextEnemyTarget: { instanceId: "enemy-b" },
     });
+    const artsPlayback = confirmedAllyActionPlayback(actions[1]!);
+    expect(artsPlayback.keepsDefeatedTargetVisible).toBe(true);
+    expect(findUnitLocation(
+      artsPlayback.state.formation,
+      "enemy-a",
+    )?.unit).toMatchObject({ hp: 0, alive: false });
+    expect(findUnitLocation(
+      actions[1]!.boundary.state.formation,
+      "enemy-a",
+    )).toBeUndefined();
+    const foreignerPlayback = confirmedAllyActionPlayback(actions[2]!);
+    expect(foreignerPlayback.keepsDefeatedTargetVisible).toBe(false);
+    expect(findUnitLocation(
+      foreignerPlayback.state.formation,
+      "enemy-a",
+    )).toBeUndefined();
     expect(findUnitLocation(
       resolved.sequence.result.state.formation,
       "enemy-a",

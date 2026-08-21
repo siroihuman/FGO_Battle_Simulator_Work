@@ -744,7 +744,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "honda-tadakatsu-normal-card-continuation-fixed"
+    manifest.status === "honda-tadakatsu-continuation-hp-playback-fixed"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -801,6 +801,14 @@ if (manifest) {
       && completedUi.hpDifferenceUsedAsAttackDamage === false
       && completedUi.allyNpChangePresentation === "animated_bars_from_confirmed_before_and_after_np"
       && completedUi.confirmedLogPlaybackOnly === true
+      && completedUi.defeatedTargetContinuationPlayback
+        === "confirmed_pre_boundary_state_with_hp_zero_enemy_visible"
+      && completedUi.defeatedTargetContinuationPlaybackFrameRequiredWithoutResourceChange
+        === true
+      && completedUi.defeatedTargetDepartureVisibleAfterContinuationFrame
+        === true
+      && completedUi.defeatedTargetContinuationUiRecalculatesBattle
+        === false
       && completedUi.playbackNavigation === "manual_previous_next"
       && completedUi.playbackSkipPosition === "upper_right"
       && completedUi.playbackSkipResult === "show_already_resolved_final_session_and_return_to_input_or_result"
@@ -1295,9 +1303,9 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.007「本多忠勝」の具体データは実画面合格済み")
-    && startHere.includes("同じ戦闘個体の単体通常カード列")
-    && startHere.includes("自動検査完了・実画面再受入待ち")
+    && startHere.includes("連続通常攻撃修正は実画面合格済み")
+    && startHere.includes("敵カードとHP0を表示し続け")
+    && startHere.includes("HP0継続表示は自動検査完了・実画面再受入待ち")
     && startHere.includes("No.007「本多忠勝」")
     && startHere.includes("No.010「シグムンド」"),
   "作業開始ページに本多忠勝の実装状態と次作業がありません"
@@ -1356,6 +1364,8 @@ assert(
     && implementationStatus.includes("No.007「本多忠勝」")
     && implementationStatus.includes("宣言的`reduce_hp`")
     && implementationStatus.includes("同じ味方戦闘個体の単体通常カード")
+    && implementationStatus.includes("エンジン確定の戦闘不能対象連続フラグ")
+    && implementationStatus.includes("資源増減0でも「連続攻撃中」フレーム")
     && implementationStatus.includes("55ファイル・566テスト")
     && implementationStatus.includes("No.010「シグムンド」")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
@@ -1455,6 +1465,10 @@ assert(
   decisionLog.includes("## D-100 同一戦闘個体の単体通常カード列は戦闘不能対象へ連続する")
     && decisionLog.includes("本多忠勝Quick→同Arts→支配のフォーリナーBuster")
     && decisionLog.includes("すべてオーバーキル")
+    && decisionLog.includes("状態: 採用（ユーザー実画面合格）")
+    && decisionLog.includes("## D-101 連続通常攻撃中は撃破対象のHP0表示を維持する")
+    && decisionLog.includes("実HP減少0・NP増減0でも「連続攻撃中」")
+    && decisionLog.includes("攻撃完了直前の確定`BattleState`")
     && decisionLog.includes("実画面再受入待ち"),
   "決定記録に同一戦闘個体の単体通常カード連続規則がありません"
 );
@@ -1534,8 +1548,8 @@ const hondaTadakatsuAcceptance = await readText(
   "docs/qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md"
 );
 assert(
-  hondaTadakatsuAcceptance.includes("本多忠勝データは実画面合格")
-    && hondaTadakatsuAcceptance.includes("連続通常攻撃修正は自動検査合格・実画面再受入待ち")
+  hondaTadakatsuAcceptance.includes("本多忠勝データと連続通常攻撃修正は実画面合格")
+    && hondaTadakatsuAcceptance.includes("連続中の敵HP0継続表示は自動検査合格・実画面再受入待ち")
     && hondaTadakatsuAcceptance.includes("https://w.atwiki.jp/siroi_human/pages/274.html")
     && hondaTadakatsuAcceptance.includes("Lv80・90は参照記録だけ")
     && hondaTadakatsuAcceptance.includes("攻撃後HP減少1000／1500／2000／2500／3000")
@@ -1543,6 +1557,7 @@ assert(
     && hondaTadakatsuAcceptance.includes("`Invinciblepierce`")
     && hondaTadakatsuAcceptance.includes("`Ignoredefense`")
     && hondaTadakatsuAcceptance.includes("本多忠勝Quick→同Arts→支配のフォーリナーBuster")
+    && hondaTadakatsuAcceptance.includes("資源増減0でも連続フレームを省略しない")
     && hondaTadakatsuAcceptance.includes("55ファイル・566テスト成功")
     && hondaTadakatsuAcceptance.includes("No.010「シグムンド」"),
   "本多忠勝とOC別HP減少の受入報告が正本と一致しません"
