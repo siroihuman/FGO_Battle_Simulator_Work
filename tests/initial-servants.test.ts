@@ -9,6 +9,7 @@ import { BattleRng } from "../src/core/rng";
 import {
   INITIAL_SERVANT_DEFINITIONS,
   DOMINATION_FOREIGNER,
+  HONDA_TADAKATSU,
   LIGHT_KOYANSKAYA,
   LUCIFERA,
   SEN_NO_RIKYU,
@@ -60,6 +61,7 @@ describe("initial servant definitions", () => {
     expect(Object.keys(registry.byDataId)).toEqual([
       "koyanskaya-of-light",
       "sen-no-rikyu",
+      "honda-tadakatsu",
       "domination-foreigner",
       "lucifera",
       "mother-mary",
@@ -78,6 +80,11 @@ describe("initial servant definitions", () => {
       level: 120,
       hp: 16_860,
       attack: 16_169,
+    });
+    expect(HONDA_TADAKATSU.levelStats.at(-1)).toEqual({
+      level: 120,
+      hp: 15_133,
+      attack: 11_449,
     });
     expect(SEN_NO_RIKYU.levelStats.at(-1)).toEqual({
       level: 120,

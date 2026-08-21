@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "effect-duration-boundary-fix-implemented",
+  "status": "honda-tadakatsu-implemented",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -660,6 +660,7 @@
         "sen-no-rikyu"
       ],
       "originalServantDataIdsInCollectionNumberOrder": [
+        "honda-tadakatsu",
         "domination-foreigner",
         "lucifera",
         "mother-mary"
@@ -700,6 +701,20 @@
       "saveSchemaChange": false,
       "dataSchemaChange": false
     },
+    "declaredStagedReduceHp": {
+      "supportedScalings": [
+        "fixed",
+        "noble_phantasm_level",
+        "overcharge"
+      ],
+      "resolutionSource": "engine_action_context",
+      "canDefeatRequiredInData": true,
+      "defaultLethality": "lethal_except_ally_skill_targeting_allies",
+      "fixedValueLogShapeUnchanged": true,
+      "uiRecalculation": false,
+      "saveSchemaChange": false,
+      "dataSchemaChange": false
+    },
     "enemySingleTargetFocus": {
       "effectType": "target_focus",
       "candidateScope": "living_ally_frontline",
@@ -716,6 +731,15 @@
       "enemySpecialTargetFocusReserved": "Enemyfocus",
       "enemySpecialTargetFocusUseRequiresExplicitUserSpecification": true,
       "knowledgeOfHereticSkill": "skill-hp-heal-per-turn"
+    },
+    "hondaTadakatsuIcons": {
+      "fourHeavenlyKings": "skill-star-weight-up",
+      "peerlessEast": "skill-immune-invincibility",
+      "hachimanAntlers": "skill-card-quick-up",
+      "magicResistance": "class-magic-resistance",
+      "invincibilityPierce": "Invinciblepierce",
+      "ignoreDefense": "Ignoredefense",
+      "cardRestrictedNpGain": "Npchargeup"
     },
     "preciseDebuffSuccessModifier": {
       "effectType": "debuff_success_basis_points",
@@ -736,6 +760,23 @@
   },
   "specifiedContent": {
     "servants": [
+      {
+        "name": "本多忠勝",
+        "collectionNo": 7,
+        "dataId": "honda-tadakatsu",
+        "classificationCategory": 1,
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented_awaiting_visual_acceptance",
+        "source": "https://w.atwiki.jp/siroi_human/pages/274.html",
+        "sourceCheckedAt": "2026-08-21",
+        "activeSkillCount": 3,
+        "classSkillCount": 1,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "upgraded_only",
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
       {
         "name": "支配のフォーリナー",
         "collectionLabel": "024’",

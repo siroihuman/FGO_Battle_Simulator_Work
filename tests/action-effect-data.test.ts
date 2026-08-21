@@ -11,10 +11,14 @@ import {
 } from "../src/effects/actionExecution";
 import { resolveAllySkillUse } from "../src/effects/skillExecution";
 import { createEffectRuntimeCounters } from "../src/effects/runtime";
-import type { DeclaredActionEffect } from "../src/effects/declarations";
+import {
+  assertValidDeclaredActionEffect,
+  declaredActionScalingRequirements,
+  type DeclaredActionEffect,
+} from "../src/effects/declarations";
 import { createBattleState } from "../src/core/battle/state";
 import { BattleRng } from "../src/core/rng";
-import { findUnitLocation } from "../src/core/battle/formation";
+import { findUnitLocation, replaceUnit } from "../src/core/battle/formation";
 import { unit } from "./helpers/battle";
 
 function battle() {
@@ -246,6 +250,130 @@ describe("declared action-effect execution", () => {
       scaling: "overcharge",
       values: [1, 2, 3, 4, 5],
     }, {})).toThrow(/requires an execution stage/);
+  });
+
+  it("resolves OC-scaled HP reduction in the engine and preserves fixed values", () => {
+    const staged: DeclaredActionEffect = {
+      kind: "effect",
+      stableId: "oc-hp-reduction",
+      order: 1,
+      description: "敵単体のHPをOCに応じて減らす",
+      target: { relation: "enemies", selection: "single" },
+      action: {
+        kind: "reduce_hp",
+        amount: {
+          scaling: "overcharge",
+          values: [1_000, 1_500, 2_000, 2_500, 3_000],
+        },
+        canDefeat: true,
+      },
+    };
+    const fixed: DeclaredActionEffect = {
+      ...staged,
+      stableId: "fixed-hp-reduction",
+      action: { kind: "reduce_hp", amount: 500, canDefeat: false },
+    };
+
+    expect(declaredActionScalingRequirements([staged, fixed])).toEqual({
+      noblePhantasmLevel: false,
+      overchargeStage: true,
+    });
+    expect(() => assertValidDeclaredActionEffect(staged, "staged"))
+      .not.toThrow();
+    expect(() => assertValidDeclaredActionEffect(fixed, "fixed"))
+      .not.toThrow();
+
+    const stagedResult = executeDeclaredActionEffects(
+      battle(),
+      "ally-a",
+      [staged],
+      { selectedTargetInstanceId: "enemy-a", overchargeStage: 3 },
+      createEffectRuntimeCounters(),
+      new BattleRng("oc-hp-reduction").stream("effects"),
+    );
+    expect(findUnitLocation(stagedResult.state.formation, "enemy-a")?.unit.hp)
+      .toBe(8_000);
+    expect(stagedResult.effects[0]).toMatchObject({
+      resolvedAmount: 2_000,
+      targetInstanceIds: ["enemy-a"],
+    });
+
+    const lethalBase = battle();
+    const lethalEnemy = findUnitLocation(
+      lethalBase.formation,
+      "enemy-a",
+    )?.unit;
+    if (!lethalEnemy) throw new Error("HP減少対象がありません");
+    const lethalResult = executeDeclaredActionEffects(
+      {
+        ...lethalBase,
+        formation: replaceUnit(lethalBase.formation, {
+          ...lethalEnemy,
+          hp: 2_000,
+        }),
+      },
+      "ally-a",
+      [staged],
+      { selectedTargetInstanceId: "enemy-a", overchargeStage: 3 },
+      createEffectRuntimeCounters(),
+      new BattleRng("lethal-oc-hp-reduction").stream("effects"),
+    );
+    expect(findUnitLocation(lethalResult.state.formation, "enemy-a")?.unit)
+      .toMatchObject({ hp: 0, alive: false });
+    expect(lethalResult.effects[0]?.batch?.results[0]?.hpReductionResult)
+      .toMatchObject({ outcome: "defeated", actualReduction: 2_000 });
+
+    const fixedResult = executeDeclaredActionEffects(
+      battle(),
+      "ally-a",
+      [fixed],
+      { selectedTargetInstanceId: "enemy-a" },
+      createEffectRuntimeCounters(),
+      new BattleRng("fixed-hp-reduction").stream("effects"),
+    );
+    expect(findUnitLocation(fixedResult.state.formation, "enemy-a")?.unit.hp)
+      .toBe(9_500);
+    expect(fixedResult.effects[0]?.resolvedAmount).toBeUndefined();
+    expect(() => executeDeclaredActionEffects(
+      battle(),
+      "ally-a",
+      [staged],
+      { selectedTargetInstanceId: "enemy-a" },
+      createEffectRuntimeCounters(),
+      new BattleRng("missing-oc-hp-reduction").stream("effects"),
+    )).toThrow(/overcharge value requires an execution stage/);
+  });
+
+  it("rejects a negative value in any staged HP-reduction table", () => {
+    const invalid: DeclaredActionEffect = {
+      kind: "effect",
+      stableId: "invalid-oc-hp-reduction",
+      order: 1,
+      description: "不正なHP減少",
+      target: { relation: "enemies", selection: "single" },
+      action: {
+        kind: "reduce_hp",
+        amount: {
+          scaling: "overcharge",
+          values: [1_000, 1_500, -1, 2_500, 3_000],
+        },
+        canDefeat: true,
+      },
+    };
+    expect(() => assertValidDeclaredActionEffect(invalid, "invalid"))
+      .toThrow(/must not be negative/);
+
+    const missingLethality = {
+      ...invalid,
+      action: {
+        kind: "reduce_hp",
+        amount: 100,
+      },
+    } as unknown as DeclaredActionEffect;
+    expect(() => assertValidDeclaredActionEffect(
+      missingLethality,
+      "missingLethality",
+    )).toThrow(/canDefeat must be boolean/);
   });
 
   it("uses the selected target's NP level and resolves all/reserve targets in order", () => {

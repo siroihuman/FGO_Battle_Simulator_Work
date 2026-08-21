@@ -37,6 +37,8 @@
 
 添付済み正式素材から`skill-crit-damage-up.png`、`Npchargeup.webp`、`QuickNpGainUp.webp`、`Critdmgup.webp`、`Curse.webp`、`Defensedown.webp`、`Defenseup.webp`、`Npseal.webp`を使用した。NP獲得量アップは`Npchargeup`、Quickクリティカル威力アップは汎用`Critdmgup`とする。`NPGainUpDmg`は被ダメージ時NP獲得量アップ、`Quickdamageup`はQuickカードの威力アップだけへ明示対応し、未指定名称へ推測画像を割り当てていない。登録済み千利休効果に未指定アイコンはない。
 
+追記（2026-08-21）: D-099により、カード色限定のNP獲得量アップも`Npchargeup`へ統一した。上記`QuickNpGainUp.webp`は当時の受入資源記録として残すが、現在のアイコン対応では使用しない。
+
 ## 回帰検査
 
 - 千利休の能力値、カード、Hit配分、基礎率、特性、スキル、クラススキル、宝具倍率と初期Lv90／宝具Lv1。

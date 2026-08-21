@@ -5,15 +5,16 @@
 ## 現在地点
 
 - フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加
-- 状態: PR #70のサーヴァント分類一覧まで`main`へ統合済み。No.007「本多忠勝」の具体データ確認に先立ち、有限ターン状態を所持者側終了・相手側終了・手動へ分離した。聖母マリア「身籠る聖処女」のターゲット集中・対粛清防御は味方ターン終了後も敵行動中に残り、敵ターン終了で失効する。防御系・その他強化の既存代表データにも相手側終了を明示した。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布、6乱数列は変更していない。No.007は未実装のままである。
+- 状態: 有限ターン状態の期限境界修正後、カテゴリ1の最初の未実装対象No.007「本多忠勝」を登録した。強化後宝具「蜻蛉切」の攻撃前3強化、Quick単体攻撃、攻撃後OC別HP減少を資料順へ接続し、共通`reduce_hp`が固定値・宝具Lv別・OC別の段階値をエンジンで解決できるようにした。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布、6乱数列は変更していない。自動検査完了・実画面受入待ちである。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. `SERVANT_CLASSIFICATION.md`のカテゴリ1・No.順に従い、未実装のNo.007「本多忠勝」の具体データ確認・実装計画確定へ進む。
+1. ユーザー環境でNo.007「本多忠勝」の編成、スキル、強化後宝具、正式アイコンを実画面確認する。
+2. 最終受入後、`SERVANT_CLASSIFICATION.md`のカテゴリ1・No.順に従い、次の未実装対象No.010「シグムンド」の具体データ確認へ進む。
 
-期限境界の修正は[`qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md`](qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md)、聖母マリアは[`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)、千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)を参照します。具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`](SERVANT_CLASSIFICATION.md)の確定済みカテゴリを確認します。
+本多忠勝は[`qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md`](qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md)、期限境界の修正は[`qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md`](qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md)、聖母マリアは[`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)、千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)を参照します。具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`](SERVANT_CLASSIFICATION.md)の確定済みカテゴリを確認します。
 
 ## 最初に読むもの
 

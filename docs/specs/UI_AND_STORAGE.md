@@ -257,7 +257,8 @@
 - ユーザー指定のスキル・状態対応だけを`public/assets/skill-icons`と`public/assets/status-icons`へ接続する。未指定は文字表示し、必要な名称を受入報告へ列挙する。
 - 画像URLはViteの配信ベースURLを先頭に付け、ローカル開発と`/FGO_Battle_Simulator_Work/`配下の公開画面の両方で同じファイルを読み込む。
 - 初期登録状態の追加指定は、Artsカード性能アップ=`Artsupstatus`、Quickカード性能アップ=`Quickupstatus`、スター発生率アップ=`Stargainup`、精神異常耐性アップ=`Resistanceup`、与ダメージプラス=`Powerup`とする。
-- NP獲得量アップは`Npchargeup`、被ダメージ時NP獲得量アップは`NPGainUpDmg`、Quickカードの威力アップは`Quickdamageup`とする。色限定クリティカル威力アップは通常のクリティカル威力アップと同じ`Critdmgup`、色限定スター集中度アップは通常のスター集中度アップと同じ`Critabsup`を使い、色限定であることだけを理由に別画像へ変えない。
+- NP獲得量アップはカード色限定の有無にかかわらず`Npchargeup`、被ダメージ時NP獲得量アップは`NPGainUpDmg`、Quickカードの威力アップは`Quickdamageup`とする。色限定クリティカル威力アップは通常のクリティカル威力アップと同じ`Critdmgup`、色限定スター集中度アップは通常のスター集中度アップと同じ`Critabsup`を使い、色限定であることだけを理由に別画像へ変えない。
+- 本多忠勝の無敵貫通は`Invinciblepierce`、防御無視は`Ignoredefense`、保有スキル「徳川四天王」は`skill-star-weight-up`、クラススキル「対魔力」は`class-magic-resistance`を使う。未指定画像へ置き換えない。
 - 通常のターゲット集中状態は`Tauntup`を使う。`Enemyfocus`は敵の特殊行動によって付与される敵専用のターゲット集中状態として予約し、ユーザーから明示指定がない限り使用しない。
 - 「外道の知識（姉なるもの） EX」のスキルアイコンは`skill-hp-heal-per-turn`を使う。
 

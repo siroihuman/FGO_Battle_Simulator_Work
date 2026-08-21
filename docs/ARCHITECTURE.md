@@ -241,6 +241,7 @@
 - `src/effects/modifiers.ts`は共通の成功率・耐性種別と分類限定照合を管理する。
 - `src/effects/removal.ts`は解除候補の確定、解除成功率、解除耐性を管理する。
 - `src/effects/actions.ts`はHP・NP・状態を変更する宣言的な共通アクションを記述順に実行する。
+- `src/effects/declarations.ts`と`src/effects/actionExecution.ts`は`change_np`、`heal_hp`、`reduce_hp`等の固定値・宝具Lv別・OC別宣言を共通の宝具文脈から実行時に解決する。HP減少の`canDefeat`は段階値と独立してデータに必須であり、UIへ値解決を委ねない。
 - `src/effects/actions.ts`の複数対象実行は編成順を維持し、HP吸収だけは全対象の減少後に吸収元へ1回回復する。
 - `src/effects/maxHp.ts`は基礎最大HPと有効な最大HP変更状態から適用後最大HPを再計算し、付与・解除・期限切れ時の現在HPを調整する。
 - `src/effects/hp.ts`は通常HP回復、HP1停止／HP0可能なHP減少、実減少量を使うHP吸収を管理する。

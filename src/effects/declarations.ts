@@ -69,6 +69,7 @@ export type DeclaredEffectAction =
       CommonAction,
       | { kind: "change_np" }
       | { kind: "heal_hp" }
+      | { kind: "reduce_hp" }
       | { kind: "apply_effects" }
     >
   | {
@@ -81,6 +82,9 @@ export type DeclaredEffectAction =
       kind: "change_np";
       amount: DeclaredActionInteger;
     }
+  | (Omit<Extract<CommonAction, { kind: "reduce_hp" }>, "amount"> & {
+      amount: DeclaredActionInteger;
+    })
   | {
       /** Stars gained before selection use command; attack-time gains use next_command. */
       kind: "gain_stars";
@@ -210,6 +214,7 @@ export function declaredActionScalingRequirements(
     if (
       action.kind === "change_np"
       || action.kind === "heal_hp"
+      || action.kind === "reduce_hp"
       || action.kind === "gain_stars"
     ) {
       values.push(action.amount);
@@ -353,6 +358,19 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
     );
     return;
   }
+  if (action.kind === "reduce_hp") {
+    assertValidDeclaredActionInteger(action.amount, `${name}.amount`);
+    const values = typeof action.amount === "number"
+      ? [action.amount]
+      : action.amount.values;
+    values.forEach((value, index) =>
+      assertNonNegative(value, `${name}.amount.values[${index}]`)
+    );
+    if (typeof action.canDefeat !== "boolean") {
+      throw new RangeError(`${name}.canDefeat must be boolean`);
+    }
+    return;
+  }
   if (action.kind === "gain_stars") {
     assertValidDeclaredActionInteger(action.amount, `${name}.amount`);
     const values = typeof action.amount === "number"
@@ -383,9 +401,7 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
     return;
   }
 
-  if (action.kind === "reduce_hp") {
-    assertNonNegative(action.amount, `${name}.amount`);
-  } else if (action.kind === "advance_skill_cooldowns") {
+  if (action.kind === "advance_skill_cooldowns") {
     assertNonNegative(action.amount, `${name}.amount`);
   } else if (action.kind === "increase_np_by_current_rate") {
     assertNonNegative(action.ratePermille, `${name}.ratePermille`);
