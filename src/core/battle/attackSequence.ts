@@ -9,8 +9,12 @@ import {
 import {
   findUnitLocation,
   orderedLocations,
+  replaceUnit,
 } from "./formation";
-import type { BattleState } from "./state";
+import {
+  setBattleFormation,
+  type BattleState,
+} from "./state";
 import type {
   BattleSide,
 } from "./types";
@@ -24,6 +28,7 @@ import type {
   TriggerAttackKind,
   TriggerEvent,
 } from "../../effects/types";
+import { consumeUnitEffectUse } from "../../effects/runtime";
 
 export interface BattleAttackTriggerContext {
   attackKind: TriggerAttackKind;
@@ -36,7 +41,20 @@ export type PreparedBattleAttackInput = Omit<
   | "rng"
   | "afterHitBatch"
   | "allowDefeatedTargets"
->;
+> & {
+  /** Count-based source modifiers snapshotted into this packet. */
+  sourceModifierEffectInstanceIds?: readonly string[];
+};
+
+export interface AdditionalBattleAttackSequenceInput {
+  stableId: string;
+  /** Additional NP attacks retain their original targets after 0 HP. */
+  allowDefeatedTargets: true;
+  prepareAttack: (
+    state: BattleState,
+    targetInstanceIds: readonly string[],
+  ) => PreparedBattleAttackInput;
+}
 
 export interface ResolveBattleAttackSequenceInput {
   sourceInstanceId: string | null;
@@ -58,6 +76,8 @@ export interface ResolveBattleAttackSequenceInput {
     state: BattleState,
     activeTargetInstanceIds: readonly string[],
   ) => PreparedBattleAttackInput;
+  /** Distinct packets emitted before on_attack/after_attack/on_death. */
+  additionalAttacks?: readonly AdditionalBattleAttackSequenceInput[];
 }
 
 export interface BattleAttackSequenceLifecycleHookInput {
@@ -84,6 +104,11 @@ export interface BattleAttackSequenceResolution {
   stoppedBeforeHits: boolean;
   beforeAttack: TriggerEventResolutionResult | null;
   attack: BattleAttackResolution | null;
+  additionalAttacks: Array<{
+    stableId: string;
+    resolution: BattleAttackResolution;
+  }>;
+  consumedSourceModifierEffectInstanceIds: string[];
   hitTriggers: TriggerEventResolutionResult[];
   onAttack: TriggerEventResolutionResult | null;
   damageTaken: TriggerEventResolutionResult[];
@@ -399,6 +424,45 @@ function activeTargets(
   );
 }
 
+function consumeSourceModifierUses(
+  state: BattleState,
+  sourceInstanceId: string | null,
+  effectInstanceIds: readonly string[],
+): {
+  state: BattleState;
+  consumedEffectInstanceIds: string[];
+} {
+  if (sourceInstanceId === null || effectInstanceIds.length === 0) {
+    return { state, consumedEffectInstanceIds: [] };
+  }
+  const sourceLocation = findUnitLocation(
+    state.formation,
+    sourceInstanceId,
+  );
+  if (!sourceLocation) {
+    return { state, consumedEffectInstanceIds: [] };
+  }
+  let source = sourceLocation.unit;
+  const consumedEffectInstanceIds: string[] = [];
+  for (const effectInstanceId of effectInstanceIds) {
+    const result = consumeUnitEffectUse(source, effectInstanceId);
+    source = result.unit;
+    if (result.consumed) {
+      consumedEffectInstanceIds.push(effectInstanceId);
+    }
+  }
+  if (consumedEffectInstanceIds.length === 0) {
+    return { state, consumedEffectInstanceIds };
+  }
+  return {
+    state: setBattleFormation(
+      state,
+      replaceUnit(state.formation, source),
+    ),
+    consumedEffectInstanceIds,
+  };
+}
+
 /**
  * Resolves one damaging action from pre-attack triggers through Hit-scoped
  * source triggers, post-damage source/target triggers, after-attack triggers,
@@ -456,7 +520,7 @@ export function resolveBattleAttackSequence(
     lifecycleStoppedHits = resolved.stopAttackHits === true;
   }
 
-  const activeTargetInstanceIds = activeTargets(
+  const primaryTargetInstanceIds = activeTargets(
     currentState,
     targetInstanceIds,
     input.allowDefeatedTargets,
@@ -467,29 +531,42 @@ export function resolveBattleAttackSequence(
       currentState.formation,
       input.sourceInstanceId,
     )?.unit.alive === true;
-  const stoppedBeforeHits =
+  const primaryStoppedBeforeHits =
     triggerStopsAttackHits(beforeAttack)
     || lifecycleStoppedHits
     || !sourceCanContinue
-    || activeTargetInstanceIds.length === 0;
+    || primaryTargetInstanceIds.length === 0;
   const hitTriggers: TriggerEventResolutionResult[] = [];
   let attack: BattleAttackResolution | null = null;
+  const additionalAttacks: BattleAttackSequenceResolution["additionalAttacks"] = [];
+  const usedSourceModifierEffectInstanceIds = new Set<string>();
   let onAttack: TriggerEventResolutionResult | null = null;
   const damageTaken: TriggerEventResolutionResult[] = [];
 
-  if (!stoppedBeforeHits) {
-    const prepared = input.prepareAttack(
+  const resolvePacket = (
+    packetTargetInstanceIds: readonly string[],
+    allowDefeatedTargets: boolean,
+    prepareAttack: AdditionalBattleAttackSequenceInput["prepareAttack"],
+  ): BattleAttackResolution => {
+    const prepared = prepareAttack(
       currentState,
-      activeTargetInstanceIds,
+      packetTargetInstanceIds,
     );
     assertPreparedTargets(
       prepared,
-      activeTargetInstanceIds,
+      packetTargetInstanceIds,
     );
-    attack = resolveBattleAttack(currentState, {
-      ...prepared,
+    const {
+      sourceModifierEffectInstanceIds = [],
+      ...preparedAttack
+    } = prepared;
+    sourceModifierEffectInstanceIds.forEach((instanceId) =>
+      usedSourceModifierEffectInstanceIds.add(instanceId)
+    );
+    const resolvedAttack = resolveBattleAttack(currentState, {
+      ...preparedAttack,
       sourceInstanceId: input.sourceInstanceId,
-      allowDefeatedTargets: input.allowDefeatedTargets,
+      allowDefeatedTargets,
       rng: input.rng,
       afterHitBatch: ({
         state: hitState,
@@ -517,7 +594,7 @@ export function resolveBattleAttackSequence(
             "on_hit",
             input.sourceInstanceId,
             participants.sourceSide,
-            activeTargetInstanceIds,
+            packetTargetInstanceIds,
             participants.targetSide,
             input.triggerContext,
             summary,
@@ -536,15 +613,70 @@ export function resolveBattleAttackSequence(
         };
       },
     });
-    currentState = attack.state;
+    currentState = resolvedAttack.state;
+    return resolvedAttack;
+  };
+
+  if (!primaryStoppedBeforeHits) {
+    attack = resolvePacket(
+      primaryTargetInstanceIds,
+      input.allowDefeatedTargets === true,
+      input.prepareAttack,
+    );
+  }
+
+  for (const additional of input.additionalAttacks ?? []) {
+    if (additional.stableId.trim().length === 0) {
+      throw new RangeError("additional attack stableId must not be empty");
+    }
+    const sourceStillAvailable =
+      input.sourceInstanceId === null
+      || findUnitLocation(
+        currentState.formation,
+        input.sourceInstanceId,
+      )?.unit.alive === true;
+    const additionalTargetInstanceIds = activeTargets(
+      currentState,
+      targetInstanceIds,
+      additional.allowDefeatedTargets,
+    );
+    if (!sourceStillAvailable || additionalTargetInstanceIds.length === 0) {
+      continue;
+    }
+    additionalAttacks.push({
+      stableId: additional.stableId,
+      resolution: resolvePacket(
+        additionalTargetInstanceIds,
+        additional.allowDefeatedTargets,
+        additional.prepareAttack,
+      ),
+    });
+  }
+
+  const modifierConsumption = consumeSourceModifierUses(
+    currentState,
+    input.sourceInstanceId,
+    [...usedSourceModifierEffectInstanceIds],
+  );
+  currentState = modifierConsumption.state;
+
+  const resolvedPackets = [
+    ...(attack ? [attack] : []),
+    ...additionalAttacks.map(({ resolution }) => resolution),
+  ];
+
+  if (resolvedPackets.length > 0) {
 
     if (input.sourceInstanceId !== null) {
+      const allHits = resolvedPackets.flatMap(
+        ({ attack: packet }) => packet.hits,
+      );
       const summary = {
-        hit: attack.attack.hits.some(
+        hit: allHits.some(
           ({ countsAsSuccessfulHit }) =>
             countsAsSuccessfulHit,
         ),
-        damage: attack.attack.hits.reduce(
+        damage: allHits.reduce(
           (total, hit) =>
             total + hit.actualHpLoss,
           0,
@@ -557,7 +689,7 @@ export function resolveBattleAttackSequence(
           "on_attack",
           input.sourceInstanceId,
           participants.sourceSide,
-          activeTargetInstanceIds,
+          targetInstanceIds,
           participants.targetSide,
           input.triggerContext,
           summary,
@@ -570,20 +702,29 @@ export function resolveBattleAttackSequence(
       onAttack = resolved.trigger;
     }
 
-    for (const target of attack.attack.targets) {
-      const hits = attack.attack.hits.filter(
-        ({ targetInstanceId }) =>
-          targetInstanceId
-          === target.targetInstanceId,
+    const damagedTargetInstanceIds = targetInstanceIds.filter(
+      (targetInstanceId) => resolvedPackets.some(
+        ({ attack: packet }) => packet.targets.some(
+          ({ targetInstanceId: packetTargetInstanceId }) =>
+            packetTargetInstanceId === targetInstanceId,
+        ),
+      ),
+    );
+    for (const targetInstanceId of damagedTargetInstanceIds) {
+      const hits = resolvedPackets.flatMap(
+        ({ attack: packet }) => packet.hits,
+      ).filter(
+        ({ targetInstanceId: hitTargetInstanceId }) =>
+          hitTargetInstanceId === targetInstanceId,
       );
       const resolved = resolveOwnerTrigger(
         currentState,
-        target.targetInstanceId,
+        targetInstanceId,
         eventForAttack(
           "on_damage_taken",
           input.sourceInstanceId,
           participants.sourceSide,
-          [target.targetInstanceId],
+          [targetInstanceId],
           participants.targetSide,
           input.triggerContext,
           {
@@ -653,9 +794,12 @@ export function resolveBattleAttackSequence(
   return {
     state: deathResolution.state,
     counters: deathResolution.counters,
-    stoppedBeforeHits,
+    stoppedBeforeHits: resolvedPackets.length === 0,
     beforeAttack,
     attack,
+    additionalAttacks,
+    consumedSourceModifierEffectInstanceIds:
+      modifierConsumption.consumedEffectInstanceIds,
     hitTriggers,
     onAttack,
     damageTaken,

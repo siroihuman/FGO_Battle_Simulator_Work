@@ -8,6 +8,8 @@ import {
   type CombatantAttackData,
 } from "./actionData";
 import {
+  countedSourceAttackModifierEffectInstanceIds,
+  defensiveClassAffinityOverridePermille,
   resolveAttackModifierTotals,
   type AttackModifierCardType,
 } from "./attackModifiers";
@@ -119,6 +121,7 @@ export function prepareBattleAttackInput(
   }
 
   const targetDataInstanceIds: Array<string | null> = [];
+  const sourceModifierEffectInstanceIds = new Set<string>();
   const targets = targetInstanceIds.map((targetInstanceId) => {
     const targetLocation = findUnitLocation(
       state.formation,
@@ -144,6 +147,15 @@ export function prepareBattleAttackInput(
       source,
       target,
     });
+    countedSourceAttackModifierEffectInstanceIds({
+      cardType: action.cardType,
+      isNoblePhantasm: action.isNoblePhantasm,
+      isCritical: action.isCritical,
+      source,
+      target,
+    }).forEach((instanceId) =>
+      sourceModifierEffectInstanceIds.add(instanceId)
+    );
     const sourceModifiers = modifiers.source;
     const targetModifiers = modifiers.target;
     const specialAttackMatches = hasAllBattleTraits(
@@ -168,11 +180,13 @@ export function prepareBattleAttackInput(
           action.firstCardDamageBonusPermille,
         classAttackCoefficientPermille:
           sourceData.classAttackCoefficientPermille,
-        classAffinityPermille: affinityPermille(
-          registry.affinities.class,
-          sourceData.classKey,
-          targetData?.classKey ?? "neutral",
-        ),
+        classAffinityPermille:
+          defensiveClassAffinityOverridePermille(target)
+          ?? affinityPermille(
+            registry.affinities.class,
+            sourceData.classKey,
+            targetData?.classKey ?? "neutral",
+          ),
         attributeAffinityPermille: affinityPermille(
           registry.affinities.attribute,
           sourceData.attributeKey,
@@ -277,6 +291,9 @@ export function prepareBattleAttackInput(
     input: {
       targets,
       hitWeights: action.hitWeights,
+      sourceModifierEffectInstanceIds: [
+        ...sourceModifierEffectInstanceIds,
+      ],
       defense: {
         cardType: action.cardType,
         isNoblePhantasm: action.isNoblePhantasm,

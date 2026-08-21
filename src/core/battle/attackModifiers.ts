@@ -41,6 +41,17 @@ export interface AttackModifierTotals {
   target: TargetAttackModifierTotals;
 }
 
+const COUNTED_SOURCE_ATTACK_MODIFIER_TYPES = new Set<string>([
+  COMMON_EFFECT_TYPES.attack,
+  COMMON_EFFECT_TYPES.cardPerformance,
+  COMMON_EFFECT_TYPES.power,
+  COMMON_EFFECT_TYPES.criticalDamage,
+  COMMON_EFFECT_TYPES.noblePhantasmDamage,
+  COMMON_EFFECT_TYPES.fixedDamage,
+  COMMON_EFFECT_TYPES.npGain,
+  COMMON_EFFECT_TYPES.starGeneration,
+]);
+
 function stringFlag(
   effect: AppliedEffect,
   name: string,
@@ -109,6 +120,66 @@ function matchesAttack(
     excludedTargetTrait
     && hasBattleTrait(context.target, excludedTargetTrait)
   );
+}
+
+/**
+ * Lists count-based source modifiers that contributed to this damaging
+ * action. The surrounding action sequence consumes the union once per card,
+ * not once per target, Hit, or additional NP packet.
+ */
+export function countedSourceAttackModifierEffectInstanceIds(
+  context: AttackModifierContext,
+): string[] {
+  return context.source.effects
+    .filter(
+      (effect) =>
+        effect.remainingUses !== null
+        && COUNTED_SOURCE_ATTACK_MODIFIER_TYPES.has(effect.effectType)
+        && (
+          effect.effectType !== COMMON_EFFECT_TYPES.criticalDamage
+          || context.isCritical
+        )
+        && (
+          effect.effectType !== COMMON_EFFECT_TYPES.noblePhantasmDamage
+          || context.isNoblePhantasm
+        )
+        && matchesAttack(effect, context),
+    )
+    .sort(
+      (left, right) => left.registrationOrder - right.registrationOrder,
+    )
+    .map(({ instanceId }) => instanceId);
+}
+
+/**
+ * A defensive class-affinity override replaces the ordinary class table
+ * result. Multiple currently registered copies must agree; differing values
+ * are rejected instead of inventing an undocumented stacking rule.
+ */
+export function defensiveClassAffinityOverridePermille(
+  target: BattleUnitState,
+): number | null {
+  const values = target.effects
+    .filter(
+      ({ effectType }) =>
+        effectType
+        === COMMON_EFFECT_TYPES.defensiveClassAffinityOverride,
+    )
+    .map(({ value }) => value);
+  if (values.length === 0) return null;
+  values.forEach((value) => {
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      throw new RangeError(
+        "defensive class-affinity override must be a positive safe integer",
+      );
+    }
+  });
+  if (new Set(values).size !== 1) {
+    throw new RangeError(
+      "conflicting defensive class-affinity override values",
+    );
+  }
+  return values[0];
 }
 
 function sumMatching(

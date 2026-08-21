@@ -10,6 +10,9 @@ import {
 } from "./schema";
 import { DOMINATION_FOREIGNER } from "./dominationForeigner";
 import { HONDA_TADAKATSU } from "./hondaTadakatsu";
+import {
+  AJISUKITAKAHIKONE_NO_KAMI,
+} from "./ajisukitakahikoneNoKami";
 import { MOTHER_MARY } from "./motherMary";
 import { SEN_NO_RIKYU } from "./senNoRikyu";
 
@@ -211,6 +214,7 @@ export const OFFICIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
 
 export const ORIGINAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
   HONDA_TADAKATSU,
+  AJISUKITAKAHIKONE_NO_KAMI,
   DOMINATION_FOREIGNER,
   LUCIFERA,
   MOTHER_MARY,

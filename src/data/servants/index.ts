@@ -4,5 +4,6 @@ export * from "./validation";
 export * from "./initialServants";
 export * from "./dominationForeigner";
 export * from "./hondaTadakatsu";
+export * from "./ajisukitakahikoneNoKami";
 export * from "./motherMary";
 export * from "./senNoRikyu";

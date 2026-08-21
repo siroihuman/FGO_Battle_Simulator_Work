@@ -253,6 +253,25 @@ describe("complete attack trigger sequence", () => {
 
   it("runs an unconditional damage-taken trigger even when protection blocks the attack", () => {
     let counters = createEffectRuntimeCounters();
+    let source = register(
+      unit("ally-a", "ally"),
+      {
+        stableId: "counted-attack-up",
+        name: "counted-attack-up",
+        effectType: COMMON_EFFECT_TYPES.attack,
+        category: "buff",
+        value: 500,
+        remainingUses: 3,
+      },
+      counters,
+    );
+    counters = source.counters;
+    const countedAttackInstanceId = source.unit.effects.find(
+      ({ stableId }) => stableId === "counted-attack-up",
+    )?.instanceId;
+    if (!countedAttackInstanceId) {
+      throw new Error("counted attack effect was not registered");
+    }
     let target = unit("enemy-a", "enemy");
     for (const effect of [
       {
@@ -314,7 +333,7 @@ describe("complete attack trigger sequence", () => {
     }
     const random = streams("blocked-damage-trigger");
     const result = resolveBattleAttackSequence(
-      battle(unit("ally-a", "ally"), target),
+      battle(source.unit, target),
       {
         sourceInstanceId: "ally-a",
         targetInstanceIds: ["enemy-a"],
@@ -329,6 +348,7 @@ describe("complete attack trigger sequence", () => {
           ],
           hitWeights: [1],
           defense: {},
+          sourceModifierEffectInstanceIds: [countedAttackInstanceId],
         }),
       },
       counters,
@@ -354,6 +374,15 @@ describe("complete attack trigger sequence", () => {
     expect(
       random.rng.stream("damage").snapshot().drawCount,
     ).toBe(0);
+    expect(result.consumedSourceModifierEffectInstanceIds).toEqual([
+      countedAttackInstanceId,
+    ]);
+    expect(findUnitLocation(
+      result.state.formation,
+      "ally-a",
+    )?.unit.effects.find(
+      ({ stableId }) => stableId === "counted-attack-up",
+    )?.remainingUses).toBe(2);
   });
 
   it("fires on-death after a lethal attack but not when guts revives the target", () => {
@@ -605,7 +634,7 @@ describe("complete attack trigger sequence", () => {
 
   it("stops all Hits, NP, and stars after a successful pre-damage instant death", () => {
     let counters = createEffectRuntimeCounters();
-    const source = register(
+    let source = register(
       unit("ally-a", "ally"),
       {
         stableId: "pre-death",
@@ -633,6 +662,19 @@ describe("complete attack trigger sequence", () => {
             },
           ],
         },
+      },
+      counters,
+    );
+    counters = source.counters;
+    source = register(
+      source.unit,
+      {
+        stableId: "counted-attack-before-no-hits",
+        name: "counted-attack-before-no-hits",
+        effectType: COMMON_EFFECT_TYPES.attack,
+        category: "buff",
+        value: 500,
+        remainingUses: 3,
       },
       counters,
     );
@@ -681,6 +723,13 @@ describe("complete attack trigger sequence", () => {
     expect(
       random.rng.stream("stars").snapshot().drawCount,
     ).toBe(0);
+    expect(result.consumedSourceModifierEffectInstanceIds).toEqual([]);
+    expect(findUnitLocation(
+      result.state.formation,
+      "ally-a",
+    )?.unit.effects.find(
+      ({ stableId }) => stableId === "counted-attack-before-no-hits",
+    )?.remainingUses).toBe(3);
   });
 
   it("matches NP-use trigger context, consumes one use, and applies ordered state actions", () => {

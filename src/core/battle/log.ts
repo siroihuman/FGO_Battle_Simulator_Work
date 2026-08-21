@@ -351,6 +351,21 @@ export interface BattleLogAttack {
     added: number;
     after: number;
   } | null;
+  /** Exact damage packets; old schema-5 saves may omit this field. */
+  packets?: BattleLogAttackPacket[];
+}
+
+export interface BattleLogAttackPacket {
+  kind: "primary" | "additional";
+  stableId: string | null;
+  targets: BattleLogAttackTarget[];
+  hits: BattleLogHit[];
+  totalCalculatedDamage: number;
+  totalActualHpLoss: number;
+  attackNpTotalUnits: number;
+  receivedNpTotalUnits: number;
+  generatedStars: number;
+  starAddition: BattleLogAttack["starAddition"];
 }
 
 export interface BattleLogTargetTransition {
@@ -806,13 +821,14 @@ function triggerStages(
   );
 }
 
-function attackLog(
-  resolution: BattleAttackSequenceResolution,
-  targetInstanceIds: readonly string[],
+function attackPacketLog(
+  resolution: NonNullable<BattleAttackSequenceResolution["attack"]>,
+  kind: BattleLogAttackPacket["kind"],
+  stableId: string | null,
   unitIndex: BattleLogUnitIndex,
-): BattleLogAttack {
-  const attack = resolution.attack?.attack ?? null;
-  const hits = (attack?.hits ?? []).map((hit): BattleLogHit => ({
+): BattleLogAttackPacket {
+  const attack = resolution.attack;
+  const hits = attack.hits.map((hit): BattleLogHit => ({
     hitNumber: hit.hitNumber,
     targetIndex: hit.targetIndex,
     target: battleLogUnitRef(unitIndex, hit.targetInstanceId),
@@ -828,7 +844,7 @@ function attackLog(
     survival: survivalLog(hit.survival),
     star: hit.star ? { ...hit.star } : null,
   }));
-  const targets = (attack?.targets ?? []).map((target) => {
+  const targets = attack.targets.map((target) => {
     const targetHits = hits.filter(
       (hit) =>
         hit.target.instanceId === target.targetInstanceId,
@@ -865,13 +881,12 @@ function attackLog(
         : null,
     } satisfies BattleLogAttackTarget;
   });
-  const starAddition = resolution.attack?.starAddition;
+  const starAddition = resolution.starAddition;
   return {
-    stoppedBeforeHits: resolution.stoppedBeforeHits,
-    targetInstanceIds: [...targetInstanceIds],
+    kind,
+    stableId,
     targets,
     hits,
-    triggerStages: triggerStages(resolution),
     totalCalculatedDamage: targets.reduce(
       (total, target) => total + target.totalDamage,
       0,
@@ -880,13 +895,13 @@ function attackLog(
       (total, target) => total + target.actualHpLoss,
       0,
     ),
-    attackNpTotalUnits: attack?.attackNpTotalUnits ?? 0,
+    attackNpTotalUnits: attack.attackNpTotalUnits,
     receivedNpTotalUnits: targets.reduce(
       (total, target) =>
         total + (target.receivedNp?.totalUnits ?? 0),
       0,
     ),
-    generatedStars: attack?.generatedStars ?? 0,
+    generatedStars: attack.generatedStars,
     starAddition: starAddition
       ? {
           bucket: starAddition.bucket,
@@ -896,6 +911,152 @@ function attackLog(
           after: starAddition.after,
         }
       : null,
+  };
+}
+
+function combinedNpResult(
+  results: ReadonlyArray<BattleLogAttackTarget["attackNp"]>,
+): BattleLogAttackTarget["attackNp"] {
+  const present = results.filter(
+    (result): result is NonNullable<typeof result> => result !== null,
+  );
+  if (present.length === 0) return null;
+  return {
+    baseUnitsPerHit: present[0].baseUnitsPerHit,
+    normalHits: present.reduce(
+      (total, result) => total + result.normalHits,
+      0,
+    ),
+    overkillHits: present.reduce(
+      (total, result) => total + result.overkillHits,
+      0,
+    ),
+    totalUnits: present.reduce(
+      (total, result) => total + result.totalUnits,
+      0,
+    ),
+  };
+}
+
+function combinedStarAddition(
+  packets: readonly BattleLogAttackPacket[],
+): BattleLogAttack["starAddition"] {
+  const additions = packets.flatMap(({ starAddition }) =>
+    starAddition ? [starAddition] : []
+  );
+  if (additions.length === 0) return null;
+  return {
+    bucket: additions[0].bucket,
+    requested: additions.reduce(
+      (total, addition) => total + addition.requested,
+      0,
+    ),
+    before: additions[0].before,
+    added: additions.reduce(
+      (total, addition) => total + addition.added,
+      0,
+    ),
+    after: additions[additions.length - 1].after,
+  };
+}
+
+function attackLog(
+  resolution: BattleAttackSequenceResolution,
+  targetInstanceIds: readonly string[],
+  unitIndex: BattleLogUnitIndex,
+): BattleLogAttack {
+  const packets = [
+    ...(resolution.attack
+      ? [attackPacketLog(
+          resolution.attack,
+          "primary",
+          null,
+          unitIndex,
+        )]
+      : []),
+    ...resolution.additionalAttacks.map(({ stableId, resolution: attack }) =>
+      attackPacketLog(attack, "additional", stableId, unitIndex)
+    ),
+  ];
+  let hitOffset = 0;
+  const hits = packets.flatMap((packet) => {
+    const offset = hitOffset;
+    const packetHits = packet.hits.map((hit) => ({
+      ...hit,
+      hitNumber: hit.hitNumber + offset,
+    }));
+    hitOffset += packet.hits.reduce(
+      (maximum, hit) => Math.max(maximum, hit.hitNumber),
+      0,
+    );
+    return packetHits;
+  });
+  const targets = targetInstanceIds.flatMap((targetInstanceId) => {
+    const packetTargets = packets.flatMap(({ targets: packetTargetList }) =>
+      packetTargetList.filter(
+        ({ target }) => target.instanceId === targetInstanceId,
+      )
+    );
+    if (packetTargets.length === 0) return [];
+    const first = packetTargets[0];
+    const last = packetTargets[packetTargets.length - 1];
+    return [{
+      ...first,
+      damageRandomModifierPermille:
+        packetTargets.length === 1
+          ? first.damageRandomModifierPermille
+          : null,
+      damageBreakdown:
+        packetTargets.length === 1 ? first.damageBreakdown : null,
+      totalDamage: packetTargets.reduce(
+        (total, target) => total + target.totalDamage,
+        0,
+      ),
+      distributedDamage: packetTargets.flatMap(
+        ({ distributedDamage }) => distributedDamage,
+      ),
+      actualHpLoss: packetTargets.reduce(
+        (total, target) => total + target.actualHpLoss,
+        0,
+      ),
+      hpBefore: first.hpBefore,
+      hpAfter: last.hpAfter,
+      attackNp: combinedNpResult(
+        packetTargets.map(({ attackNp }) => attackNp),
+      ),
+      receivedNp: combinedNpResult(
+        packetTargets.map(({ receivedNp }) => receivedNp),
+      ),
+    } satisfies BattleLogAttackTarget];
+  });
+  return {
+    stoppedBeforeHits: resolution.stoppedBeforeHits,
+    targetInstanceIds: [...targetInstanceIds],
+    targets,
+    hits,
+    triggerStages: triggerStages(resolution),
+    totalCalculatedDamage: packets.reduce(
+      (total, packet) => total + packet.totalCalculatedDamage,
+      0,
+    ),
+    totalActualHpLoss: packets.reduce(
+      (total, packet) => total + packet.totalActualHpLoss,
+      0,
+    ),
+    attackNpTotalUnits: packets.reduce(
+      (total, packet) => total + packet.attackNpTotalUnits,
+      0,
+    ),
+    receivedNpTotalUnits: packets.reduce(
+      (total, packet) => total + packet.receivedNpTotalUnits,
+      0,
+    ),
+    generatedStars: packets.reduce(
+      (total, packet) => total + packet.generatedStars,
+      0,
+    ),
+    starAddition: combinedStarAddition(packets),
+    packets,
   };
 }
 

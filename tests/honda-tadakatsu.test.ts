@@ -168,7 +168,7 @@ describe("No.007 本多忠勝", () => {
       },
     });
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 62, 70]);
+      .toEqual([7, 24, 57, 62, 70]);
     expect(initialAllySelectionForServant(HONDA_TADAKATSU.dataId))
       .toMatchObject({ level: 70, noblePhantasmLevel: 1 });
     expect(registeredServantWikiUrl(HONDA_TADAKATSU.dataId))

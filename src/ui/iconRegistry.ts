@@ -21,7 +21,12 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "徳川四天王": "skill-star-weight-up",
   "東国無双": "skill-immune-invincibility",
   "八幡鹿角": "skill-card-quick-up",
+  "魔力放出（雷神）": "skill-card-buster-up",
+  "豊穣の加護": "skill-hp-heal",
+  "怒りの力": "skill-attack-up",
   "対魔力": "class-magic-resistance",
+  "騎乗": "class-riding",
+  "神性": "class-divinity",
   "オシリスの塵": "skill-immune-invincibility",
   "イシスの雨": "skill-clear-debuff",
   "メジェドの眼": "skill-cooldown",
@@ -55,6 +60,9 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "最大HPアップ": "Maxhpup",
   "ターゲット集中": "Tauntup",
   "対粛清防御": "Specialinvincible",
+  "回避": "Avoid",
+  "Buster攻撃耐性ダウン": "Busterresistdown",
+  "防御時クラス相性不利": "Changeclass",
 };
 
 function publicAssetPath(path: string): string {

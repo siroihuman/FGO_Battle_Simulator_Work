@@ -127,6 +127,10 @@ export interface AllyCommandAttacksResult {
 interface ResolvedAllyActionData {
   targetScope: AttackTargetScope;
   calculation: AttackCalculationData;
+  additionalAttacks: Array<{
+    stableId: string;
+    calculation: AttackCalculationData;
+  }>;
   overchargeStage: NoblePhantasmOverchargeStage | null;
   critical: CommandCardCriticalResult | null;
 }
@@ -227,6 +231,7 @@ function resolveAllyActionData(
       accepted: true,
       data: {
         targetScope: "single",
+        additionalAttacks: [],
         overchargeStage: null,
         critical: null,
         calculation: {
@@ -275,6 +280,7 @@ function resolveAllyActionData(
       accepted: true,
       data: {
         targetScope: "single",
+        additionalAttacks: [],
         overchargeStage: null,
         critical,
         calculation: {
@@ -334,6 +340,33 @@ function resolveAllyActionData(
     accepted: true,
     data: {
       targetScope: noblePhantasm.targetScope,
+      additionalAttacks: noblePhantasm.additionalAttack
+        ? [{
+            stableId: noblePhantasm.additionalAttack.stableId,
+            calculation: {
+              cardType: card.type,
+              isNoblePhantasm: true,
+              isCritical: false,
+              cardDamageValuePermille:
+                context.cardDamageValuePermille,
+              cardNpValuePermille:
+                context.cardNpValuePermille,
+              cardStarValuePermille:
+                context.cardStarValuePermille,
+              firstCardDamageBonusPermille: 0,
+              firstCardNpBonusPermille: 0,
+              firstCardStarBonusPermille: 0,
+              busterChainModPermille: 0,
+              extraCardModifierPermille: 1_000,
+              hitWeights: noblePhantasm.additionalAttack.hitWeights,
+              npDamageMultiplierPermille:
+                noblePhantasm.additionalAttack
+                  .damageMultiplierPermilleByOvercharge[
+                    overchargeStage - 1
+                  ],
+            },
+          }]
+        : [],
       overchargeStage,
       critical: null,
       calculation: {
@@ -729,6 +762,28 @@ export function resolveAllyCommandAttacks(
                 actionData.data.calculation,
                 resolverInput.defeatedTargetContinuation,
               ).input,
+              ...(actionData.data.additionalAttacks.length > 0
+                ? {
+                    additionalAttacks:
+                      actionData.data.additionalAttacks.map(
+                        (additional) => ({
+                          stableId: additional.stableId,
+                          allowDefeatedTargets: true as const,
+                          prepareAttack: (
+                            state,
+                            retainedTargetInstanceIds,
+                          ) => prepareBattleAttackInput(
+                            state,
+                            input.registry,
+                            resolverInput.action.ownerInstanceId,
+                            retainedTargetInstanceIds,
+                            additional.calculation,
+                            true,
+                          ).input,
+                        }),
+                      ),
+                  }
+                : {}),
             },
             counters,
           );
