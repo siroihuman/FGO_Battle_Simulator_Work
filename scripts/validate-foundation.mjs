@@ -411,7 +411,8 @@ if (manifest) {
   assert(
     ajisukitakahikoneNoKami?.collectionNo === 57
       && ajisukitakahikoneNoKami?.classificationCategory === 1
-      && ajisukitakahikoneNoKami?.implementationStatus === "implemented_pending_user_acceptance"
+      && ajisukitakahikoneNoKami?.implementationStatus === "implemented_and_accepted"
+      && ajisukitakahikoneNoKami?.acceptancePullRequest === 73
       && ajisukitakahikoneNoKami?.activeSkillCount === 3
       && ajisukitakahikoneNoKami?.classSkillCount === 3
       && ajisukitakahikoneNoKami?.noblePhantasmCount === 1
@@ -800,7 +801,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "ajisukitakahikone-no-kami-implemented-pending-user-acceptance"
+    manifest.status === "ajisukitakahikone-no-kami-implemented-and-accepted"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1365,7 +1366,7 @@ assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
     && startHere.includes("No.057「阿遅鉏高日子根神」")
     && startHere.includes("対象HPと倍率0を問わず発生するOC追加9Hit")
-    && startHere.includes("ユーザー実画面受入待ち")
+    && startHere.includes("ユーザー環境の実画面確認を完了して最終合格")
     && startHere.includes("中断保存形式4・データ1.38.0")
     && startHere.includes("No.010「シグムンド」"),
   "作業開始ページに阿遅鉏高日子根神の実装状態と次作業がありません"
@@ -1433,7 +1434,7 @@ assert(
     && implementationStatus.includes("No.057「阿遅鉏高日子根神」")
     && implementationStatus.includes("OC別9Hit追加攻撃")
     && implementationStatus.includes("防御時クラス相性不利150%")
-    && implementationStatus.includes("ユーザー実画面確認待ち")
+    && implementationStatus.includes("2026-08-21にユーザー実画面受入を完了して最終合格")
     && implementationStatus.includes("No.010「シグムンド」")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
   "実装状況に阿遅鉏高日子根神、宝具追加攻撃、次作業、既存受入記録がありません"
@@ -1551,6 +1552,13 @@ assert(
     && decisionLog.includes("中断保存形式4、データ1.38.0"),
   "決定記録に阿遅鉏高日子根神と宝具追加攻撃の実装方針がありません"
 );
+assert(
+  decisionLog.includes("## D-104 No.057「阿遅鉏高日子根神」を最終受入とする")
+    && decisionLog.includes("PR #73")
+    && decisionLog.includes("状態: 採用（ユーザー実画面受入完了）")
+    && decisionLog.includes("No.010「シグムンド」の具体データ確認・実装可能性確認"),
+  "決定記録に阿遅鉏高日子根神の最終受入がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1648,14 +1656,17 @@ const ajisukitakahikoneAcceptance = await readText(
   "docs/qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md"
 );
 assert(
-  ajisukitakahikoneAcceptance.includes("判定: 自動検査完了後・ユーザー実画面受入待ち")
+  ajisukitakahikoneAcceptance.includes("判定: 最終合格（ユーザー実画面受入完了）")
+    && ajisukitakahikoneAcceptance.includes("最終実画面受入日: 2026-08-21")
+    && ajisukitakahikoneAcceptance.includes("統合PR: #73")
     && ajisukitakahikoneAcceptance.includes("https://w.atwiki.jp/siroi_human/pages/50.html")
     && ajisukitakahikoneAcceptance.includes("OC1の倍率0でも必ず9Hit")
     && ajisukitakahikoneAcceptance.includes("固定150%へ上書き")
     && ajisukitakahikoneAcceptance.includes("`Changeclass`")
     && ajisukitakahikoneAcceptance.includes("中断保存形式4、データ1.38.0")
     && ajisukitakahikoneAcceptance.includes("56ファイル・571テスト")
-    && ajisukitakahikoneAcceptance.includes("自動検査は完了した"),
+    && ajisukitakahikoneAcceptance.includes("未確認の受入項目はない")
+    && ajisukitakahikoneAcceptance.includes("最終合格とする"),
   "阿遅鉏高日子根神と宝具追加攻撃の受入報告が正本と一致しません"
 );
 

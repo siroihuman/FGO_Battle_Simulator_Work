@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "ajisukitakahikone-no-kami-implemented-pending-user-acceptance",
+  "status": "ajisukitakahikone-no-kami-implemented-and-accepted",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -851,7 +851,8 @@
         "classificationCategory": 1,
         "schemaVersion": 1,
         "contentRevision": "current_upgraded_only",
-        "implementationStatus": "implemented_pending_user_acceptance",
+        "implementationStatus": "implemented_and_accepted",
+        "acceptancePullRequest": 73,
         "source": "https://w.atwiki.jp/siroi_human/pages/50.html",
         "sourceCheckedAt": "2026-08-21",
         "activeSkillCount": 3,
