@@ -802,7 +802,9 @@ if (manifest) {
       && completedUi.allyNpChangePresentation === "animated_bars_from_confirmed_before_and_after_np"
       && completedUi.confirmedLogPlaybackOnly === true
       && completedUi.defeatedTargetContinuationPlayback
-        === "confirmed_pre_boundary_state_with_hp_zero_enemy_visible"
+        === "confirmed_pre_boundary_state_with_hp_zero_enemy_visible_in_result_window"
+      && completedUi.defeatedTargetContinuationHpPresentation
+        === "enemy_hp_row_zero_to_zero_in_confirmed_result_window"
       && completedUi.defeatedTargetContinuationPlaybackFrameRequiredWithoutResourceChange
         === true
       && completedUi.defeatedTargetDepartureVisibleAfterContinuationFrame
@@ -1304,8 +1306,9 @@ assert(startHere.includes("## 必須規則"), "作業開始ページに必須規
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
     && startHere.includes("連続通常攻撃修正は実画面合格済み")
-    && startHere.includes("敵カードとHP0を表示し続け")
-    && startHere.includes("HP0継続表示は自動検査完了・実画面再受入待ち")
+    && startHere.includes("確定結果ウィンドウ内へ敵HP欄を残し")
+    && startHere.includes("HP0→0／最大HPを表示し続ける")
+    && startHere.includes("確定結果ウィンドウ内の敵HP継続表示は自動検査完了・実画面再受入待ち")
     && startHere.includes("No.007「本多忠勝」")
     && startHere.includes("No.010「シグムンド」"),
   "作業開始ページに本多忠勝の実装状態と次作業がありません"
@@ -1365,7 +1368,8 @@ assert(
     && implementationStatus.includes("宣言的`reduce_hp`")
     && implementationStatus.includes("同じ味方戦闘個体の単体通常カード")
     && implementationStatus.includes("エンジン確定の戦闘不能対象連続フラグ")
-    && implementationStatus.includes("資源増減0でも「連続攻撃中」フレーム")
+    && implementationStatus.includes("確定結果ウィンドウ内へ撃破対象の敵HP欄")
+    && implementationStatus.includes("連続フレームと敵HP欄を省略しない")
     && implementationStatus.includes("55ファイル・566テスト")
     && implementationStatus.includes("No.010「シグムンド」")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
@@ -1467,7 +1471,8 @@ assert(
     && decisionLog.includes("すべてオーバーキル")
     && decisionLog.includes("状態: 採用（ユーザー実画面合格）")
     && decisionLog.includes("## D-101 連続通常攻撃中は撃破対象のHP0表示を維持する")
-    && decisionLog.includes("実HP減少0・NP増減0でも「連続攻撃中」")
+    && decisionLog.includes("空のHPバー、`0 → 0 / 最大HP`")
+    && decisionLog.includes("確定結果フレームと敵HP欄を省略しない")
     && decisionLog.includes("攻撃完了直前の確定`BattleState`")
     && decisionLog.includes("実画面再受入待ち"),
   "決定記録に同一戦闘個体の単体通常カード連続規則がありません"
@@ -1549,7 +1554,7 @@ const hondaTadakatsuAcceptance = await readText(
 );
 assert(
   hondaTadakatsuAcceptance.includes("本多忠勝データと連続通常攻撃修正は実画面合格")
-    && hondaTadakatsuAcceptance.includes("連続中の敵HP0継続表示は自動検査合格・実画面再受入待ち")
+    && hondaTadakatsuAcceptance.includes("確定結果ウィンドウ内の敵HP0継続表示は自動検査合格・実画面再受入待ち")
     && hondaTadakatsuAcceptance.includes("https://w.atwiki.jp/siroi_human/pages/274.html")
     && hondaTadakatsuAcceptance.includes("Lv80・90は参照記録だけ")
     && hondaTadakatsuAcceptance.includes("攻撃後HP減少1000／1500／2000／2500／3000")
@@ -1557,7 +1562,7 @@ assert(
     && hondaTadakatsuAcceptance.includes("`Invinciblepierce`")
     && hondaTadakatsuAcceptance.includes("`Ignoredefense`")
     && hondaTadakatsuAcceptance.includes("本多忠勝Quick→同Arts→支配のフォーリナーBuster")
-    && hondaTadakatsuAcceptance.includes("資源増減0でも連続フレームを省略しない")
+    && hondaTadakatsuAcceptance.includes("資源増減0でも連続フレームと敵HP欄を省略しない")
     && hondaTadakatsuAcceptance.includes("55ファイル・566テスト成功")
     && hondaTadakatsuAcceptance.includes("No.010「シグムンド」"),
   "本多忠勝とOC別HP減少の受入報告が正本と一致しません"

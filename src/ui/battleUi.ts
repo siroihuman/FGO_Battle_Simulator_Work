@@ -226,6 +226,7 @@ export interface ConfirmedAttackDamage {
 export interface ConfirmedAllyActionPlayback {
   state: BattleState;
   keepsDefeatedTargetVisible: boolean;
+  continuedTargetHp: ConfirmedHpTransition | null;
 }
 
 function isResolvedAllyCommandAttackDetail(
@@ -254,14 +255,30 @@ export function confirmedAllyActionPlayback(
     && action.resolverCalled
     && isResolvedAllyCommandAttackDetail(action.resolverDetail)
   ) {
+    const state = action.resolverDetail.resolution.state;
+    const target = unitsByInstanceId(state).get(
+      action.targetAtStart.instanceId,
+    );
     return {
-      state: action.resolverDetail.resolution.state,
+      state,
       keepsDefeatedTargetVisible: true,
+      continuedTargetHp:
+        target?.side === "enemy"
+          ? {
+              instanceId: target.instanceId,
+              name: target.name,
+              side: "enemy",
+              hpBefore: target.hp,
+              hpAfter: target.hp,
+              maxHp: target.maxHp,
+            }
+          : null,
     };
   }
   return {
     state: action.boundary.state,
     keepsDefeatedTargetVisible: false,
+    continuedTargetHp: null,
   };
 }
 

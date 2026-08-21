@@ -1444,9 +1444,18 @@ export function BattleScreen({
         displayState?: BattleState;
         forceFrame?: boolean;
         notice?: string;
+        persistentHpTransition?: ConfirmedHpTransition | null;
       } = {},
     ) => {
       const hpTransitions = confirmedHpTransitions(previousState, nextState);
+      if (
+        options.persistentHpTransition
+        && !hpTransitions.some(({ instanceId }) =>
+          instanceId === options.persistentHpTransition?.instanceId
+        )
+      ) {
+        hpTransitions.push(options.persistentHpTransition);
+      }
       const npTransitions = confirmedNpTransitions(previousState, nextState);
       if (
         hpTransitions.length > 0
@@ -1478,6 +1487,7 @@ export function BattleScreen({
           {
             displayState: actionPlayback.state,
             forceFrame: actionPlayback.keepsDefeatedTargetVisible,
+            persistentHpTransition: actionPlayback.continuedTargetHp,
             notice: actionPlayback.keepsDefeatedTargetVisible
               ? "連続攻撃中"
               : undefined,

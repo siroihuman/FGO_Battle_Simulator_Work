@@ -73,9 +73,20 @@ describe("completed battle UI selectors", () => {
     const markup = renderToStaticMarkup(createElement(PlaybackOverlay, {
       notice: "チェイン発生",
       summaries: [],
-      hpTransitions: [],
+      hpTransitions: [{
+        instanceId: "continued-enemy",
+        name: "連続攻撃対象",
+        side: "enemy",
+        hpBefore: 0,
+        hpAfter: 0,
+        maxHp: 100_000,
+      }],
       npTransitions: [],
-      damageAmounts: [],
+      damageAmounts: [{
+        instanceId: "continued-enemy",
+        name: "連続攻撃対象",
+        damage: 12_345,
+      }],
       index: 0,
       total: 4,
       onPrevious: () => undefined,
@@ -87,6 +98,10 @@ describe("completed battle UI selectors", () => {
     expect(markup).toContain('aria-label="確定結果演出をスキップ"');
     expect(markup.indexOf("1 / 4")).toBeLessThan(markup.indexOf("スキップ"));
     expect(markup.indexOf("スキップ")).toBeLessThan(markup.indexOf("チェイン発生"));
+    expect(markup).toContain('aria-label="敵HP増減"');
+    expect(markup).toContain("連続攻撃対象");
+    expect(markup).toContain("ダメージ 12,345");
+    expect(markup).toContain("0 → 0 / 100,000");
   });
 
   it("caps command selection at three while keeping selected cards removable", () => {

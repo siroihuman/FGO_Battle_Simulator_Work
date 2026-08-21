@@ -527,6 +527,14 @@ describe("No.007 本多忠勝", () => {
     });
     const artsPlayback = confirmedAllyActionPlayback(actions[1]!);
     expect(artsPlayback.keepsDefeatedTargetVisible).toBe(true);
+    expect(artsPlayback.continuedTargetHp).toEqual({
+      instanceId: "enemy-a",
+      name: "enemy-a",
+      side: "enemy",
+      hpBefore: 0,
+      hpAfter: 0,
+      maxHp: 1,
+    });
     expect(findUnitLocation(
       artsPlayback.state.formation,
       "enemy-a",
@@ -537,6 +545,7 @@ describe("No.007 本多忠勝", () => {
     )).toBeUndefined();
     const foreignerPlayback = confirmedAllyActionPlayback(actions[2]!);
     expect(foreignerPlayback.keepsDefeatedTargetVisible).toBe(false);
+    expect(foreignerPlayback.continuedTargetHp).toBeNull();
     expect(findUnitLocation(
       foreignerPlayback.state.formation,
       "enemy-a",
