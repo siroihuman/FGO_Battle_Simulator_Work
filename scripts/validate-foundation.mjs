@@ -86,6 +86,24 @@ if (manifest) {
     "敵対象が尽きた後は残りコマンド行動を開始してはいけません"
   );
   assert(
+    manifest.coreRules.sameOwnerSingleTargetNormalDefeatedTargetContinuation === true
+      && manifest.coreRules.sameOwnerNormalContinuationIncludesExtraAttack === true
+      && JSON.stringify(manifest.coreRules.sameOwnerNormalContinuationExcludes)
+        === JSON.stringify([
+          "noble_phantasm",
+          "all_target",
+          "different_battle_instance",
+          "unavailable_next_owner"
+        ])
+      && manifest.coreRules.continuedDefeatedTargetHits
+        === "all_overkill_actual_hp_loss_zero"
+      && manifest.coreRules.continuedDefeatedTargetDeathTriggerRepeats === false
+      && manifest.coreRules.sameOwnerNormalContinuationRngPolicy
+        === "normal_action_rng_only"
+      && manifest.coreRules.sameOwnerNormalContinuationSchemaChange === false,
+    "同一戦闘個体の単体通常カード連続規則が一致しません"
+  );
+  assert(
     manifest.coreRules.enemyPriorityBeforeNormalPlan === true,
     "敵優先スキル完了後に通常行動予定を作らなければなりません"
   );
@@ -351,7 +369,7 @@ if (manifest) {
       && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
         === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
       && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["domination-foreigner", "lucifera", "mother-mary"])
+        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "lucifera", "mother-mary"])
       && servantOriginTabs.tabBrowseMutation === "none"
       && servantOriginTabs.currentSelectionOutsideTabs === true,
     "編成の公式／オリジナル区分とNo.順が一致しません"
@@ -373,10 +391,11 @@ if (manifest) {
     "編成のHP／ATKフォウ入力規則が一致しません"
   );
   const specifiedServants = manifest.specifiedContent?.servants ?? [];
+  const hondaTadakatsu = specifiedServants.find(({ dataId }) => dataId === "honda-tadakatsu");
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
   const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 3
+    specifiedServants.length === 4
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -385,6 +404,18 @@ if (manifest) {
       && senNoRikyu?.battleSuspendSchemaVersion === 4
       && senNoRikyu?.dataSchemaVersion === "1.38.0",
     "指定コンテンツに千利休の登録状態がありません"
+  );
+  assert(
+    hondaTadakatsu?.collectionNo === 7
+      && hondaTadakatsu?.classificationCategory === 1
+      && hondaTadakatsu?.implementationStatus === "implemented_and_accepted"
+      && hondaTadakatsu?.activeSkillCount === 3
+      && hondaTadakatsu?.classSkillCount === 1
+      && hondaTadakatsu?.noblePhantasmCount === 1
+      && hondaTadakatsu?.noblePhantasmRevision === "upgraded_only"
+      && hondaTadakatsu?.battleSuspendSchemaVersion === 4
+      && hondaTadakatsu?.dataSchemaVersion === "1.38.0",
+    "指定コンテンツに本多忠勝の登録状態がありません"
   );
   assert(
     motherMary?.collectionNo === 70
@@ -401,6 +432,7 @@ if (manifest) {
     "指定コンテンツに聖母マリアの最終再臨登録状態がありません"
   );
   const stagedHeal = manifest.coreRules.declaredStagedHealHp;
+  const stagedReduceHp = manifest.coreRules.declaredStagedReduceHp;
   const targetFocus = manifest.coreRules.enemySingleTargetFocus;
   const motherMaryIcons = manifest.coreRules.motherMaryIconCorrections;
   assert(
@@ -410,6 +442,17 @@ if (manifest) {
       && stagedHeal?.saveSchemaChange === false
       && stagedHeal?.dataSchemaChange === false,
     "段階式HP回復の共通規則が一致しません"
+  );
+  assert(
+    JSON.stringify(stagedReduceHp?.supportedScalings) === JSON.stringify(["fixed", "noble_phantasm_level", "overcharge"])
+      && stagedReduceHp?.resolutionSource === "engine_action_context"
+      && stagedReduceHp?.canDefeatRequiredInData === true
+      && stagedReduceHp?.defaultLethality === "lethal_except_ally_skill_targeting_allies"
+      && stagedReduceHp?.fixedValueLogShapeUnchanged === true
+      && stagedReduceHp?.uiRecalculation === false
+      && stagedReduceHp?.saveSchemaChange === false
+      && stagedReduceHp?.dataSchemaChange === false,
+    "段階式HP減少の共通規則が一致しません"
   );
   assert(
     targetFocus?.effectType === "target_focus"
@@ -701,7 +744,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "effect-duration-boundary-fix-implemented"
+    manifest.status === "honda-tadakatsu-implemented-and-accepted"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -758,6 +801,16 @@ if (manifest) {
       && completedUi.hpDifferenceUsedAsAttackDamage === false
       && completedUi.allyNpChangePresentation === "animated_bars_from_confirmed_before_and_after_np"
       && completedUi.confirmedLogPlaybackOnly === true
+      && completedUi.defeatedTargetContinuationPlayback
+        === "confirmed_pre_boundary_state_with_hp_zero_enemy_visible_in_result_window"
+      && completedUi.defeatedTargetContinuationHpPresentation
+        === "enemy_hp_row_zero_to_zero_in_confirmed_result_window"
+      && completedUi.defeatedTargetContinuationPlaybackFrameRequiredWithoutResourceChange
+        === true
+      && completedUi.defeatedTargetDepartureVisibleAfterContinuationFrame
+        === true
+      && completedUi.defeatedTargetContinuationUiRecalculatesBattle
+        === false
       && completedUi.playbackNavigation === "manual_previous_next"
       && completedUi.playbackSkipPosition === "upper_right"
       && completedUi.playbackSkipResult === "show_already_resolved_final_session_and_return_to_input_or_result"
@@ -1208,6 +1261,7 @@ const mandatoryFiles = [
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md",
   "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md",
   "docs/qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md",
+  "docs/qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md",
   "docs/archive/README.md",
   "docs/archive/2026-08-04/PROJECT_RULES_v1.0.0.md",
   "docs/archive/2026-08-04/IMPLEMENTATION_STATUS_v1.0.0.md",
@@ -1232,6 +1286,7 @@ const mandatoryFiles = [
   "src/core/battle/enemyNoblePhantasmContext.ts",
   "src/data/servants/dominationForeigner.ts",
   "src/data/servants/senNoRikyu.ts",
+  "src/data/servants/hondaTadakatsu.ts",
   "src/effects/noblePhantasmOvercharge.ts",
 ];
 
@@ -1250,12 +1305,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("PR #70のサーヴァント分類一覧")
-    && startHere.includes("身籠る聖処女")
-    && startHere.includes("敵ターン終了で失効")
+    && startHere.includes("Quick撃破後も同Artsを同じ対象へ完遂")
+    && startHere.includes("対象名・確定ダメージ・空のHPバー・HP0→0／最大HPを表示し続ける")
+    && startHere.includes("ユーザー実画面受入済みの最終合格")
     && startHere.includes("No.007「本多忠勝」")
-    && startHere.includes("具体データ確認・実装計画確定"),
-  "作業開始ページに期限修正とNo.007の次作業がありません"
+    && startHere.includes("No.010「シグムンド」"),
+  "作業開始ページに本多忠勝の実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1275,7 +1330,7 @@ const requiredUiAssets = [
     "skill-immune-invincibility", "skill-np-charge",
     "skill-unique-command-shuffle", "skill-unique-order-change",
     "skill-card-quick-up", "skill-np-damafe-up", "skill-crit-damage-up",
-    "skill-hp-heal-per-turn",
+    "skill-hp-heal-per-turn", "skill-star-weight-up", "class-magic-resistance",
   ].map((name) => `public/assets/skill-icons/${name}.png`),
   ...[
     "Artsupstatus", "Attackdown", "Attackup", "Buffatk", "Busterupstatus",
@@ -1285,7 +1340,7 @@ const requiredUiAssets = [
     "Removalresistup", "Resistancedown", "Resistanceup", "Quickupstatus",
     "Starabsoprtdown", "Stargainup", "Statusdown", "Statusup",
     "Npgainturn", "Stargainturn", "NPOvercharge", "Npchargeup", "NPGainUpDmg",
-    "QuickNpGainUp", "Quickdamageup", "Curse", "Defensedown",
+    "Quickdamageup", "Curse", "Defensedown", "Invinciblepierce", "Ignoredefense",
     "Defenseup", "Npseal", "Tauntup", "Hpregen", "Maxhpup", "Specialinvincible",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
@@ -1309,9 +1364,15 @@ assert(
     && implementationStatus.includes("有限ターン状態の明示的な期限境界")
     && implementationStatus.includes("54ファイル・553テスト")
     && implementationStatus.includes("No.007「本多忠勝」")
-    && implementationStatus.includes("具体データ確認・実装計画確定")
+    && implementationStatus.includes("宣言的`reduce_hp`")
+    && implementationStatus.includes("同じ味方戦闘個体の単体通常カード")
+    && implementationStatus.includes("エンジン確定の戦闘不能対象連続フラグ")
+    && implementationStatus.includes("確定結果ウィンドウ内へ撃破対象の敵HP欄")
+    && implementationStatus.includes("連続フレームと敵HP欄を省略しない")
+    && implementationStatus.includes("55ファイル・566テスト")
+    && implementationStatus.includes("No.010「シグムンド」")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
-  "実装状況に期限修正、No.007の次作業、既存受入記録がありません"
+  "実装状況に本多忠勝、OC別HP減少、次作業、既存受入記録がありません"
 );
 const dominationForeignerAcceptance = await readText(
   "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md"
@@ -1395,6 +1456,28 @@ assert(
     && decisionLog.includes("No.007「本多忠勝」"),
   "決定記録に状態期限境界の修正方針がありません"
 );
+assert(
+  decisionLog.includes("## D-099 OC別HP減少を共通化してNo.007「本多忠勝」を登録する")
+    && decisionLog.includes("DeclaredActionInteger")
+    && decisionLog.includes("`canDefeat: true`")
+    && decisionLog.includes("`Npchargeup`")
+    && decisionLog.includes("No.010「シグムンド」"),
+  "決定記録に本多忠勝とOC別HP減少の実装方針がありません"
+);
+assert(
+  decisionLog.includes("## D-100 同一戦闘個体の単体通常カード列は戦闘不能対象へ連続する")
+    && decisionLog.includes("本多忠勝Quick→同Arts→支配のフォーリナーBuster")
+    && decisionLog.includes("すべてオーバーキル")
+    && decisionLog.includes("状態: 採用（ユーザー実画面合格）")
+    && decisionLog.includes("## D-101 連続通常攻撃中は撃破対象のHP0表示を維持する")
+    && decisionLog.includes("空のHPバー、`0 → 0 / 最大HP`")
+    && decisionLog.includes("確定結果フレームと敵HP欄を省略しない")
+    && decisionLog.includes("攻撃完了直前の確定`BattleState`")
+    && decisionLog.includes("状態: 採用（ユーザー実画面合格）")
+    && decisionLog.includes("## D-102 No.007「本多忠勝」を最終受入とする")
+    && decisionLog.includes("PR #72"),
+  "決定記録に同一戦闘個体の単体通常カード連続規則がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1413,6 +1496,7 @@ assert(
     && docsIndex.includes("qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md")
     && docsIndex.includes("qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md")
     && docsIndex.includes("qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md")
+    && docsIndex.includes("qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md")
     && docsIndex.includes("SERVANT_CLASSIFICATION.md"),
   "文書索引に最新の統合受入報告がありません"
 );
@@ -1436,6 +1520,8 @@ assert(
     && servantClassification.includes("未記録の候補を過去チャットや名称から推測してカテゴリ1へ入れない")
     && servantClassification.includes("| 001 | 八百屋お七 | 通常 | 2 |")
     && servantClassification.includes("| 005 | 黄帝 | 通常 | 4 |")
+    && servantClassification.includes("| 007 | 本多忠勝 | 通常 | 1 |")
+    && servantClassification.includes("https://w.atwiki.jp/siroi_human/pages/274.html")
     && servantClassification.includes("| 024’ | 支配のフォーリナー | 派生 | 1 |")
     && servantClassification.includes("https://w.atwiki.jp/siroi_human/pages/766.html")
     && servantClassification.includes("| 070 | 聖母マリア | 通常 | 1 |")
@@ -1463,6 +1549,24 @@ assert(
     && motherMaryAcceptance.includes("PR #69")
     && motherMaryAcceptance.includes("v1.0初期完成範囲外の具体コンテンツ追加対象を1件だけ選定する"),
   "聖母マリアの受入報告が正本と一致しません"
+);
+const hondaTadakatsuAcceptance = await readText(
+  "docs/qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md"
+);
+assert(
+  hondaTadakatsuAcceptance.includes("判定: 最終合格（ユーザー実画面受入完了）")
+    && hondaTadakatsuAcceptance.includes("統合PR: #72")
+    && hondaTadakatsuAcceptance.includes("https://w.atwiki.jp/siroi_human/pages/274.html")
+    && hondaTadakatsuAcceptance.includes("Lv80・90は参照記録だけ")
+    && hondaTadakatsuAcceptance.includes("攻撃後HP減少1000／1500／2000／2500／3000")
+    && hondaTadakatsuAcceptance.includes("`canDefeat: true`")
+    && hondaTadakatsuAcceptance.includes("`Invinciblepierce`")
+    && hondaTadakatsuAcceptance.includes("`Ignoredefense`")
+    && hondaTadakatsuAcceptance.includes("本多忠勝Quick→同Arts→支配のフォーリナーBuster")
+    && hondaTadakatsuAcceptance.includes("資源増減0でも連続フレームと敵HP欄を省略しない")
+    && hondaTadakatsuAcceptance.includes("55ファイル・566テスト成功")
+    && hondaTadakatsuAcceptance.includes("No.010「シグムンド」"),
+  "本多忠勝とOC別HP減少の受入報告が正本と一致しません"
 );
 
 const senNoRikyuAcceptance = await readText(
@@ -1511,12 +1615,25 @@ assert(
     && effectsAndTiming.includes("千利休「幽玄たる黒」"),
   "効果仕様に攻撃イベント実対象へ限定する共通トリガー規則がありません"
 );
+assert(
+  effectsAndTiming.includes("同じ戦闘個体の単体通常カード連続中")
+    && effectsAndTiming.includes("全Hitをオーバーキル")
+    && effectsAndTiming.includes("既存ダメージ・NP・スター乱数列を通常どおり使用"),
+  "効果仕様に戦闘不能対象へ続く単体通常カード列の規則がありません"
+);
 
 const battleSystem = await readText("docs/specs/BATTLE_SYSTEM.md");
 assert(
   battleSystem.includes("### ターン終了トリガーによるスター獲得")
     && battleSystem.includes("戦闘終了時は繰り上げず"),
   "戦闘仕様にターン終了スターの順序と繰上げ境界がありません"
+);
+assert(
+  battleSystem.includes("同じ戦闘個体の単体通常カードが連続する区間")
+    && battleSystem.includes("成立済みExtra Attack")
+    && battleSystem.includes("実HP減少は0")
+    && battleSystem.includes("次行動者の実行不能"),
+  "戦闘仕様に単体通常カード連続の対象保持境界がありません"
 );
 
 const calculationsAndRng = await readText(
@@ -1526,6 +1643,12 @@ assert(
   calculationsAndRng.includes("ターン終了トリガーによるスター獲得も")
     && calculationsAndRng.includes("他の5乱数列は変更しない"),
   "計算・乱数仕様にターン終了スターの上限と乱数境界がありません"
+);
+assert(
+  calculationsAndRng.includes("単体通常カード連続により")
+    && calculationsAndRng.includes("全Hitをオーバーキル")
+    && calculationsAndRng.includes("判断自体は乱数を消費しない"),
+  "計算・乱数仕様に単体通常カード連続のオーバーキル規則がありません"
 );
 
 const uiAndStorage = await readText("docs/specs/UI_AND_STORAGE.md");
@@ -1583,12 +1706,21 @@ assert(
 );
 assert(
   iconRegistry.includes('"NP獲得量アップ": "Npchargeup"')
+    && iconRegistry.includes('"QuickカードNP獲得量アップ": "Npchargeup"')
+    && iconRegistry.includes('"QuickカードのNP獲得量アップ": "Npchargeup"')
     && iconRegistry.includes('"被ダメージ時NP獲得量アップ": "NPGainUpDmg"')
     && iconRegistry.includes('"Quickカードの威力アップ": "Quickdamageup"')
     && !iconRegistry.includes('"Quickクリティカル威力アップ": "Quickdamageup"')
     && iconRegistry.includes('effect.effectType === COMMON_EFFECT_TYPES.criticalDamage')
     && iconRegistry.includes('effect.effectType === COMMON_EFFECT_TYPES.starFocus'),
   "状態アイコンのNP獲得量・色限定クリティカル・スター集中対応が一致しません"
+);
+assert(
+  iconRegistry.includes('"徳川四天王": "skill-star-weight-up"')
+    && iconRegistry.includes('"対魔力": "class-magic-resistance"')
+    && iconRegistry.includes('"無敵貫通": "Invinciblepierce"')
+    && iconRegistry.includes('"防御無視": "Ignoredefense"'),
+  "本多忠勝の正式スキル・状態アイコン対応が一致しません"
 );
 assert(
   iconRegistry.includes('"外道の知識（姉なるもの）": "skill-hp-heal-per-turn"')
@@ -1681,8 +1813,17 @@ assert(
   initialContent.includes("### No.362 千利休")
     && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
     && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
-    && initialContent.includes("オリジナル: No.024’ 支配のフォーリナー、No.062 ルシフェラ、No.070 聖母マリア"),
+    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.062 ルシフェラ、No.070 聖母マリア"),
   "具体データ仕様に千利休と編成区分の採用範囲がありません"
+);
+assert(
+  initialContent.includes("### No.007 本多忠勝")
+    && initialContent.includes("Lv80 10617／8047")
+    && initialContent.includes("OC別1000／1500／2000／2500／3000")
+    && initialContent.includes("共通`reduce_hp`の段階値")
+    && initialContent.includes("`Invinciblepierce`")
+    && initialContent.includes("`Ignoredefense`"),
+  "具体データ仕様に本多忠勝とOC別HP減少の採用範囲がありません"
 );
 assert(
   initialContent.includes("### No.070 聖母マリア")
@@ -1708,6 +1849,20 @@ assert(
     && motherMary.includes('amount: { scaling: "overcharge"')
     && motherMary.includes('url: "https://w.atwiki.jp/siroi_human/pages/781.html"'),
   "聖母マリアの登録データ、ターゲット集中、段階式回復がありません"
+);
+const hondaTadakatsuSource = await readText("src/data/servants/hondaTadakatsu.ts");
+const effectDeclarations = await readText("src/effects/declarations.ts");
+const effectActionExecution = await readText("src/effects/actionExecution.ts");
+assert(
+  hondaTadakatsuSource.includes('dataId: "honda-tadakatsu"')
+    && hondaTadakatsuSource.includes('collectionNo: 7')
+    && hondaTadakatsuSource.includes('name: "蜻蛉切"')
+    && hondaTadakatsuSource.includes('scaling: "overcharge"')
+    && hondaTadakatsuSource.includes('canDefeat: true')
+    && hondaTadakatsuSource.includes('url: "https://w.atwiki.jp/siroi_human/pages/274.html"')
+    && effectDeclarations.includes('action.kind === "reduce_hp"')
+    && effectActionExecution.includes('if (effect.action.kind === "reduce_hp")'),
+  "本多忠勝の登録データまたはOC別HP減少の共通実装がありません"
 );
 assert(
   initialBattleUi.includes("export const INITIAL_ATTACK_AFFINITIES")

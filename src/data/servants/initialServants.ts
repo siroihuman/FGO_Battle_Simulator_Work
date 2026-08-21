@@ -9,6 +9,7 @@ import {
   type ServantDefinition,
 } from "./schema";
 import { DOMINATION_FOREIGNER } from "./dominationForeigner";
+import { HONDA_TADAKATSU } from "./hondaTadakatsu";
 import { MOTHER_MARY } from "./motherMary";
 import { SEN_NO_RIKYU } from "./senNoRikyu";
 
@@ -209,6 +210,7 @@ export const OFFICIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
 ].sort(byCollectionNumber);
 
 export const ORIGINAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
+  HONDA_TADAKATSU,
   DOMINATION_FOREIGNER,
   LUCIFERA,
   MOTHER_MARY,

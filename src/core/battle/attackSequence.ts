@@ -35,11 +35,14 @@ export type PreparedBattleAttackInput = Omit<
   | "sourceInstanceId"
   | "rng"
   | "afterHitBatch"
+  | "allowDefeatedTargets"
 >;
 
 export interface ResolveBattleAttackSequenceInput {
   sourceInstanceId: string | null;
   targetInstanceIds: readonly string[];
+  /** Allows a retained defeated target during a same-owner normal-card run. */
+  allowDefeatedTargets?: boolean;
   triggerContext: BattleAttackTriggerContext;
   rng: AttackRngStreams;
   /** Runs after the common before_attack trigger and before Hit calculation. */
@@ -119,6 +122,7 @@ function validateParticipants(
   state: BattleState,
   sourceInstanceId: string | null,
   targetInstanceIds: readonly string[],
+  allowDefeatedTargets = false,
 ): AttackParticipants {
   assertAttackPhase(state);
   if (targetInstanceIds.length === 0) {
@@ -159,7 +163,7 @@ function validateParticipants(
         `attack target is not in formation: ${instanceId}`,
       );
     }
-    if (!location.unit.alive) {
+    if (!allowDefeatedTargets && !location.unit.alive) {
       throw new RangeError(
         `attack target is defeated: ${instanceId}`,
       );
@@ -379,13 +383,19 @@ function resolveNewDeaths(
 function activeTargets(
   state: BattleState,
   targetInstanceIds: readonly string[],
+  allowDefeatedTargets = false,
 ): string[] {
   return targetInstanceIds.filter(
-    (instanceId) =>
-      findUnitLocation(
+    (instanceId) => {
+      const location = findUnitLocation(
         state.formation,
         instanceId,
-      )?.unit.alive === true,
+      );
+      return Boolean(
+        location
+        && (location.unit.alive || allowDefeatedTargets),
+      );
+    },
   );
 }
 
@@ -404,6 +414,7 @@ export function resolveBattleAttackSequence(
     state,
     input.sourceInstanceId,
     input.targetInstanceIds,
+    input.allowDefeatedTargets,
   );
   const targetInstanceIds =
     participants.orderedTargetInstanceIds;
@@ -448,6 +459,7 @@ export function resolveBattleAttackSequence(
   const activeTargetInstanceIds = activeTargets(
     currentState,
     targetInstanceIds,
+    input.allowDefeatedTargets,
   );
   const sourceCanContinue =
     input.sourceInstanceId === null
@@ -477,6 +489,7 @@ export function resolveBattleAttackSequence(
     attack = resolveBattleAttack(currentState, {
       ...prepared,
       sourceInstanceId: input.sourceInstanceId,
+      allowDefeatedTargets: input.allowDefeatedTargets,
       rng: input.rng,
       afterHitBatch: ({
         state: hitState,

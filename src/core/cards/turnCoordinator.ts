@@ -53,6 +53,11 @@ export interface AllyCommandActionResolverInput {
   state: BattleState;
   action: AllyCommandSequenceAction;
   target: EnemyTargetAnchor;
+  /**
+   * True only when a preceding single-target normal card from the same owner
+   * defeated this target and deliberately retained it for overkill.
+   */
+  defeatedTargetContinuation: boolean;
   chain: CommandCardChainAnalysis;
   preflight:
     | Extract<
@@ -67,6 +72,8 @@ export interface AllyCommandActionResolverInput {
 
 export interface AllyCommandActionResolverResult {
   state: BattleState;
+  /** Actual target scope of a resolved damaging action. */
+  targetScope?: "single" | "all";
   /**
    * Opaque, serializable action detail for the later battle-log layer.
    */
@@ -102,6 +109,8 @@ export type ExtraAttackExecutionResult =
 export interface AllyCommandActionResolution {
   action: AllyCommandSequenceAction;
   targetAtStart: EnemyTargetAnchor;
+  /** Engine-confirmed continuation against a target already at HP 0. */
+  defeatedTargetContinuation: boolean;
   preflight:
     | CommandCardExecutionResult
     | ExtraAttackExecutionResult;
@@ -197,6 +206,53 @@ function plannedActions(
         },
       ]
     : selected;
+}
+
+function isNormalCommandAction(
+  action: AllyCommandSequenceAction,
+): boolean {
+  return action.kind === "selected_card"
+    && action.calculation.card.kind === "normal";
+}
+
+function isSameOwnerNormalContinuation(
+  state: BattleState,
+  current: AllyCommandSequenceAction,
+  next: AllyCommandSequenceAction | undefined,
+  targetScope: "single" | "all" | undefined,
+): boolean {
+  if (
+    targetScope !== "single"
+    || !isNormalCommandAction(current)
+    || !next
+    || next.ownerInstanceId !== current.ownerInstanceId
+    || !(
+      isNormalCommandAction(next)
+      || next.kind === "extra_attack"
+    )
+  ) {
+    return false;
+  }
+  return commandCardOwnerRestrictions(
+    state,
+    next.ownerInstanceId,
+  ).restrictions.length === 0;
+}
+
+function isDefeatedEnemyTarget(
+  state: BattleState,
+  target: EnemyTargetAnchor,
+): boolean {
+  const location = findUnitLocation(
+    state.formation,
+    target.instanceId,
+  );
+  return Boolean(
+    location
+    && location.side === "enemy"
+    && location.area === "frontline"
+    && !location.unit.alive,
+  );
 }
 
 /**
@@ -335,9 +391,13 @@ export function resolveAllyCommandSequence(
   let target: EnemyTargetAnchor | null = initialTarget;
   let currentState = quickChainStarAddition.state;
 
-  for (const action of plan) {
+  for (const [actionIndex, action] of plan.entries()) {
     if (!target) break;
     const targetAtStart = target;
+    const defeatedTargetContinuation = isDefeatedEnemyTarget(
+      currentState,
+      targetAtStart,
+    );
     const additionalRestrictions =
       action.kind === "selected_card" && actionGuard
         ? actionGuard({
@@ -361,11 +421,13 @@ export function resolveAllyCommandSequence(
 
     let resolverCalled = false;
     let resolverDetail: unknown;
+    let resolvedTargetScope: "single" | "all" | undefined;
     if (preflight.outcome === "ready") {
       const resolved = resolver({
         state: currentState,
         action,
         target: targetAtStart,
+        defeatedTargetContinuation,
         chain,
         preflight,
       });
@@ -373,17 +435,28 @@ export function resolveAllyCommandSequence(
       currentState = resolved.state;
       resolverCalled = true;
       resolverDetail = resolved.detail;
+      resolvedTargetScope = resolved.targetScope;
     }
 
+    const deferDefeatedEnemyTarget =
+      isDefeatedEnemyTarget(currentState, targetAtStart)
+      && isSameOwnerNormalContinuation(
+        currentState,
+        action,
+        plan[actionIndex + 1],
+        resolvedTargetScope,
+      );
     const boundary = resolveActionBoundary(
       currentState,
       targetAtStart,
+      { deferDefeatedEnemyTarget },
     );
     currentState = boundary.state;
     target = boundary.nextEnemyTarget;
     actions.push({
       action,
       targetAtStart,
+      defeatedTargetContinuation,
       preflight,
       resolverCalled,
       ...(resolverDetail === undefined

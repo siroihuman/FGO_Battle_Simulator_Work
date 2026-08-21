@@ -290,6 +290,21 @@ function preparedAction(
       resolvedAmount: amount,
     };
   }
+  if (effect.action.kind === "reduce_hp") {
+    const amount = resolveDeclaredActionInteger(
+      effect.action.amount,
+      context,
+    );
+    return {
+      kind: "common",
+      action: {
+        ...effect.action,
+        amount,
+      },
+      resolvedAmount:
+        typeof effect.action.amount === "number" ? undefined : amount,
+    };
+  }
   if (effect.action.kind === "gain_stars") {
     const amount = resolveDeclaredActionInteger(
       effect.action.amount,

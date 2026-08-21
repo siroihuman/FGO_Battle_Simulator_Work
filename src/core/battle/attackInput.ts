@@ -98,6 +98,7 @@ export function prepareBattleAttackInput(
   sourceInstanceId: string,
   targetInstanceIds: readonly string[],
   action: AttackCalculationData,
+  allowDefeatedTargets = false,
 ): PreparedAttackInputResult {
   assertActionData(action);
   const sourceLocation = findUnitLocation(
@@ -123,7 +124,10 @@ export function prepareBattleAttackInput(
       state.formation,
       targetInstanceId,
     );
-    if (!targetLocation || !targetLocation.unit.alive) {
+    if (
+      !targetLocation
+      || (!allowDefeatedTargets && !targetLocation.unit.alive)
+    ) {
       throw new RangeError(
         `attack-input target is unavailable: ${targetInstanceId}`,
       );

@@ -51,6 +51,7 @@
 - No.362「千利休」と編成区分タブの受入結果: [`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)
 - No.070「聖母マリア」の受入状況: [`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)
 - 有限ターン状態の期限境界修正: [`qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md`](qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md)
+- No.007「本多忠勝」とOC別HP減少共通処理の受入状況: [`qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md`](qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md)
 - 詳細な完了履歴・決定理由・旧規則: [`archive/README.md`](archive/README.md)
 
 詳細仕様は現在も有効な正本です。履歴を確認する必要がある場合だけアーカイブを開いてください。

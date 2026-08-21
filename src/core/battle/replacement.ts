@@ -137,6 +137,15 @@ export interface EnemyReplacementResult {
   replacementDeferred: boolean;
 }
 
+export interface EnemyReplacementOptions {
+  /**
+   * Keeps specific defeated frontline enemies in place until a later safe
+   * boundary. This is used only while one ally continues consecutive
+   * single-target normal attacks against the same defeated target.
+   */
+  deferredDepartureInstanceIds?: readonly string[];
+}
+
 interface AllyFormationReplacementResult {
   ally: SideFormation;
   events: AllyDefeatReplacementEvent[];
@@ -216,8 +225,12 @@ export function resolveAllyDefeatReplacement(
 export function resolveEnemyReplacement(
   state: BattleState,
   boundary: EnemyReplacementBoundary,
+  options: EnemyReplacementOptions = {},
 ): EnemyReplacementResult {
   const frontline = [...state.formation.enemy.frontline];
+  const deferredDepartureInstanceIds = new Set(
+    options.deferredDepartureInstanceIds ?? [],
+  );
   const reserve = state.formation.enemy.reserve.map((candidate, index) => ({
     candidate,
     originalIndex: index,
@@ -227,6 +240,7 @@ export function resolveEnemyReplacement(
   for (let index = 0; index < frontline.length; index += 1) {
     const current = frontline[index];
     if (!current || current.alive) continue;
+    if (deferredDepartureInstanceIds.has(current.instanceId)) continue;
     departures.push({
       area: "frontline",
       index,
