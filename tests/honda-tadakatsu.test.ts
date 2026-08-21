@@ -18,6 +18,7 @@ import {
   selectCommandCards,
 } from "../src/core/cards/selection";
 import {
+  DOMINATION_FOREIGNER,
   HONDA_TADAKATSU,
   LIGHT_KOYANSKAYA,
   ORIGINAL_SERVANT_DEFINITIONS,
@@ -384,6 +385,151 @@ describe("No.007 本多忠勝", () => {
       expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.cardPerformance, value: 200 }),
     ]));
     expect(unspecifiedEffectNames(sourceEffects)).toEqual([]);
+  });
+
+  it("finishes Honda's consecutive Q and A on a defeated target before Foreigner's B retargets", () => {
+    const hondaSource = honda("honda");
+    const foreigner = createServantBattleInstance(
+      DOMINATION_FOREIGNER,
+      {
+        instanceId: "foreigner",
+        level: 90,
+        noblePhantasmLevel: 1,
+      },
+    );
+    const third = createServantBattleInstance(
+      LIGHT_KOYANSKAYA,
+      {
+        instanceId: "ally-c",
+        level: 90,
+        noblePhantasmLevel: 1,
+      },
+    );
+    let state = createBattleState({
+      ally: {
+        frontline: [hondaSource.unit, foreigner.unit, third.unit],
+        reserve: [],
+      },
+      waves: [{
+        enemy: {
+          frontline: [
+            unit("enemy-a", "enemy", {
+              hp: 1,
+              maxHp: 1,
+              baseMaxHp: 1,
+            }),
+            unit("enemy-b", "enemy", {
+              hp: 1_000_000,
+              maxHp: 1_000_000,
+              baseMaxHp: 1_000_000,
+            }),
+            null,
+          ],
+          reserve: [],
+        },
+      }],
+      enemyFrontlineLimit: 3,
+    });
+    const requestedCards = [
+      state.commandDeck.sourceCards.find(({ ownerInstanceId, cardIndex }) =>
+        ownerInstanceId === "honda" && cardIndex === 0
+      ),
+      state.commandDeck.sourceCards.find(({ ownerInstanceId, cardIndex }) =>
+        ownerInstanceId === "honda" && cardIndex === 2
+      ),
+      state.commandDeck.sourceCards.find(({ ownerInstanceId, cardIndex }) =>
+        ownerInstanceId === "foreigner" && cardIndex === 4
+      ),
+    ];
+    if (requestedCards.some((card) => !card)) {
+      throw new Error("Q→A→Bの検査カードがありません");
+    }
+    const selectedCards = requestedCards as [
+      NonNullable<(typeof requestedCards)[number]>,
+      NonNullable<(typeof requestedCards)[number]>,
+      NonNullable<(typeof requestedCards)[number]>,
+    ];
+    const fillers = state.commandDeck.sourceCards.filter((candidate) =>
+      !selectedCards.some(({ cardId }) => cardId === candidate.cardId)
+    ).slice(0, 2);
+    state = {
+      ...state,
+      commandStarDistributionMode: "legacy_on_command_confirmation",
+      commandStarDistribution: null,
+      commandDeck: {
+        ...state.commandDeck,
+        currentHand: [...selectedCards, ...fillers],
+      },
+    };
+    const selection = selectCommandCards(
+      state,
+      selectedCards.map(({ cardId }) => cardId),
+    );
+    if (!selection.accepted) {
+      throw new Error("Q→A→Bのカード選択に失敗しました");
+    }
+    const registry = createBattleAttackDataRegistry([
+      hondaSource.attackData,
+      foreigner.attackData,
+      third.attackData,
+      combatantData("enemy-a", "enemy-a"),
+      combatantData("enemy-b", "enemy-b"),
+    ]);
+    const run = () => {
+      const random = new BattleRng("honda-normal-card-target-continuation");
+      return resolveAllyCommandAttacks({
+        state,
+        selection: selection.selection,
+        registry,
+        rng: {
+          effects: random.stream("effects"),
+          critical: random.stream("critical"),
+          damage: random.stream("damage"),
+          stars: random.stream("stars"),
+        },
+        requestedTargetInstanceId: "enemy-a",
+      });
+    };
+    const resolved = run();
+
+    expect(resolved.sequence.accepted).toBe(true);
+    if (!resolved.sequence.accepted) return;
+    const actions = resolved.sequence.result.actions;
+    expect(actions.map(({ targetAtStart }) => targetAtStart.instanceId))
+      .toEqual(["enemy-a", "enemy-a", "enemy-b"]);
+    expect(actions[0]?.boundary).toMatchObject({
+      enemyReplacement: { departures: [] },
+      nextEnemyTarget: { instanceId: "enemy-a" },
+    });
+    const arts = actions[1]?.resolverDetail as AllyCommandAttackDetail;
+    expect(arts).toMatchObject({
+      outcome: "resolved",
+      targetScope: "single",
+      targetInstanceIds: ["enemy-a"],
+    });
+    if (arts.outcome !== "resolved") return;
+    expect(arts.resolution.attack?.attack.hits).toHaveLength(2);
+    expect(arts.resolution.attack?.attack.hits.every((hit) =>
+      hit.overkillOrOvergauge
+      && hit.actualHpLoss === 0
+    )).toBe(true);
+    expect(actions[1]?.boundary).toMatchObject({
+      enemyReplacement: {
+        departures: [expect.objectContaining({ instanceId: "enemy-a" })],
+      },
+      nextEnemyTarget: { instanceId: "enemy-b" },
+    });
+    expect(findUnitLocation(
+      resolved.sequence.result.state.formation,
+      "enemy-a",
+    )).toBeUndefined();
+    expect(findUnitLocation(
+      resolved.sequence.result.state.formation,
+      "enemy-b",
+    )?.unit.hp).toBeLessThan(1_000_000);
+
+    const replayed = run();
+    expect(replayed).toEqual(resolved);
   });
 
   it("uses only the specified formal skill and status icons", () => {

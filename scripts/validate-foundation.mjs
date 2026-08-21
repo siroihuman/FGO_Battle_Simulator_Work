@@ -86,6 +86,24 @@ if (manifest) {
     "敵対象が尽きた後は残りコマンド行動を開始してはいけません"
   );
   assert(
+    manifest.coreRules.sameOwnerSingleTargetNormalDefeatedTargetContinuation === true
+      && manifest.coreRules.sameOwnerNormalContinuationIncludesExtraAttack === true
+      && JSON.stringify(manifest.coreRules.sameOwnerNormalContinuationExcludes)
+        === JSON.stringify([
+          "noble_phantasm",
+          "all_target",
+          "different_battle_instance",
+          "unavailable_next_owner"
+        ])
+      && manifest.coreRules.continuedDefeatedTargetHits
+        === "all_overkill_actual_hp_loss_zero"
+      && manifest.coreRules.continuedDefeatedTargetDeathTriggerRepeats === false
+      && manifest.coreRules.sameOwnerNormalContinuationRngPolicy
+        === "normal_action_rng_only"
+      && manifest.coreRules.sameOwnerNormalContinuationSchemaChange === false,
+    "同一戦闘個体の単体通常カード連続規則が一致しません"
+  );
+  assert(
     manifest.coreRules.enemyPriorityBeforeNormalPlan === true,
     "敵優先スキル完了後に通常行動予定を作らなければなりません"
   );
@@ -390,7 +408,7 @@ if (manifest) {
   assert(
     hondaTadakatsu?.collectionNo === 7
       && hondaTadakatsu?.classificationCategory === 1
-      && hondaTadakatsu?.implementationStatus === "implemented_awaiting_visual_acceptance"
+      && hondaTadakatsu?.implementationStatus === "implemented_awaiting_visual_reacceptance"
       && hondaTadakatsu?.activeSkillCount === 3
       && hondaTadakatsu?.classSkillCount === 1
       && hondaTadakatsu?.noblePhantasmCount === 1
@@ -726,7 +744,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "honda-tadakatsu-implemented"
+    manifest.status === "honda-tadakatsu-normal-card-continuation-fixed"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1277,9 +1295,9 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.007「本多忠勝」を登録")
-    && startHere.includes("共通`reduce_hp`")
-    && startHere.includes("自動検査完了・実画面受入待ち")
+    && startHere.includes("No.007「本多忠勝」の具体データは実画面合格済み")
+    && startHere.includes("同じ戦闘個体の単体通常カード列")
+    && startHere.includes("自動検査完了・実画面再受入待ち")
     && startHere.includes("No.007「本多忠勝」")
     && startHere.includes("No.010「シグムンド」"),
   "作業開始ページに本多忠勝の実装状態と次作業がありません"
@@ -1337,6 +1355,8 @@ assert(
     && implementationStatus.includes("54ファイル・553テスト")
     && implementationStatus.includes("No.007「本多忠勝」")
     && implementationStatus.includes("宣言的`reduce_hp`")
+    && implementationStatus.includes("同じ味方戦闘個体の単体通常カード")
+    && implementationStatus.includes("55ファイル・566テスト")
     && implementationStatus.includes("No.010「シグムンド」")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
   "実装状況に本多忠勝、OC別HP減少、次作業、既存受入記録がありません"
@@ -1431,6 +1451,13 @@ assert(
     && decisionLog.includes("No.010「シグムンド」"),
   "決定記録に本多忠勝とOC別HP減少の実装方針がありません"
 );
+assert(
+  decisionLog.includes("## D-100 同一戦闘個体の単体通常カード列は戦闘不能対象へ連続する")
+    && decisionLog.includes("本多忠勝Quick→同Arts→支配のフォーリナーBuster")
+    && decisionLog.includes("すべてオーバーキル")
+    && decisionLog.includes("実画面再受入待ち"),
+  "決定記録に同一戦闘個体の単体通常カード連続規則がありません"
+);
 
 const enemyNpAcceptance = await readText(
   "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
@@ -1507,14 +1534,16 @@ const hondaTadakatsuAcceptance = await readText(
   "docs/qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md"
 );
 assert(
-  hondaTadakatsuAcceptance.includes("判定: 自動検査合格・実画面受入待ち")
+  hondaTadakatsuAcceptance.includes("本多忠勝データは実画面合格")
+    && hondaTadakatsuAcceptance.includes("連続通常攻撃修正は自動検査合格・実画面再受入待ち")
     && hondaTadakatsuAcceptance.includes("https://w.atwiki.jp/siroi_human/pages/274.html")
     && hondaTadakatsuAcceptance.includes("Lv80・90は参照記録だけ")
     && hondaTadakatsuAcceptance.includes("攻撃後HP減少1000／1500／2000／2500／3000")
     && hondaTadakatsuAcceptance.includes("`canDefeat: true`")
     && hondaTadakatsuAcceptance.includes("`Invinciblepierce`")
     && hondaTadakatsuAcceptance.includes("`Ignoredefense`")
-    && hondaTadakatsuAcceptance.includes("55ファイル・561テスト成功")
+    && hondaTadakatsuAcceptance.includes("本多忠勝Quick→同Arts→支配のフォーリナーBuster")
+    && hondaTadakatsuAcceptance.includes("55ファイル・566テスト成功")
     && hondaTadakatsuAcceptance.includes("No.010「シグムンド」"),
   "本多忠勝とOC別HP減少の受入報告が正本と一致しません"
 );
@@ -1565,12 +1594,25 @@ assert(
     && effectsAndTiming.includes("千利休「幽玄たる黒」"),
   "効果仕様に攻撃イベント実対象へ限定する共通トリガー規則がありません"
 );
+assert(
+  effectsAndTiming.includes("同じ戦闘個体の単体通常カード連続中")
+    && effectsAndTiming.includes("全Hitをオーバーキル")
+    && effectsAndTiming.includes("既存ダメージ・NP・スター乱数列を通常どおり使用"),
+  "効果仕様に戦闘不能対象へ続く単体通常カード列の規則がありません"
+);
 
 const battleSystem = await readText("docs/specs/BATTLE_SYSTEM.md");
 assert(
   battleSystem.includes("### ターン終了トリガーによるスター獲得")
     && battleSystem.includes("戦闘終了時は繰り上げず"),
   "戦闘仕様にターン終了スターの順序と繰上げ境界がありません"
+);
+assert(
+  battleSystem.includes("同じ戦闘個体の単体通常カードが連続する区間")
+    && battleSystem.includes("成立済みExtra Attack")
+    && battleSystem.includes("実HP減少は0")
+    && battleSystem.includes("次行動者の実行不能"),
+  "戦闘仕様に単体通常カード連続の対象保持境界がありません"
 );
 
 const calculationsAndRng = await readText(
@@ -1580,6 +1622,12 @@ assert(
   calculationsAndRng.includes("ターン終了トリガーによるスター獲得も")
     && calculationsAndRng.includes("他の5乱数列は変更しない"),
   "計算・乱数仕様にターン終了スターの上限と乱数境界がありません"
+);
+assert(
+  calculationsAndRng.includes("単体通常カード連続により")
+    && calculationsAndRng.includes("全Hitをオーバーキル")
+    && calculationsAndRng.includes("判断自体は乱数を消費しない"),
+  "計算・乱数仕様に単体通常カード連続のオーバーキル規則がありません"
 );
 
 const uiAndStorage = await readText("docs/specs/UI_AND_STORAGE.md");

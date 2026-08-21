@@ -482,6 +482,122 @@ describe("ally command sequence coordinator", () => {
     });
   });
 
+  it("keeps a defeated target through consecutive single-target normal cards from the same ally", () => {
+    let state = withHand(battle(), [
+      ["ally-a", 0],
+      ["ally-a", 1],
+      ["ally-b", 0],
+    ]);
+    const selection = select(state, [
+      normalCardId(state, "ally-a", 0),
+      normalCardId(state, "ally-a", 1),
+      normalCardId(state, "ally-b", 0),
+    ]);
+    const targets: string[] = [];
+    const started = resolveAllyCommandSequence(
+      state,
+      selection,
+      (input) => {
+        targets.push(input.target.instanceId);
+        return {
+          state:
+            input.action.sequence === 1
+              ? defeat(input.state, input.target.instanceId)
+              : input.state,
+          targetScope: "single",
+        };
+      },
+      "enemy-b",
+    );
+
+    expect(started.accepted).toBe(true);
+    if (!started.accepted) return;
+    expect(targets).toEqual(["enemy-b", "enemy-b", "enemy-c"]);
+    expect(started.result.actions[0]?.boundary).toMatchObject({
+      enemyReplacement: { departures: [] },
+      nextEnemyTarget: {
+        instanceId: "enemy-b",
+        frontlineIndex: 1,
+      },
+    });
+    expect(started.result.actions[1]?.boundary).toMatchObject({
+      enemyReplacement: {
+        departures: [{ instanceId: "enemy-b" }],
+      },
+      nextEnemyTarget: {
+        instanceId: "enemy-c",
+        frontlineIndex: 2,
+      },
+    });
+  });
+
+  it("retargets normally when the next same-owner card is a noble phantasm", () => {
+    let state = withHand(battle(), [
+      ["ally-a", 0],
+      ["ally-b", 0],
+    ]);
+    const selection = select(state, [
+      normalCardId(state, "ally-a", 0),
+      npCardId(state, "ally-a"),
+      normalCardId(state, "ally-b", 0),
+    ]);
+    const targets: string[] = [];
+    const started = resolveAllyCommandSequence(
+      state,
+      selection,
+      (input) => {
+        targets.push(input.target.instanceId);
+        return {
+          state:
+            input.action.sequence === 1
+              ? defeat(input.state, input.target.instanceId)
+              : input.state,
+          targetScope: "single",
+        };
+      },
+      "enemy-b",
+    );
+
+    expect(started.accepted).toBe(true);
+    if (!started.accepted) return;
+    expect(targets).toEqual(["enemy-b", "enemy-c", "enemy-c"]);
+    expect(started.result.actions[0]?.boundary.enemyReplacement.departures)
+      .toEqual([expect.objectContaining({ instanceId: "enemy-b" })]);
+  });
+
+  it("does not retain a defeated target after an all-target attack", () => {
+    let state = withHand(battle(), [
+      ["ally-a", 0],
+      ["ally-a", 1],
+      ["ally-b", 0],
+    ]);
+    const selection = select(state, [
+      normalCardId(state, "ally-a", 0),
+      normalCardId(state, "ally-a", 1),
+      normalCardId(state, "ally-b", 0),
+    ]);
+    const targets: string[] = [];
+    const started = resolveAllyCommandSequence(
+      state,
+      selection,
+      (input) => {
+        targets.push(input.target.instanceId);
+        return {
+          state:
+            input.action.sequence === 1
+              ? defeat(input.state, input.target.instanceId)
+              : input.state,
+          targetScope: input.action.sequence === 1 ? "all" : "single",
+        };
+      },
+      "enemy-b",
+    );
+
+    expect(started.accepted).toBe(true);
+    if (!started.accepted) return;
+    expect(targets).toEqual(["enemy-b", "enemy-c", "enemy-c"]);
+  });
+
   it("does not prioritize an immediate replacement in the departed target's slot", () => {
     const prepared = mixedSelection(battle("immediate"));
     const targets: string[] = [];
@@ -617,6 +733,46 @@ describe("ally command sequence coordinator", () => {
       { sequence: 3, kind: "selected_card" },
       { sequence: 4, kind: "extra_attack" },
     ]);
+  });
+
+  it("keeps a target defeated by the third normal card through the same owner's Extra Attack", () => {
+    const prepared = braveSelection(battle());
+    const targets: string[] = [];
+    const started = resolveAllyCommandSequence(
+      prepared.state,
+      prepared.selection,
+      (input) => {
+        targets.push(input.target.instanceId);
+        return {
+          state:
+            input.action.sequence === 3
+              ? defeat(input.state, input.target.instanceId)
+              : input.state,
+          targetScope: "single",
+        };
+      },
+      "enemy-b",
+    );
+
+    expect(started.accepted).toBe(true);
+    if (!started.accepted) return;
+    expect(targets).toEqual(["enemy-b", "enemy-b", "enemy-b", "enemy-b"]);
+    expect(started.result.actions[2]?.boundary).toMatchObject({
+      enemyReplacement: { departures: [] },
+      nextEnemyTarget: {
+        instanceId: "enemy-b",
+        frontlineIndex: 1,
+      },
+    });
+    expect(started.result.actions[3]?.boundary).toMatchObject({
+      enemyReplacement: {
+        departures: [{ instanceId: "enemy-b" }],
+      },
+      nextEnemyTarget: {
+        instanceId: "enemy-c",
+        frontlineIndex: 2,
+      },
+    });
   });
 
   it("adds a Quick-chain bonus to the next command star bucket once", () => {

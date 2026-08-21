@@ -182,7 +182,7 @@ function enemyBattle(): BattleState {
 }
 
 describe("versioned battle action log", () => {
-  it("records Hits, trigger order, immediate replacement, and rear-slot retargeting", () => {
+  it("records Hits, retained defeated targets, and delayed retargeting", () => {
     const result = resolveAllyLog("battle-log-ally");
     const log = result.battleLog;
     const first = log.entries[0];
@@ -232,29 +232,23 @@ describe("versioned battle action log", () => {
         ],
       },
       boundary: {
-        enemyDepartures: [
-          {
-            area: "frontline",
-            index: 0,
-            unit: { instanceId: "enemy-a" },
-          },
-        ],
+        enemyDepartures: [],
         enemyArrivals: [
           {
-            frontlineIndex: 0,
+            frontlineIndex: 2,
             reserveIndexBefore: 0,
             unit: { instanceId: "enemy-c", name: "Enemy C" },
           },
         ],
         targetTransition: {
-          outcome: "retargeted",
+          outcome: "maintained",
           previous: {
             instanceId: "enemy-a",
             frontlineIndex: 0,
           },
           next: {
-            instanceId: "enemy-b",
-            frontlineIndex: 1,
+            instanceId: "enemy-a",
+            frontlineIndex: 0,
           },
         },
       },
@@ -291,6 +285,48 @@ describe("versioned battle action log", () => {
         }),
       ]),
     );
+
+    const extra = log.entries[3];
+    expect(extra).toMatchObject({
+      action: {
+        kind: "extra_attack",
+        sequence: 4,
+      },
+      targetsAtStart: [
+        { instanceId: "enemy-a", name: "Enemy A" },
+      ],
+      attack: {
+        totalActualHpLoss: 0,
+      },
+      boundary: {
+        enemyDepartures: [
+          {
+            area: "frontline",
+            index: 0,
+            unit: { instanceId: "enemy-a" },
+          },
+        ],
+        enemyArrivals: [],
+        targetTransition: {
+          outcome: "retargeted",
+          previous: {
+            instanceId: "enemy-a",
+            frontlineIndex: 0,
+          },
+          next: {
+            instanceId: "enemy-b",
+            frontlineIndex: 1,
+          },
+        },
+      },
+    });
+    expect(extra?.attack?.hits[0]).toMatchObject({
+      target: { instanceId: "enemy-a" },
+      hpBefore: 0,
+      hpAfter: 0,
+      actualHpLoss: 0,
+      overkillOrOvergauge: true,
+    });
   });
 
   it("is JSON-safe and exactly reproducible from a fixed seed", () => {

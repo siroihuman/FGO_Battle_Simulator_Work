@@ -40,6 +40,14 @@ export interface ActionBoundaryResult {
   nextEnemyTarget: EnemyTargetAnchor | null;
 }
 
+export interface ActionBoundaryOptions {
+  /**
+   * Defers only the defeated selected enemy while the same ally continues a
+   * consecutive single-target normal-card attack.
+   */
+  deferDefeatedEnemyTarget?: boolean;
+}
+
 function assertActionPhase(
   state: BattleState,
 ): asserts state is BattleState & {
@@ -194,6 +202,7 @@ function resolveAllyReplacementAndDeck(
 export function resolveActionBoundary(
   state: BattleState,
   previousEnemyTarget: EnemyTargetAnchor | null = null,
+  options: ActionBoundaryOptions = {},
 ): ActionBoundaryResult {
   assertActionPhase(state);
   const phase = state.phase;
@@ -205,6 +214,13 @@ export function resolveActionBoundary(
     enemyReplacement = resolveEnemyReplacement(
       currentState,
       "after_action",
+      options.deferDefeatedEnemyTarget && previousEnemyTarget
+        ? {
+            deferredDepartureInstanceIds: [
+              previousEnemyTarget.instanceId,
+            ],
+          }
+        : {},
     );
     currentState = enemyReplacement.state;
     const ally = resolveAllyReplacementAndDeck(currentState);
@@ -221,6 +237,25 @@ export function resolveActionBoundary(
     currentState = enemyReplacement.state;
   }
 
+  const deferredTargetLocation =
+    phase === "ally_action"
+    && options.deferDefeatedEnemyTarget
+    && previousEnemyTarget
+      ? findUnitLocation(
+          currentState.formation,
+          previousEnemyTarget.instanceId,
+        )
+      : undefined;
+  const deferredTarget =
+    deferredTargetLocation?.side === "enemy"
+    && deferredTargetLocation.area === "frontline"
+    && !deferredTargetLocation.unit.alive
+      ? {
+          instanceId: deferredTargetLocation.unit.instanceId,
+          frontlineIndex: deferredTargetLocation.index,
+        }
+      : null;
+
   return {
     state: currentState,
     phase,
@@ -229,10 +264,11 @@ export function resolveActionBoundary(
     previousEnemyTarget,
     nextEnemyTarget:
       phase === "ally_action" && previousEnemyTarget
-        ? retargetEnemyAfterAction(
-            currentState,
-            previousEnemyTarget,
-          )
+        ? deferredTarget
+          ?? retargetEnemyAfterAction(
+              currentState,
+              previousEnemyTarget,
+            )
         : null,
   };
 }

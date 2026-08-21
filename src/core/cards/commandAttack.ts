@@ -650,6 +650,8 @@ export function resolveAllyCommandAttacks(
               sourceInstanceId:
                 resolverInput.action.ownerInstanceId,
               targetInstanceIds,
+              allowDefeatedTargets:
+                resolverInput.defeatedTargetContinuation,
               triggerContext: {
                 attackKind:
                   selectedCard?.kind === "noble_phantasm"
@@ -725,6 +727,7 @@ export function resolveAllyCommandAttacks(
                 resolverInput.action.ownerInstanceId,
                 activeTargetInstanceIds,
                 actionData.data.calculation,
+                resolverInput.defeatedTargetContinuation,
               ).input,
             },
             counters,
@@ -732,6 +735,7 @@ export function resolveAllyCommandAttacks(
           counters = resolution.counters;
           return {
             state: resolution.state,
+            targetScope: actionData.data.targetScope,
             detail: {
               outcome: "resolved",
               targetScope: actionData.data.targetScope,

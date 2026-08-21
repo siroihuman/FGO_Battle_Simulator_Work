@@ -31,6 +31,8 @@ export interface ResolveBattleAttackInput
   > {
   sourceInstanceId: string | null;
   targets: readonly BattleAttackTargetInput[];
+  /** Allows an explicitly retained defeated target for command-card overkill. */
+  allowDefeatedTargets?: boolean;
   afterHitBatch?: BattleAttackHitBatchHook;
 }
 
@@ -87,6 +89,7 @@ function currentSource(
 function orderedTargetInputs(
   state: BattleState,
   inputs: readonly BattleAttackTargetInput[],
+  allowDefeatedTargets = false,
 ): AttackTargetInput[] {
   if (inputs.length === 0) {
     throw new RangeError("battle attack targets must not be empty");
@@ -101,7 +104,7 @@ function orderedTargetInputs(
         `attack target is not in formation: ${input.targetInstanceId}`,
       );
     }
-    if (!location.unit.alive) {
+    if (!allowDefeatedTargets && !location.unit.alive) {
       throw new RangeError(
         `attack target is defeated: ${input.targetInstanceId}`,
       );
@@ -258,11 +261,16 @@ export function resolveBattleAttack(
   const {
     sourceInstanceId,
     targets: targetInputs,
+    allowDefeatedTargets = false,
     afterHitBatch,
     ...attackInput
   } = input;
   const source = currentSource(state, sourceInstanceId);
-  const targets = orderedTargetInputs(state, targetInputs);
+  const targets = orderedTargetInputs(
+    state,
+    targetInputs,
+    allowDefeatedTargets,
+  );
   if (
     source
     && targets.some(({ target }) => target.side === source.side)
