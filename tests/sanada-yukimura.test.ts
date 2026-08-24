@@ -298,6 +298,6 @@ describe("No.094 真田信繁", () => {
     expect(registeredStatusIconPath(effects.find(({ effectType }) => effectType === COMMON_EFFECT_TYPES.guts)!))
       .toContain("Gutsstatus.webp");
     expect(registeredStatusIconPath(effects.find(({ effectType }) => effectType === COMMON_EFFECT_TYPES.damageCut)!))
-      .toContain("DmgResistUp.webp");
+      .toContain("Defenseup.webp");
   });
 });

@@ -58,6 +58,7 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "宝具OC段階アップ": "NPOvercharge",
   "NP獲得量アップ": "Npchargeup",
   "被ダメージ時NP獲得量アップ": "NPGainUpDmg",
+  "被ダメージ時のNP獲得量アップ": "NPGainUpDmg",
   "QuickカードNP獲得量アップ": "Npchargeup",
   "QuickカードのNP獲得量アップ": "Npchargeup",
   "無敵貫通": "Invinciblepierce",
@@ -75,7 +76,7 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "防御時クラス相性不利": "Changeclass",
   "Busterカードのスター集中度アップ": "Busterabsorpt",
   "ガッツ": "Gutsstatus",
-  "被ダメージカット": "DmgResistUp",
+  "被ダメージカット": "Defenseup",
 };
 
 function publicAssetPath(path: string): string {

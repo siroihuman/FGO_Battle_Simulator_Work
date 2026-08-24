@@ -1128,6 +1128,16 @@
         "eligibleServantDataIds": ["sen-no-rikyu"],
         "source": "https://w.atwiki.jp/f_go/pages/5723.html",
         "implementationStatus": "implemented"
+      },
+      {
+        "name": "六文の渡し賃",
+        "dataId": "sanada-yukimura-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["sanada-yukimura"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/813.html",
+        "implementationStatus": "implemented"
       }
     ],
     "enemies": [

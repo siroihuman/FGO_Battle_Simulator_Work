@@ -13,6 +13,7 @@ import {
   FENRIR_BOND,
   HONDA_TADAKATSU_BOND,
   INITIAL_CRAFT_ESSENCE_REGISTRY,
+  SANADA_YUKIMURA_BOND,
 } from "../src/data/craftEssences";
 import {
   INITIAL_MYSTIC_CODE_REGISTRY,
@@ -20,6 +21,7 @@ import {
 import {
   LIGHT_KOYANSKAYA,
   HONDA_TADAKATSU,
+  SANADA_YUKIMURA,
   SEN_NO_RIKYU,
   LUCIFERA,
   type ServantLevel,
@@ -441,7 +443,7 @@ describe("minimum initial battle UI adapter", () => {
 
   it("uses only registered initial selection sources and renders labeled mobile-safe controls", () => {
     expect(Object.keys(INITIAL_MYSTIC_CODE_REGISTRY.byDataId)).toHaveLength(3);
-    expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toHaveLength(10);
+    expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toHaveLength(11);
     const markup = renderToStaticMarkup(createElement(App));
 
     expect(markup).toContain("初期戦闘設定");
@@ -472,5 +474,14 @@ describe("minimum initial battle UI adapter", () => {
     }));
     expect(hondaMarkup).toContain(HONDA_TADAKATSU_BOND.name);
     expect(hondaMarkup).not.toContain(FENRIR_BOND.name);
+    expect(hondaMarkup).not.toContain(SANADA_YUKIMURA_BOND.name);
+
+    const sanadaMarkup = renderToStaticMarkup(createElement(AllySlotEditor, {
+      label: "真田信繁検査用",
+      required: true,
+      selection: ally(SANADA_YUKIMURA.dataId),
+      onChange: () => {},
+    }));
+    expect(sanadaMarkup).toContain(SANADA_YUKIMURA_BOND.name);
   });
 });

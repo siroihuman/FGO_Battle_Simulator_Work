@@ -118,7 +118,7 @@
 - クラススキルは対魔力C（弱体耐性15%）と騎乗B（Quick8%）を解除不能の受動効果として戦闘開始時に適用する。
 - 強化後Buster全体宝具「真田丸 C++」だけを登録する。自身の宝具威力10%・1ターン、敵全体のOC別Buster攻撃耐性10／20／30／40／50%ダウン・3ターン、1回だけ消費する防御無視、宝具Lv別300／400／450／475／500%の均等4Hit全体攻撃、味方全体の防御30%・3ターン、無敵1ターンを資料順に処理する。防御無視は既存`ignore_defense`状態を攻撃前に1回だけ付与し、同じ宝具攻撃で消費するため、次の攻撃へ持ち越さない。
 - 防御・ガッツ・ダメージカット・無敵・強化解除耐性・弱体耐性は防御系またはその他強化として`opponent_turn_end`を明示する。Buster性能・宝具威力は攻撃系強化として所持者側ターン終了を維持する。
-- 正式アイコンは「六文銭、風雲を裂く」=`skill-card-buster-up`、「不惜身命」=`skill-guts`、「真田の赤備え」=`skill-immune-invincibility`、対魔力=`class-magic-resistance`、騎乗=`class-riding`、ガッツ=`Gutsstatus`、被ダメージカット=`DmgResistUp`を使用する。未指定画像を推測しない。
+- 正式アイコンは「六文銭、風雲を裂く」=`skill-card-buster-up`、「不惜身命」=`skill-guts`、「真田の赤備え」=`skill-immune-invincibility`、対魔力=`class-magic-resistance`、騎乗=`class-riding`、ガッツ=`Gutsstatus`、被ダメージカット=`Defenseup`を使用する。未指定画像を推測しない。
 - BattleSession、中断保存形式4、データ1.38.0、行動ログ形式5、ターンログ形式2、固定シードリプレイ、カード再配布、6乱数列を変更しない。
 
 ### No.362 千利休
@@ -221,7 +221,7 @@ Lv最大方針は既存の魔術礼装形式2と共通です。Lv選択値やLv�
 
 ## 概念礼装
 
-形式1のLv・解放状態・ATK・HP・開始時／前衛限定フィールド効果データ、戦闘個体別選択、開始時適用基盤と、汎用2枚・絆礼装8枚の具体データ・効果実行を実装済みです。
+形式1のLv・解放状態・ATK・HP・開始時／前衛限定フィールド効果データ、戦闘個体別選択、開始時適用基盤と、汎用2枚・絆礼装9枚の具体データ・効果実行を実装済みです。
 
 ### 初期対象
 
@@ -235,13 +235,14 @@ Lv最大方針は既存の魔術礼装形式2と共通です。Lv選択値やLv�
 | 六つのありえざるもの | `fenrir-bond` | 星4 | 最大解放 | 80 | `fenrir`自身 | https://w.atwiki.jp/siroi_human/pages/329.html |
 | 六罪牽く黄金車 | `lucifera-bond` | 星4 | 最大解放 | 80 | `lucifera`自身／前衛中の〔悪〕味方 | https://w.atwiki.jp/siroi_human/pages/795.html |
 | 聖母の揺籃 | `mother-mary-bond` | 星4 | 最大解放 | 80 | `mother-mary`前衛中の〔領域外の生命〕味方 | https://w.atwiki.jp/siroi_human/pages/781.html |
+| 六文の渡し賃 | `sanada-yukimura-bond` | 星4 | 最大解放 | 80 | `sanada-yukimura`前衛中の味方全体 | https://w.atwiki.jp/siroi_human/pages/813.html |
 | コヤンスカヤの野望～東海岸版～ | `koyanskaya-of-light-bond` | 星4 | 最大解放 | 80 | `koyanskaya-of-light`前衛中の味方全体 | https://w.atwiki.jp/f_go/pages/5141.html |
 | 水の如く花の如く | `sen-no-rikyu-bond` | 星4 | 最大解放 | 80 | `sen-no-rikyu`前衛中の味方全体 | https://w.atwiki.jp/f_go/pages/5723.html |
 
 - 参照確認日: 2026-08-10。
 - 初期実装では未解放データを登録せず、解放状態を選択項目にしない。登録する全定義は`limitBreak: "max"`とする。
 - 初期実装のLvはレアリティ別最大Lv固定とし、Lv選択項目を設けない。
-- 汎用2枚は星5Lv100、絆礼装8枚は星4Lv80で登録する。絆礼装8枚の最終ATK・HPはすべて100・100。
+- 汎用2枚は星5Lv100、絆礼装9枚は星4Lv80で登録する。絆礼装9枚の最終ATK・HPはすべて100・100。
 - 最大解放・Lv最大時能力値は、カレイドスコープがATK 2000・HP 0、黒の聖杯がATK 2400・HP 0。形式1データの最終ATK・HPとして登録済み。
 - 最大解放効果は、カレイドスコープが開始NP 100%、黒の聖杯が宝具威力80%と毎ターンHP500減少。開始NPは共通NP変更、宝具威力は共通数値状態、毎ターンHP減少は共通ターン終了トリガーへ接続済み。
 - 黒の聖杯の毎ターンHP減少は、追加資料でHP0になり得ることを確認した。HP1停止の`slip_damage`へ近似せず、HP0可能な共通HP減少として処理する。
@@ -286,7 +287,7 @@ Lv最大方針は既存の魔術礼装形式2と共通です。Lv選択値やLv�
 
 ### 具体データ実装
 
-- `src/data/craftEssences/initialCraftEssences.ts`へ汎用2枚と絆礼装8枚の形式1定義、出典、確認日を登録済み。
+- `src/data/craftEssences/initialCraftEssences.ts`へ汎用2枚と絆礼装9枚の形式1定義、出典、確認日を登録済み。
 - 通常処理: カレイドスコープの開始NP100%、黒の聖杯の宝具威力80%・HP0可能なHP500減少、絆礼装のカード性能・攻撃・NP獲得量・特攻・回復量・クリティカル・宝具威力・通常Buster攻撃トリガー。
 - 限定的例外処理: 黒の聖杯と聖母マリア絆礼装の毎ターン発動、絆礼装の前衛限定フィールド効果。いずれも既存の再利用可能な共通トリガー・共通状態を使用する。
 - 固有例外処理: なし。個別mechanicsファイルは作成しない。

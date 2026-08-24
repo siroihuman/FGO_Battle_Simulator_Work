@@ -18,9 +18,11 @@ import {
   LIGHT_KOYANSKAYA_BOND,
   LUCIFERA_BOND,
   MOTHER_MARY_BOND,
+  SANADA_YUKIMURA_BOND,
   SEN_NO_RIKYU_BOND,
 } from "../src/data/craftEssences";
 import { createEffectRuntimeCounters } from "../src/effects/runtime";
+import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
 import { resolveSideTurnEnd } from "../src/effects/turnEnd";
 import { collectTriggerActivations } from "../src/effects/triggers";
 import { presentUnitEffects } from "../src/ui/effectPresentation";
@@ -151,7 +153,7 @@ function battleUnit(
 
 describe("bond Craft Essences", () => {
   it("registers all requested bond essences with exact wearer restrictions and fixed Lv80 stats", () => {
-    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(10);
+    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(11);
     for (const definition of INITIAL_CRAFT_ESSENCE_DEFINITIONS.filter(
       ({ eligibleServantDataIds }) => eligibleServantDataIds !== undefined,
     )) {
@@ -167,6 +169,10 @@ describe("bond Craft Essences", () => {
     expect(HONDA_TADAKATSU_BOND.name).toBe("傷ひとつなき具足");
     expect(DOMINATION_FOREIGNER_BOND.name).toBe("一九二八年二月号");
     expect(FENRIR_BOND.name).toBe("六つのありえざるもの");
+    expect(SANADA_YUKIMURA_BOND).toMatchObject({
+      name: "六文の渡し賃",
+      eligibleServantDataIds: ["sanada-yukimura"],
+    });
     expect(LIGHT_KOYANSKAYA_BOND.eligibleServantDataIds).toEqual([
       "koyanskaya-of-light",
     ]);
@@ -188,6 +194,46 @@ describe("bond Craft Essences", () => {
         }),
       })],
     });
+  });
+
+  it("registers 真田信繁's bond effects for every current frontline ally only", () => {
+    const initialState = createBattleState({
+      ally: {
+        frontline: [
+          unit("sanada", "ally", { dataId: "sanada-yukimura" }),
+          unit("ally-b", "ally", { dataId: "honda-tadakatsu" }),
+          unit("ally-c", "ally", { dataId: "fenrir" }),
+        ],
+        reserve: [unit("ally-d", "ally", { dataId: "honda-tadakatsu" })],
+      },
+      waves: [{ enemy: { frontline: [unit("enemy-a", "enemy"), null, null], reserve: [] } }],
+      enemyFrontlineLimit: 3,
+    });
+    const result = initializeBattleLoadout({
+      state: initialState,
+      rng: new BattleRng("sanada-bond"),
+      counters: createEffectRuntimeCounters(),
+      attackRegistry: createBattleAttackDataRegistry([
+        combatantData("sanada", "sanada-yukimura", { attack: 10_000 }),
+        combatantData("ally-b", "honda-tadakatsu", { attack: 10_000 }),
+        combatantData("ally-c", "fenrir", { attack: 10_000 }),
+        combatantData("ally-d", "honda-tadakatsu", { attack: 10_000 }),
+      ]),
+      craftEssenceRegistry: INITIAL_CRAFT_ESSENCE_REGISTRY,
+      selection: {
+        mysticCodeDataId: null,
+        craftEssenceDataIdByInstanceId: { sanada: "sanada-yukimura-bond" },
+      },
+    });
+    const effects = battleUnit(result.state.formation, "ally-b").effects;
+    expect(effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.criticalDamage, value: 100 }),
+      expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.defense, value: 100 }),
+      expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.receivedNpGain, value: 100 }),
+    ]));
+    expect(battleUnit(result.state.formation, "ally-d").effects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ stableId: "sanada-yukimura-bond-party-critical-state", value: 0 }),
+    ]));
   });
 
   it("rejects a bond essence before mutating state when the exact servant data ID does not match", () => {

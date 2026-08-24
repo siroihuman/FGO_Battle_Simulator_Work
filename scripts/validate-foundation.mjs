@@ -1209,9 +1209,10 @@ if (manifest) {
     ["聖母の揺籃", "mother-mary-bond", "mother-mary", "https://w.atwiki.jp/siroi_human/pages/781.html"],
     ["コヤンスカヤの野望～東海岸版～", "koyanskaya-of-light-bond", "koyanskaya-of-light", "https://w.atwiki.jp/f_go/pages/5141.html"],
     ["水の如く花の如く", "sen-no-rikyu-bond", "sen-no-rikyu", "https://w.atwiki.jp/f_go/pages/5723.html"],
+    ["六文の渡し賃", "sanada-yukimura-bond", "sanada-yukimura", "https://w.atwiki.jp/siroi_human/pages/813.html"],
   ];
   assert(
-    initialCraftEssences.length === 10
+    initialCraftEssences.length === 11
       && initialCraftEssences[0]?.name === "カレイドスコープ"
       && initialCraftEssences[0]?.dataId === "kaleidoscope"
       && initialCraftEssences[0]?.rarity === 5
@@ -1233,7 +1234,7 @@ if (manifest) {
           && craftEssence.source === source
           && craftEssence.implementationStatus === "implemented";
       }),
-    "概念礼装2枚と絆礼装8枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
+    "概念礼装2枚と絆礼装9枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
   );
 
   const initialEnemies = manifest.initialContent?.enemies ?? [];
@@ -1465,7 +1466,7 @@ const requiredUiAssets = [
     "Quickdamageup", "Curse", "Defensedown", "Invinciblepierce", "Ignoredefense",
     "Defenseup", "Npseal", "Tauntup", "Hpregen", "Maxhpup", "Specialinvincible",
     "Avoid", "Busterresistdown", "Changeclass", "Busterabsorpt", "Healpowup",
-    "Gutsstatus", "DmgResistUp",
+    "Gutsstatus",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
@@ -1641,6 +1642,7 @@ assert(
     && decisionLog.includes("`sanada-yukimura`")
     && decisionLog.includes("攻撃前に`ignore_defense`状態を1回だけ登録")
     && decisionLog.includes("`Gutsstatus`")
+    && decisionLog.includes("絆礼装: 「六文の渡し賃」")
     && decisionLog.includes("No.059「那須与一」"),
   "決定記録に真田信繁の実装方針がありません"
 );
@@ -1911,7 +1913,8 @@ assert(
 assert(
   iconRegistry.includes('"不惜身命": "skill-guts"')
     && iconRegistry.includes('"ガッツ": "Gutsstatus"')
-    && iconRegistry.includes('"被ダメージカット": "DmgResistUp"'),
+    && iconRegistry.includes('"被ダメージカット": "Defenseup"')
+    && iconRegistry.includes('"被ダメージ時のNP獲得量アップ": "NPGainUpDmg"'),
   "真田信繁の正式スキル・状態アイコン対応が一致しません"
 );
 assert(
@@ -2040,8 +2043,14 @@ assert(
     && initialContent.includes("Q4／A3／B2／EX4／宝具4で")
     && initialContent.includes("防御無視は既存`ignore_defense`状態")
     && initialContent.includes("`skill-guts`")
-    && initialContent.includes("`DmgResistUp`"),
+    && initialContent.includes("`Defenseup`"),
   "具体データ仕様に真田信繁の採用範囲がありません"
+);
+assert(
+  initialContent.includes("六文の渡し賃")
+    && initialContent.includes("`sanada-yukimura-bond`")
+    && initialContent.includes("絆礼装9枚"),
+  "具体データ仕様に真田信繁の絆礼装がありません"
 );
 assert(
   initialContent.includes("### No.070 聖母マリア")
