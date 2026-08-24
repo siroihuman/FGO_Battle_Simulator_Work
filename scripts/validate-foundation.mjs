@@ -369,7 +369,7 @@ if (manifest) {
       && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
         === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
       && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "ajisukitakahikone-no-kami", "lucifera", "mother-mary"])
+        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary"])
       && servantOriginTabs.tabBrowseMutation === "none"
       && servantOriginTabs.currentSelectionOutsideTabs === true,
     "編成の公式／オリジナル区分とNo.順が一致しません"
@@ -395,10 +395,11 @@ if (manifest) {
   const ajisukitakahikoneNoKami = specifiedServants.find(
     ({ dataId }) => dataId === "ajisukitakahikone-no-kami"
   );
+  const fenrir = specifiedServants.find(({ dataId }) => dataId === "fenrir");
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
   const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 5
+    specifiedServants.length === 6
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -407,6 +408,23 @@ if (manifest) {
       && senNoRikyu?.battleSuspendSchemaVersion === 4
       && senNoRikyu?.dataSchemaVersion === "1.38.0",
     "指定コンテンツに千利休の登録状態がありません"
+  );
+  assert(
+    fenrir?.collectionNo === 58
+      && fenrir?.classificationCategory === 1
+      && fenrir?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && fenrir?.activeSkillCount === 3
+      && fenrir?.classSkillCount === 4
+      && fenrir?.noblePhantasmCount === 1
+      && fenrir?.noblePhantasmRevision === "upgraded_only"
+      && fenrir?.noblePhantasmHitCount === 5
+      && fenrir?.noblePhantasmFixedSpecialAttack?.requiredTargetTrait === "天の力"
+      && fenrir?.noblePhantasmFixedSpecialAttack?.multiplierPermille === 1500
+      && fenrir?.noblePhantasmPostHpReduction?.amount === 1000
+      && fenrir?.noblePhantasmPostHpReduction?.canDefeat === true
+      && fenrir?.battleSuspendSchemaVersion === 4
+      && fenrir?.dataSchemaVersion === "1.38.0",
+    "指定コンテンツにフェンリルの登録状態がありません"
   );
   assert(
     ajisukitakahikoneNoKami?.collectionNo === 57
@@ -801,7 +819,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "ajisukitakahikone-no-kami-implemented-and-accepted"
+    manifest.status === "fenrir-implemented-awaiting-user-acceptance"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1346,6 +1364,7 @@ const mandatoryFiles = [
   "src/data/servants/senNoRikyu.ts",
   "src/data/servants/hondaTadakatsu.ts",
   "src/data/servants/ajisukitakahikoneNoKami.ts",
+  "src/data/servants/fenrir.ts",
   "src/effects/noblePhantasmOvercharge.ts",
 ];
 
@@ -1364,12 +1383,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.057「阿遅鉏高日子根神」")
-    && startHere.includes("対象HPと倍率0を問わず発生するOC追加9Hit")
-    && startHere.includes("ユーザー環境の実画面確認を完了して最終合格")
+    && startHere.includes("No.058「フェンリル」")
+    && startHere.includes("〔天の力〕固定特攻")
+    && startHere.includes("実画面受入とPR統合を待つ")
     && startHere.includes("中断保存形式4・データ1.38.0")
-    && startHere.includes("No.010「シグムンド」"),
-  "作業開始ページに阿遅鉏高日子根神の実装状態と次作業がありません"
+    && startHere.includes("No.059「那須与一」"),
+  "作業開始ページにフェンリルの実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1390,7 +1409,8 @@ const requiredUiAssets = [
     "skill-unique-command-shuffle", "skill-unique-order-change",
     "skill-card-quick-up", "skill-np-damafe-up", "skill-crit-damage-up",
     "skill-hp-heal-per-turn", "skill-star-weight-up", "class-magic-resistance",
-    "class-riding", "class-divinity",
+    "class-riding", "class-divinity", "class-mad-enhancement",
+    "skill-card-buster-star-weight", "skill-star-rate-up",
   ].map((name) => `public/assets/skill-icons/${name}.png`),
   ...[
     "Artsupstatus", "Attackdown", "Attackup", "Buffatk", "Busterupstatus",
@@ -1402,7 +1422,7 @@ const requiredUiAssets = [
     "Npgainturn", "Stargainturn", "NPOvercharge", "Npchargeup", "NPGainUpDmg",
     "Quickdamageup", "Curse", "Defensedown", "Invinciblepierce", "Ignoredefense",
     "Defenseup", "Npseal", "Tauntup", "Hpregen", "Maxhpup", "Specialinvincible",
-    "Avoid", "Busterresistdown", "Changeclass",
+    "Avoid", "Busterresistdown", "Changeclass", "Busterabsorpt",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
@@ -1432,12 +1452,14 @@ assert(
     && implementationStatus.includes("連続フレームと敵HP欄を省略しない")
     && implementationStatus.includes("55ファイル・566テスト")
     && implementationStatus.includes("No.057「阿遅鉏高日子根神」")
-    && implementationStatus.includes("OC別9Hit追加攻撃")
-    && implementationStatus.includes("防御時クラス相性不利150%")
-    && implementationStatus.includes("2026-08-21にユーザー実画面受入を完了して最終合格")
-    && implementationStatus.includes("No.010「シグムンド」")
+    && implementationStatus.includes("「神度剣」は攻撃前に敵全体へ")
+    && implementationStatus.includes("防御時クラス相性不利は受ける攻撃のクラス相性を固定150%へ上書き")
+    && implementationStatus.includes("No.058「フェンリル」")
+    && implementationStatus.includes("〔天の力〕固定150%特攻")
+    && implementationStatus.includes("`canDefeat: true`")
+    && implementationStatus.includes("No.059「那須与一」")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
-  "実装状況に阿遅鉏高日子根神、宝具追加攻撃、次作業、既存受入記録がありません"
+  "実装状況にフェンリル、既存受入記録、次作業がありません"
 );
 const dominationForeignerAcceptance = await readText(
   "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md"
@@ -1558,6 +1580,15 @@ assert(
     && decisionLog.includes("状態: 採用（ユーザー実画面受入完了）")
     && decisionLog.includes("No.010「シグムンド」の具体データ確認・実装可能性確認"),
   "決定記録に阿遅鉏高日子根神の最終受入がありません"
+);
+assert(
+  decisionLog.includes("## D-105 No.058「フェンリル」をカテゴリ1の明示指定対象として登録する")
+    && decisionLog.includes("`fenrir`")
+    && decisionLog.includes("〔天の力〕固定特攻")
+    && decisionLog.includes("`canDefeat: true`")
+    && decisionLog.includes("`Busterabsorpt`")
+    && decisionLog.includes("No.059「那須与一"),
+  "決定記録にフェンリルの実装方針がありません"
 );
 
 const enemyNpAcceptance = await readText(
@@ -1914,7 +1945,7 @@ assert(
   initialContent.includes("### No.362 千利休")
     && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
     && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
-    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.057 阿遅鉏高日子根神、No.062 ルシフェラ、No.070 聖母マリア"),
+    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア"),
   "具体データ仕様に千利休と編成区分の採用範囲がありません"
 );
 assert(
@@ -1935,6 +1966,14 @@ assert(
     && initialContent.includes("1500permilleへ上書き")
     && initialContent.includes("`Changeclass`"),
   "具体データ仕様に阿遅鉏高日子根神と宝具追加攻撃の採用範囲がありません"
+);
+assert(
+  initialContent.includes("### No.058 フェンリル")
+    && initialContent.includes("Q5／A2／B2／EX5／宝具5Hit")
+    && initialContent.includes("〔天の力〕固定150%特攻")
+    && initialContent.includes("HP1000減少（`canDefeat: true`）")
+    && initialContent.includes("`Busterabsorpt`"),
+  "具体データ仕様にフェンリルの採用範囲がありません"
 );
 assert(
   initialContent.includes("### No.070 聖母マリア")
@@ -1965,6 +2004,7 @@ const hondaTadakatsuSource = await readText("src/data/servants/hondaTadakatsu.ts
 const ajisukitakahikoneSource = await readText(
   "src/data/servants/ajisukitakahikoneNoKami.ts"
 );
+const fenrirSource = await readText("src/data/servants/fenrir.ts");
 const effectDeclarations = await readText("src/effects/declarations.ts");
 const effectActionExecution = await readText("src/effects/actionExecution.ts");
 assert(
@@ -1987,6 +2027,17 @@ assert(
     && ajisukitakahikoneSource.includes("defensiveClassAffinityOverride")
     && ajisukitakahikoneSource.includes('url: "https://w.atwiki.jp/siroi_human/pages/50.html"'),
   "阿遅鉏高日子根神の登録データ、宝具追加攻撃、防御相性上書きがありません"
+);
+assert(
+  fenrirSource.includes('dataId: "fenrir"')
+    && fenrirSource.includes("collectionNo: 58")
+    && fenrirSource.includes('name: "咆哮轟く終焉の黄昏"')
+    && fenrirSource.includes('requiredTargetTraits: ["天の力"]')
+    && fenrirSource.includes("multiplierPermille: 1_500")
+    && fenrirSource.includes("hitWeights: [1, 1, 1, 1, 1]")
+    && fenrirSource.includes("canDefeat: true")
+    && fenrirSource.includes('url: "https://w.atwiki.jp/siroi_human/pages/329.html"'),
+  "フェンリルの登録データ、特攻、宝具後HP減少がありません"
 );
 assert(
   initialBattleUi.includes("export const INITIAL_ATTACK_AFFINITIES")

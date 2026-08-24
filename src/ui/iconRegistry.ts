@@ -24,6 +24,11 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "魔力放出（雷神）": "skill-card-buster-up",
   "豊穣の加護": "skill-hp-heal",
   "怒りの力": "skill-attack-up",
+  "神殺しの魔狼": "skill-damage-up",
+  "魔狼阻む三本の拘束": "skill-np-charge",
+  "凍気迸る獣の四脚": "skill-card-buster-star-weight",
+  "狂化": "class-mad-enhancement",
+  "野性": "skill-star-rate-up",
   "対魔力": "class-magic-resistance",
   "騎乗": "class-riding",
   "神性": "class-divinity",
@@ -39,6 +44,7 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
 };
 
 const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
+  "Busterカード性能アップ": "Busterupstatus",
   "Artsカード性能アップ": "Artsupstatus",
   "Quickカード性能アップ": "Quickupstatus",
   "スター発生率アップ": "Stargainup",
@@ -63,6 +69,7 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "回避": "Avoid",
   "Buster攻撃耐性ダウン": "Busterresistdown",
   "防御時クラス相性不利": "Changeclass",
+  "Busterカードのスター集中度アップ": "Busterabsorpt",
 };
 
 function publicAssetPath(path: string): string {

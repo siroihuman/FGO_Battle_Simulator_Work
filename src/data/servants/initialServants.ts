@@ -13,6 +13,7 @@ import { HONDA_TADAKATSU } from "./hondaTadakatsu";
 import {
   AJISUKITAKAHIKONE_NO_KAMI,
 } from "./ajisukitakahikoneNoKami";
+import { FENRIR } from "./fenrir";
 import { MOTHER_MARY } from "./motherMary";
 import { SEN_NO_RIKYU } from "./senNoRikyu";
 
@@ -215,6 +216,7 @@ export const OFFICIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
 export const ORIGINAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
   HONDA_TADAKATSU,
   AJISUKITAKAHIKONE_NO_KAMI,
+  FENRIR,
   DOMINATION_FOREIGNER,
   LUCIFERA,
   MOTHER_MARY,
