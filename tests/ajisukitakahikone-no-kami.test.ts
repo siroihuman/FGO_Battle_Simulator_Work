@@ -158,7 +158,7 @@ describe("No.057 阿遅鉏高日子根神", () => {
         },
       });
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 57, 58, 62, 70]);
+      .toEqual([7, 24, 57, 58, 62, 70, 94]);
     expect(initialAllySelectionForServant(AJISUKITAKAHIKONE_NO_KAMI.dataId))
       .toMatchObject({ level: 90, noblePhantasmLevel: 1 });
     expect(registeredServantWikiUrl(AJISUKITAKAHIKONE_NO_KAMI.dataId))
@@ -490,7 +490,7 @@ describe("No.057 阿遅鉏高日子根神", () => {
     ])).toEqual([]);
     const detail = presentNoblePhantasmDetail(source.unit);
     expect(detail?.descriptions).toContain(
-      "＆オーバーチャージで追加で強力な攻撃<OC:威力UP>：0% / 200% / 300% / 400% / 500%",
+      "＆オーバーチャージで追加で強力な攻撃<OC:威力UP>　Buster(x1.5)　",
     );
   });
 

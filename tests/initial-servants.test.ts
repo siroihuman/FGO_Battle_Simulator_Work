@@ -14,6 +14,7 @@ import {
   HONDA_TADAKATSU,
   LIGHT_KOYANSKAYA,
   LUCIFERA,
+  SANADA_YUKIMURA,
   SEN_NO_RIKYU,
   assertValidServantDefinition,
   createServantBattleInstance,
@@ -69,6 +70,7 @@ describe("initial servant definitions", () => {
       "fenrir",
       "lucifera",
       "mother-mary",
+      "sanada-yukimura",
     ]);
     expect(LIGHT_KOYANSKAYA.levelStats.at(-1)).toEqual({
       level: 120,
@@ -99,6 +101,11 @@ describe("initial servant definitions", () => {
       level: 120,
       hp: 16_112,
       attack: 16_813,
+    });
+    expect(SANADA_YUKIMURA.levelStats.at(-1)).toEqual({
+      level: 120,
+      hp: 18_527,
+      attack: 14_544,
     });
     expect(SEN_NO_RIKYU.levelStats.at(-1)).toEqual({
       level: 120,

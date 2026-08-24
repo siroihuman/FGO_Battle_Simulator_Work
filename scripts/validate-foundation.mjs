@@ -369,7 +369,7 @@ if (manifest) {
       && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
         === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
       && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary"])
+        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary", "sanada-yukimura"])
       && servantOriginTabs.tabBrowseMutation === "none"
       && servantOriginTabs.currentSelectionOutsideTabs === true,
     "編成の公式／オリジナル区分とNo.順が一致しません"
@@ -396,10 +396,11 @@ if (manifest) {
     ({ dataId }) => dataId === "ajisukitakahikone-no-kami"
   );
   const fenrir = specifiedServants.find(({ dataId }) => dataId === "fenrir");
+  const sanadaYukimura = specifiedServants.find(({ dataId }) => dataId === "sanada-yukimura");
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
   const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 6
+    specifiedServants.length === 7
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -412,7 +413,7 @@ if (manifest) {
   assert(
     fenrir?.collectionNo === 58
       && fenrir?.classificationCategory === 1
-      && fenrir?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && fenrir?.implementationStatus === "implemented_and_accepted"
       && fenrir?.activeSkillCount === 3
       && fenrir?.classSkillCount === 4
       && fenrir?.noblePhantasmCount === 1
@@ -425,6 +426,20 @@ if (manifest) {
       && fenrir?.battleSuspendSchemaVersion === 4
       && fenrir?.dataSchemaVersion === "1.38.0",
     "指定コンテンツにフェンリルの登録状態がありません"
+  );
+  assert(
+    sanadaYukimura?.collectionNo === 94
+      && sanadaYukimura?.classificationCategory === 1
+      && sanadaYukimura?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && sanadaYukimura?.activeSkillCount === 3
+      && sanadaYukimura?.classSkillCount === 2
+      && sanadaYukimura?.noblePhantasmCount === 1
+      && sanadaYukimura?.noblePhantasmRevision === "upgraded_only"
+      && sanadaYukimura?.noblePhantasmHitCount === 4
+      && sanadaYukimura?.noblePhantasmIgnoreDefense === "one_use_pre_attack_common_effect"
+      && sanadaYukimura?.battleSuspendSchemaVersion === 4
+      && sanadaYukimura?.dataSchemaVersion === "1.38.0",
+    "指定コンテンツに真田信繁の登録状態がありません"
   );
   assert(
     ajisukitakahikoneNoKami?.collectionNo === 57
@@ -819,7 +834,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "bond-craft-essences-implemented-awaiting-user-acceptance"
+    manifest.status === "sanada-yukimura-implemented-awaiting-user-acceptance"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1194,9 +1209,10 @@ if (manifest) {
     ["聖母の揺籃", "mother-mary-bond", "mother-mary", "https://w.atwiki.jp/siroi_human/pages/781.html"],
     ["コヤンスカヤの野望～東海岸版～", "koyanskaya-of-light-bond", "koyanskaya-of-light", "https://w.atwiki.jp/f_go/pages/5141.html"],
     ["水の如く花の如く", "sen-no-rikyu-bond", "sen-no-rikyu", "https://w.atwiki.jp/f_go/pages/5723.html"],
+    ["六文の渡し賃", "sanada-yukimura-bond", "sanada-yukimura", "https://w.atwiki.jp/siroi_human/pages/813.html"],
   ];
   assert(
-    initialCraftEssences.length === 10
+    initialCraftEssences.length === 11
       && initialCraftEssences[0]?.name === "カレイドスコープ"
       && initialCraftEssences[0]?.dataId === "kaleidoscope"
       && initialCraftEssences[0]?.rarity === 5
@@ -1218,7 +1234,7 @@ if (manifest) {
           && craftEssence.source === source
           && craftEssence.implementationStatus === "implemented";
       }),
-    "概念礼装2枚と絆礼装8枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
+    "概念礼装2枚と絆礼装9枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
   );
 
   const initialEnemies = manifest.initialContent?.enemies ?? [];
@@ -1391,6 +1407,7 @@ const mandatoryFiles = [
   "src/data/servants/hondaTadakatsu.ts",
   "src/data/servants/ajisukitakahikoneNoKami.ts",
   "src/data/servants/fenrir.ts",
+  "src/data/servants/sanadaYukimura.ts",
   "src/effects/noblePhantasmOvercharge.ts",
 ];
 
@@ -1409,12 +1426,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("指定済み8騎の絆礼装")
-    && startHere.includes("厳密なサーヴァント`dataId`")
+    && startHere.includes("No.094「真田信繁」")
+    && startHere.includes("具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`]")
     && startHere.includes("実画面受入とPR統合を待つ")
     && startHere.includes("中断保存形式4・データ1.38.0")
     && startHere.includes("No.059「那須与一」"),
-  "作業開始ページに絆礼装の実装状態と次作業がありません"
+  "作業開始ページに真田信繁の実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1436,7 +1453,7 @@ const requiredUiAssets = [
     "skill-card-quick-up", "skill-np-damafe-up", "skill-crit-damage-up",
     "skill-hp-heal-per-turn", "skill-star-weight-up", "class-magic-resistance",
     "class-riding", "class-divinity", "class-mad-enhancement",
-    "skill-card-buster-star-weight", "skill-star-rate-up",
+    "skill-card-buster-star-weight", "skill-star-rate-up", "skill-guts",
   ].map((name) => `public/assets/skill-icons/${name}.png`),
   ...[
     "Artsupstatus", "Attackdown", "Attackup", "Buffatk", "Busterupstatus",
@@ -1449,6 +1466,7 @@ const requiredUiAssets = [
     "Quickdamageup", "Curse", "Defensedown", "Invinciblepierce", "Ignoredefense",
     "Defenseup", "Npseal", "Tauntup", "Hpregen", "Maxhpup", "Specialinvincible",
     "Avoid", "Busterresistdown", "Changeclass", "Busterabsorpt", "Healpowup",
+    "Gutsstatus",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
@@ -1483,6 +1501,9 @@ assert(
     && implementationStatus.includes("No.058「フェンリル」")
     && implementationStatus.includes("〔天の力〕固定150%特攻")
     && implementationStatus.includes("`canDefeat: true`")
+    && implementationStatus.includes("No.094「真田信繁」")
+    && implementationStatus.includes("防御無視は攻撃前に登録し同一宝具攻撃で消費する")
+    && implementationStatus.includes("`skill-guts`")
     && implementationStatus.includes("No.059「那須与一」")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
   "実装状況にフェンリル、既存受入記録、次作業がありません"
@@ -1615,6 +1636,15 @@ assert(
     && decisionLog.includes("`Busterabsorpt`")
     && decisionLog.includes("No.059「那須与一"),
   "決定記録にフェンリルの実装方針がありません"
+);
+assert(
+  decisionLog.includes("## D-109 No.094「真田信繁」をカテゴリ1の明示指定対象として登録する")
+    && decisionLog.includes("`sanada-yukimura`")
+    && decisionLog.includes("攻撃前に`ignore_defense`状態を1回だけ登録")
+    && decisionLog.includes("`Gutsstatus`")
+    && decisionLog.includes("絆礼装: 「六文の渡し賃」")
+    && decisionLog.includes("No.059「那須与一」"),
+  "決定記録に真田信繁の実装方針がありません"
 );
 
 const enemyNpAcceptance = await readText(
@@ -1881,6 +1911,13 @@ assert(
   "本多忠勝の正式スキル・状態アイコン対応が一致しません"
 );
 assert(
+  iconRegistry.includes('"不惜身命": "skill-guts"')
+    && iconRegistry.includes('"ガッツ": "Gutsstatus"')
+    && iconRegistry.includes('"被ダメージカット": "Defenseup"')
+    && iconRegistry.includes('"被ダメージ時のNP獲得量アップ": "NPGainUpDmg"'),
+  "真田信繁の正式スキル・状態アイコン対応が一致しません"
+);
+assert(
   iconRegistry.includes('"外道の知識（姉なるもの）": "skill-hp-heal-per-turn"')
     && iconRegistry.includes('"ターゲット集中": "Tauntup"')
     && !iconRegistry.includes('"ターゲット集中": "Enemyfocus"'),
@@ -1971,7 +2008,7 @@ assert(
   initialContent.includes("### No.362 千利休")
     && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
     && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
-    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア"),
+    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア、No.094 真田信繁"),
   "具体データ仕様に千利休と編成区分の採用範囲がありません"
 );
 assert(
@@ -2000,6 +2037,20 @@ assert(
     && initialContent.includes("HP1000減少（`canDefeat: true`）")
     && initialContent.includes("`Busterabsorpt`"),
   "具体データ仕様にフェンリルの採用範囲がありません"
+);
+assert(
+  initialContent.includes("### No.094 真田信繁")
+    && initialContent.includes("Q4／A3／B2／EX4／宝具4で")
+    && initialContent.includes("防御無視は既存`ignore_defense`状態")
+    && initialContent.includes("`skill-guts`")
+    && initialContent.includes("`Defenseup`"),
+  "具体データ仕様に真田信繁の採用範囲がありません"
+);
+assert(
+  initialContent.includes("六文の渡し賃")
+    && initialContent.includes("`sanada-yukimura-bond`")
+    && initialContent.includes("絆礼装9枚"),
+  "具体データ仕様に真田信繁の絆礼装がありません"
 );
 assert(
   initialContent.includes("### No.070 聖母マリア")
@@ -2031,6 +2082,7 @@ const ajisukitakahikoneSource = await readText(
   "src/data/servants/ajisukitakahikoneNoKami.ts"
 );
 const fenrirSource = await readText("src/data/servants/fenrir.ts");
+const sanadaYukimuraSource = await readText("src/data/servants/sanadaYukimura.ts");
 const effectDeclarations = await readText("src/effects/declarations.ts");
 const effectActionExecution = await readText("src/effects/actionExecution.ts");
 assert(
@@ -2064,6 +2116,16 @@ assert(
     && fenrirSource.includes("canDefeat: true")
     && fenrirSource.includes('url: "https://w.atwiki.jp/siroi_human/pages/329.html"'),
   "フェンリルの登録データ、特攻、宝具後HP減少がありません"
+);
+assert(
+  sanadaYukimuraSource.includes('dataId: "sanada-yukimura"')
+    && sanadaYukimuraSource.includes("collectionNo: 94")
+    && sanadaYukimuraSource.includes('name: "真田丸"')
+    && sanadaYukimuraSource.includes("hitWeights: [1, 1, 1, 1]")
+    && sanadaYukimuraSource.includes("effectType: COMMON_EFFECT_TYPES.ignoreDefense")
+    && sanadaYukimuraSource.includes("remainingUses: 1")
+    && sanadaYukimuraSource.includes('url: "https://w.atwiki.jp/siroi_human/pages/813.html"'),
+  "真田信繁の登録データ、防御無視、均等Hitがありません"
 );
 assert(
   initialBattleUi.includes("export const INITIAL_ATTACK_AFFINITIES")

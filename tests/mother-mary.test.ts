@@ -116,7 +116,7 @@ describe("No.070 聖母マリア", () => {
       cardType: "arts",
     });
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 57, 58, 62, 70]);
+      .toEqual([7, 24, 57, 58, 62, 70, 94]);
     expect(initialAllySelectionForServant(MOTHER_MARY.dataId))
       .toMatchObject({ level: 90, noblePhantasmLevel: 1 });
     expect(registeredServantWikiUrl(MOTHER_MARY.dataId))
@@ -623,7 +623,7 @@ describe("No.070 聖母マリア", () => {
       title: "千の仔を孕みし森の黒山羊",
       rank: "A++",
       descriptions: expect.arrayContaining([
-        "＆〔天の力を持つ敵〕特攻<OC:特攻威力UP>：150% / 162.5% / 175% / 187.5% / 200%",
+        "＆〔天の力を持つ敵〕特攻<OC:特攻威力UP>　Arts(x1.0)　",
       ]),
     });
   });

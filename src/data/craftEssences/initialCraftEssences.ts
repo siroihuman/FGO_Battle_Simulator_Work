@@ -274,6 +274,31 @@ export const MOTHER_MARY_BOND: CraftEssenceDefinition = {
   sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/781.html", checkedAt: "2026-08-24", note: "絆礼装「聖母の揺籃」の名称、星4Lv80・ATK100・HP100、〔領域外の生命〕味方へのHP回復量30%と毎ターンHP500回復を照合。" }],
 };
 
+export const SANADA_YUKIMURA_BOND: CraftEssenceDefinition = {
+  schemaVersion: CRAFT_ESSENCE_DATA_SCHEMA_VERSION,
+  dataId: "sanada-yukimura-bond",
+  name: "六文の渡し賃",
+  ...BOND_CRAFT_ESSENCE,
+  eligibleServantDataIds: ["sanada-yukimura"],
+  startEffects: [],
+  fieldEffects: [{
+    kind: "effect",
+    stableId: "sanada-yukimura-bond-party-effects",
+    order: 1,
+    description: "真田信繁装備時のみ、自身がフィールドにいる間、味方全体のクリティカル威力・防御力・被ダメージ時のNP獲得量を各10%アップ",
+    target: { relation: "allies", selection: "all", includeReserve: true },
+    action: {
+      kind: "apply_effects",
+      effects: [
+        { template: { stableId: "sanada-yukimura-bond-party-critical-state", name: "クリティカル威力アップ", effectType: COMMON_EFFECT_TYPES.criticalDamage, category: "buff", value: 100, removalPolicy: "unremovable" } },
+        { template: { stableId: "sanada-yukimura-bond-party-defense-state", name: "防御力アップ", effectType: COMMON_EFFECT_TYPES.defense, category: "buff", classifications: ["defense"], value: 100, removalPolicy: "unremovable" } },
+        { template: { stableId: "sanada-yukimura-bond-party-received-np-state", name: "被ダメージ時のNP獲得量アップ", effectType: COMMON_EFFECT_TYPES.receivedNpGain, category: "buff", value: 100, removalPolicy: "unremovable" } },
+      ],
+    },
+  }],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/813.html", checkedAt: "2026-08-24", note: "絆礼装「六文の渡し賃」の名称、星4Lv80・ATK100・HP100、前衛中の味方全体へのクリティカル威力・防御力・被ダメージ時NP獲得量各10%を照合。" }],
+};
+
 export const LIGHT_KOYANSKAYA_BOND: CraftEssenceDefinition = {
   schemaVersion: CRAFT_ESSENCE_DATA_SCHEMA_VERSION,
   dataId: "koyanskaya-of-light-bond",
@@ -325,6 +350,7 @@ export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   FENRIR_BOND,
   LUCIFERA_BOND,
   MOTHER_MARY_BOND,
+  SANADA_YUKIMURA_BOND,
   LIGHT_KOYANSKAYA_BOND,
   SEN_NO_RIKYU_BOND,
 ] as const;
