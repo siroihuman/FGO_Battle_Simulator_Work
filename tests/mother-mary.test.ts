@@ -623,7 +623,7 @@ describe("No.070 聖母マリア", () => {
       title: "千の仔を孕みし森の黒山羊",
       rank: "A++",
       descriptions: expect.arrayContaining([
-        "＆〔天の力を持つ敵〕特攻<OC:特攻威力UP>　Arts(x1.0)　",
+        "＆〔天の力を持つ敵〕特攻<OC:特攻威力UP>：150% / 162.5% / 175% / 187.5% / 200%",
       ]),
     });
   });

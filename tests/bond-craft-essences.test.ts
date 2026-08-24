@@ -177,7 +177,7 @@ describe("bond Craft Essences", () => {
       "koyanskaya-of-light",
     ]);
     expect(SEN_NO_RIKYU_BOND.eligibleServantDataIds).toEqual(["sen-no-rikyu"]);
-    expect(FENRIR_BOND.startEffects[0].action).toMatchObject({
+    expect(FENRIR_BOND.startEffects[1].action).toMatchObject({
       kind: "apply_effects",
       effects: expect.arrayContaining([expect.objectContaining({
         template: expect.objectContaining({
@@ -194,6 +194,27 @@ describe("bond Craft Essences", () => {
         }),
       })],
     });
+    expect(HONDA_TADAKATSU_BOND.startEffects.map(({ description }) => description)).toEqual([
+      "自身のQuickカード性能をアップ",
+      "＆クリティカル威力をアップ",
+    ]);
+    expect(DOMINATION_FOREIGNER_BOND.fieldEffects?.map(({ description }) => description)).toEqual([
+      "＋自身を除く味方全体の〔人の力を持つ味方〕の攻撃力をアップ",
+      "＆NP獲得量をアップ",
+    ]);
+    expect(FENRIR_BOND.startEffects.map(({ description }) => description)).toEqual([
+      "自身のクリティカル威力をアップ",
+      "＆「Buster通常攻撃時確率(30％)でNPを増やす状態」を付与",
+    ]);
+    expect(MOTHER_MARY_BOND.fieldEffects?.map(({ description }) => description)).toEqual([
+      "〔領域外の生命〕特性の味方全体のHP回復量をアップ",
+      "＆毎ターンHP回復状態を付与",
+    ]);
+    expect(SANADA_YUKIMURA_BOND.fieldEffects?.map(({ description }) => description)).toEqual([
+      "自身がフィールドにいる間、味方全体のクリティカル威力をアップ",
+      "＆防御力をアップ",
+      "＆被ダメージ時のNP獲得量をアップ",
+    ]);
   });
 
   it("registers 真田信繁's bond effects for every current frontline ally only", () => {

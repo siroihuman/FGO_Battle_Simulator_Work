@@ -138,12 +138,12 @@ describe("No.024’ 支配のフォーリナー", () => {
       ({ effects }) => effects.map(({ description }) => description),
     );
     expect(skillDescriptions).toContain(
-      "味方単体のQuickカード性能をアップ[Lv](3T)",
+      "味方単体のQuickカード性能をアップ[Lv](3T)：50%",
     );
     expect(skillDescriptions.every((description) => !description.includes(" / ")))
       .toBe(true);
     expect(DOMINATION_FOREIGNER.noblePhantasm.effects.some(
-      (effect) => effect.kind === "effect" && effect.description === "＋自身を除く〔人の力を持つ味方〕全体のNPを増やす<OC:効果UP>",
+      (effect) => effect.kind === "effect" && effect.description.includes("10% / 15% / 20% / 25% / 30%"),
     )).toBe(true);
 
     const instance = servant("domination");
@@ -635,7 +635,7 @@ describe("No.024’ 支配のフォーリナー", () => {
       title: "旧き共鳴する海底の都",
       rank: "EX",
       descriptions: expect.arrayContaining([
-        "＆〔人の力を持つ敵〕特攻　Quick(x0.8)　",
+        "＆〔人の力を持つ敵〕特攻：150%",
       ]),
     });
   });

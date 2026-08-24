@@ -203,7 +203,6 @@ const TEST_SERVANT = {
         kind: "attack",
         stableId: "test-np-damage",
         order: 2,
-        description: "敵全体に強力な攻撃[Lv]　Buster(x1.5)　",
         targetScope: "all",
         hitWeights: [1, 1, 1],
         damageMultiplierPermilleByLevel: [
@@ -215,7 +214,6 @@ const TEST_SERVANT = {
         ],
         specialAttack: {
           stableId: "test-np-special",
-          description: "＆〔悪〕特攻<OC:特攻威力UP>　Buster(x1.5)　",
           requiredTargetTraits: ["evil"],
           multiplierPermilleByOvercharge: [
             1_500,

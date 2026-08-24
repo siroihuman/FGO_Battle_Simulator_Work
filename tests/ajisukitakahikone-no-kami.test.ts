@@ -490,7 +490,7 @@ describe("No.057 阿遅鉏高日子根神", () => {
     ])).toEqual([]);
     const detail = presentNoblePhantasmDetail(source.unit);
     expect(detail?.descriptions).toContain(
-      "＆オーバーチャージで追加で強力な攻撃<OC:威力UP>　Buster(x1.5)　",
+      "＆オーバーチャージで追加で強力な攻撃<OC:威力UP>：0% / 200% / 300% / 400% / 500%",
     );
   });
 

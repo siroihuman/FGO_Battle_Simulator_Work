@@ -72,8 +72,6 @@ export type ServantEffectDefinition = DeclaredActionEffect;
 
 export interface ServantNoblePhantasmSpecialAttack {
   stableId: string;
-  /** Exact source-Wiki effect-row text shown alongside the primary attack. */
-  description: string;
   requiredTargetTraits?: readonly string[];
   multiplierPermille?: number;
   multiplierPermilleByOvercharge?: readonly [
@@ -92,8 +90,6 @@ export interface ServantNoblePhantasmSpecialAttack {
  */
 export interface ServantNoblePhantasmAdditionalAttack {
   stableId: string;
-  /** Exact source-Wiki effect-row text for this distinct attack packet. */
-  description: string;
   hitWeights: readonly number[];
   damageMultiplierPermilleByOvercharge: readonly [
     number,
@@ -107,8 +103,6 @@ export interface ServantNoblePhantasmAdditionalAttack {
 export interface ServantNoblePhantasmAttackEffect {
   kind: "attack";
   stableId: string;
-  /** Exact source-Wiki effect-row text for the primary attack. */
-  description: string;
   order: number;
   targetScope: AttackTargetScope;
   hitWeights: readonly number[];
