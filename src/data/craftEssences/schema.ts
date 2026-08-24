@@ -24,7 +24,14 @@ export interface CraftEssenceDefinition {
   level: number;
   attack: number;
   hp: number;
+  /**
+   * When set, this Craft Essence can only be equipped by these exact servant
+   * data IDs. This deliberately distinguishes class changes and variants.
+   */
+  eligibleServantDataIds?: readonly string[];
   /** Source-ordered effects applied once before the first card draw. */
   startEffects: readonly DeclaredActionEffect[];
+  /** Effects supplied to allies only while this equipped servant is frontline. */
+  fieldEffects?: readonly DeclaredActionEffect[];
   sources: readonly CraftEssenceSourceReference[];
 }

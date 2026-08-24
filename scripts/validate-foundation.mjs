@@ -819,7 +819,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "fenrir-implemented-awaiting-user-acceptance"
+    manifest.status === "bond-craft-essences-implemented-awaiting-user-acceptance"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1128,6 +1128,22 @@ if (manifest) {
       && manifest.coreRules.craftEssenceStartEffectsIncludeReserve === true,
     "控えも概念礼装の選択・開始時初期化対象でなければなりません"
   );
+  const craftEssenceFieldEffects = manifest.coreRules.craftEssenceFieldEffects;
+  assert(
+    manifest.coreRules.craftEssenceEligibleServantDataIds
+      === "exact_data_id_only_ui_filtered_and_engine_rejected_before_mutation"
+      && craftEssenceFieldEffects.target === "all_allies_including_reserve"
+      && craftEssenceFieldEffects.application
+        === "declarative_passive_initialization"
+      && craftEssenceFieldEffects.activeWhen
+        === "source_and_recipient_are_both_ally_frontline"
+      && craftEssenceFieldEffects.inactiveValue === 0
+      && craftEssenceFieldEffects.uiInactiveValueDisplay === "hidden"
+      && craftEssenceFieldEffects.formationRefresh === "set_battle_formation"
+      && craftEssenceFieldEffects.saveSchemaChange === false
+      && craftEssenceFieldEffects.dataSchemaChange === false,
+    "絆礼装の厳密装備対象と前衛限定フィールド効果の規則が一致しません"
+  );
   assert(
     manifest.coreRules.initialCraftEssenceDataRegistry
       === "src/data/craftEssences/initialCraftEssences.ts"
@@ -1169,30 +1185,40 @@ if (manifest) {
   );
 
   const initialCraftEssences = manifest.initialContent?.craftEssences ?? [];
+  const expectedBondCraftEssences = [
+    ["傷ひとつなき具足", "honda-tadakatsu-bond", "honda-tadakatsu", "https://w.atwiki.jp/siroi_human/pages/274.html"],
+    ["一九二八年二月号", "domination-foreigner-bond", "domination-foreigner", "https://w.atwiki.jp/siroi_human/pages/766.html"],
+    ["二谷を渡る玉", "ajisukitakahikone-no-kami-bond", "ajisukitakahikone-no-kami", "https://w.atwiki.jp/siroi_human/pages/50.html"],
+    ["六つのありえざるもの", "fenrir-bond", "fenrir", "https://w.atwiki.jp/siroi_human/pages/329.html"],
+    ["六罪牽く黄金車", "lucifera-bond", "lucifera", "https://w.atwiki.jp/siroi_human/pages/795.html"],
+    ["聖母の揺籃", "mother-mary-bond", "mother-mary", "https://w.atwiki.jp/siroi_human/pages/781.html"],
+    ["コヤンスカヤの野望～東海岸版～", "koyanskaya-of-light-bond", "koyanskaya-of-light", "https://w.atwiki.jp/f_go/pages/5141.html"],
+    ["水の如く花の如く", "sen-no-rikyu-bond", "sen-no-rikyu", "https://w.atwiki.jp/f_go/pages/5723.html"],
+  ];
   assert(
-    JSON.stringify(initialCraftEssences) === JSON.stringify([
-      {
-        name: "カレイドスコープ",
-        dataId: "kaleidoscope",
-        rarity: 5,
-        limitBreak: "max",
-        level: 100,
-        effectTarget: "equipped_ally_instance",
-        source: "https://appmedia.jp/fategrandorder/90628",
-        implementationStatus: "implemented"
-      },
-      {
-        name: "黒の聖杯",
-        dataId: "black-grail",
-        rarity: 5,
-        limitBreak: "max",
-        level: 100,
-        effectTarget: "equipped_ally_instance",
-        source: "https://appmedia.jp/fategrandorder/103128",
-        implementationStatus: "implemented"
-      }
-    ]),
-    "初期概念礼装2枚の正式名称・ID・最大解放・Lv・対象・参照が一致しません"
+    initialCraftEssences.length === 10
+      && initialCraftEssences[0]?.name === "カレイドスコープ"
+      && initialCraftEssences[0]?.dataId === "kaleidoscope"
+      && initialCraftEssences[0]?.rarity === 5
+      && initialCraftEssences[0]?.limitBreak === "max"
+      && initialCraftEssences[0]?.level === 100
+      && initialCraftEssences[1]?.name === "黒の聖杯"
+      && initialCraftEssences[1]?.dataId === "black-grail"
+      && initialCraftEssences[1]?.rarity === 5
+      && initialCraftEssences[1]?.limitBreak === "max"
+      && initialCraftEssences[1]?.level === 100
+      && initialCraftEssences.slice(2).every((craftEssence, index) => {
+        const [name, dataId, eligibleDataId, source] = expectedBondCraftEssences[index];
+        return craftEssence.name === name
+          && craftEssence.dataId === dataId
+          && craftEssence.rarity === 4
+          && craftEssence.limitBreak === "max"
+          && craftEssence.level === 80
+          && JSON.stringify(craftEssence.eligibleServantDataIds) === JSON.stringify([eligibleDataId])
+          && craftEssence.source === source
+          && craftEssence.implementationStatus === "implemented";
+      }),
+    "概念礼装2枚と絆礼装8枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
   );
 
   const initialEnemies = manifest.initialContent?.enemies ?? [];
@@ -1383,12 +1409,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.058「フェンリル」")
-    && startHere.includes("〔天の力〕固定特攻")
+    && startHere.includes("指定済み8騎の絆礼装")
+    && startHere.includes("厳密なサーヴァント`dataId`")
     && startHere.includes("実画面受入とPR統合を待つ")
     && startHere.includes("中断保存形式4・データ1.38.0")
     && startHere.includes("No.059「那須与一」"),
-  "作業開始ページにフェンリルの実装状態と次作業がありません"
+  "作業開始ページに絆礼装の実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"

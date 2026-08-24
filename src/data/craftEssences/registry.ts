@@ -44,6 +44,19 @@ export function assertValidCraftEssenceDefinition(
   }
   assertStableId(definition.dataId, "Craft Essence dataId");
   assertNonEmpty(definition.name, `${definition.dataId}.name`);
+  if (definition.eligibleServantDataIds !== undefined) {
+    if (definition.eligibleServantDataIds.length === 0) {
+      throw new RangeError(`${definition.dataId}.eligibleServantDataIds must not be empty`);
+    }
+    const ids = new Set<string>();
+    definition.eligibleServantDataIds.forEach((dataId) => {
+      assertStableId(dataId, `${definition.dataId}.eligibleServantDataIds`);
+      if (ids.has(dataId)) {
+        throw new RangeError(`${definition.dataId}.eligibleServantDataIds must be unique`);
+      }
+      ids.add(dataId);
+    });
+  }
   if (![1, 2, 3, 4, 5].includes(definition.rarity)) {
     throw new RangeError(`${definition.dataId}.rarity must be from 1 to 5`);
   }
@@ -84,6 +97,36 @@ export function assertValidCraftEssenceDefinition(
         }
       });
     }
+  });
+  definition.fieldEffects?.forEach((effect, index) => {
+    if (effect.order !== index + 1) {
+      throw new RangeError(
+        `${definition.dataId}.fieldEffects order must be contiguous from 1`,
+      );
+    }
+    assertStableId(effect.stableId, `${definition.dataId}.fieldEffects[${index}].stableId`);
+    if (stableIds.has(effect.stableId)) {
+      throw new RangeError(`duplicate Craft Essence effect ID: ${effect.stableId}`);
+    }
+    stableIds.add(effect.stableId);
+    assertValidDeclaredActionEffect(effect, `${definition.dataId}.fieldEffects[${index}]`);
+    if (
+      effect.target.relation !== "allies"
+      || effect.target.selection !== "all"
+      || effect.target.includeReserve !== true
+    ) {
+      throw new RangeError(
+        `${definition.dataId}.fieldEffects must target all allies including reserve`,
+      );
+    }
+    if (effect.action.kind !== "apply_effects") {
+      throw new RangeError(`${definition.dataId}.fieldEffects[${index}] must apply effects`);
+    }
+    effect.action.effects.forEach(({ template }, templateIndex) => {
+      if (template.removalPolicy !== "unremovable" || typeof template.value !== "number") {
+        throw new RangeError(`${definition.dataId}.fieldEffects[${index}].action.effects[${templateIndex}] must be fixed unremovable effects`);
+      }
+    });
   });
   if (definition.sources.length === 0) {
     throw new RangeError(`${definition.dataId}.sources must not be empty`);

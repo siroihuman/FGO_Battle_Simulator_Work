@@ -66,6 +66,32 @@ interface ResolvedCraftEssenceSelection {
   definition: CraftEssenceDefinition;
 }
 
+function fieldAuraEffect(
+  effect: import("../../effects/declarations").DeclaredActionEffect,
+  sourceInstanceId: string,
+): import("../../effects/declarations").DeclaredActionEffect {
+  if (effect.action.kind !== "apply_effects") {
+    throw new RangeError("Craft Essence field effect must apply effects");
+  }
+  return {
+    ...effect,
+    action: {
+      kind: "apply_effects",
+      effects: effect.action.effects.map(({ template, ...application }) => ({
+        ...application,
+        template: {
+          ...template,
+          flags: {
+            ...template.flags,
+            fieldAuraSourceInstanceId: sourceInstanceId,
+            fieldAuraBaseValue: template.value as number,
+          },
+        },
+      })),
+    },
+  };
+}
+
 function checkedAddition(left: number, right: number, name: string): number {
   const value = left + right;
   if (!Number.isSafeInteger(value) || value < 0) {
@@ -115,6 +141,18 @@ function resolveCraftEssences(
     if (!definition) {
       throw new RangeError(
         `selected Craft Essence is not registered: ${dataId}`,
+      );
+    }
+    const unit = findUnitLocation(state.formation, instanceId)?.unit;
+    if (!unit || unit.side !== "ally") {
+      throw new RangeError(`equipped ally is missing: ${instanceId}`);
+    }
+    if (
+      definition.eligibleServantDataIds !== undefined
+      && !definition.eligibleServantDataIds.includes(unit.dataId)
+    ) {
+      throw new RangeError(
+        `Craft Essence ${dataId} cannot be equipped by servant: ${unit.dataId}`,
       );
     }
     return [{ instanceId, definition }];
@@ -221,7 +259,7 @@ function combinedActionEffectRegistry(
     ]),
   );
   for (const { instanceId, definition } of craftEssences) {
-    if (definition.startEffects.length === 0) continue;
+    if (definition.startEffects.length === 0 && !definition.fieldEffects?.length) continue;
     const unit = findUnitLocation(state.formation, instanceId)?.unit;
     if (!unit) {
       throw new RangeError(`equipped ally is missing: ${instanceId}`);
@@ -244,7 +282,12 @@ function combinedActionEffectRegistry(
         {
           stableId: `craft-essence-${definition.dataId}`,
           name: definition.name,
-          effects: definition.startEffects,
+          effects: [
+            ...definition.startEffects,
+            ...(definition.fieldEffects ?? []).map((effect) =>
+              fieldAuraEffect(effect, instanceId)
+            ),
+          ].map((effect, index) => ({ ...effect, order: index + 1 })),
         },
       ],
     });
@@ -360,9 +403,14 @@ export function initializeBattleLoadout(
         input.rng.stream("effects"),
       )
     : null;
+  const initializedState = passiveInitialization?.state ?? state;
+  const auraRefreshedState = setBattleFormation(
+    initializedState,
+    initializedState.formation,
+  );
 
   return {
-    state: passiveInitialization?.state ?? state,
+    state: auraRefreshedState,
     counters: passiveInitialization?.counters ?? input.counters,
     attackRegistry,
     ...(actionEffectRegistry ? { actionEffectRegistry } : {}),

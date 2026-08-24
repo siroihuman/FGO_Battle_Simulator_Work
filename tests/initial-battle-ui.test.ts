@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { App, normalizeStoredSetup } from "../src/App";
+import { AllySlotEditor, App, normalizeStoredSetup } from "../src/App";
 import {
   parseBattleSuspendSave,
   resolveBattleSessionTurn,
@@ -10,6 +10,8 @@ import {
 } from "../src/core/battle/session";
 import { findUnitLocation } from "../src/core/battle/formation";
 import {
+  FENRIR_BOND,
+  HONDA_TADAKATSU_BOND,
   INITIAL_CRAFT_ESSENCE_REGISTRY,
 } from "../src/data/craftEssences";
 import {
@@ -17,6 +19,7 @@ import {
 } from "../src/data/mysticCodes";
 import {
   LIGHT_KOYANSKAYA,
+  HONDA_TADAKATSU,
   SEN_NO_RIKYU,
   LUCIFERA,
   type ServantLevel,
@@ -438,7 +441,7 @@ describe("minimum initial battle UI adapter", () => {
 
   it("uses only registered initial selection sources and renders labeled mobile-safe controls", () => {
     expect(Object.keys(INITIAL_MYSTIC_CODE_REGISTRY.byDataId)).toHaveLength(3);
-    expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toHaveLength(2);
+    expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toHaveLength(10);
     const markup = renderToStaticMarkup(createElement(App));
 
     expect(markup).toContain("初期戦闘設定");
@@ -460,5 +463,14 @@ describe("minimum initial battle UI adapter", () => {
     expect(markup).toContain('max="3000"');
     expect(markup).toContain("次へ");
     expect(markup).toContain("disabled");
+
+    const hondaMarkup = renderToStaticMarkup(createElement(AllySlotEditor, {
+      label: "検査用",
+      required: true,
+      selection: ally(HONDA_TADAKATSU.dataId),
+      onChange: () => {},
+    }));
+    expect(hondaMarkup).toContain(HONDA_TADAKATSU_BOND.name);
+    expect(hondaMarkup).not.toContain(FENRIR_BOND.name);
   });
 });

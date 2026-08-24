@@ -807,10 +807,32 @@ export function setBattleFormation(
   if (pendingBreaks < 0) {
     throw new RangeError("pending break count cannot become negative");
   }
+  const frontlineIds = new Set(
+    normalizedFormation.ally.frontline.flatMap((unit) => unit ? [unit.instanceId] : []),
+  );
+  const refreshAura = (unit: BattleUnitState | null): BattleUnitState | null => {
+    if (!unit) return unit;
+    const effects = unit.effects.map((effect) => {
+      const source = effect.flags.fieldAuraSourceInstanceId;
+      const base = effect.flags.fieldAuraBaseValue;
+      if (typeof source !== "string" || typeof base !== "number") return effect;
+      const value = frontlineIds.has(source) && frontlineIds.has(unit.instanceId)
+        ? base
+        : 0;
+      return effect.value === value ? effect : { ...effect, value };
+    });
+    return effects.every((effect, index) => effect === unit.effects[index])
+      ? unit
+      : { ...unit, effects };
+  };
+  const ally = {
+    frontline: normalizedFormation.ally.frontline.map(refreshAura),
+    reserve: normalizedFormation.ally.reserve.map((unit) => refreshAura(unit)!),
+  };
   return {
     ...state,
     formation: {
-      ally: copySideFormation(normalizedFormation.ally),
+      ally: copySideFormation(ally),
       enemy: copySideFormation(normalizedFormation.enemy),
     },
     waveContinuation: {

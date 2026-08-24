@@ -97,12 +97,12 @@ function battleUnit(
 }
 
 describe("initial Craft Essence data and execution", () => {
-  it("registers both maximum-limit-broken level-100 definitions with exact stats and sources", () => {
-    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(2);
-    expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toEqual([
+  it("registers the generic maximum-limit-broken level-100 definitions with exact stats and sources", () => {
+    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(10);
+    expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toEqual(expect.arrayContaining([
       "kaleidoscope",
       "black-grail",
-    ]);
+    ]));
     expect(KALEIDOSCOPE).toMatchObject({
       dataId: "kaleidoscope",
       name: "カレイドスコープ",
@@ -121,7 +121,7 @@ describe("initial Craft Essence data and execution", () => {
       attack: 2_400,
       hp: 0,
     });
-    for (const definition of INITIAL_CRAFT_ESSENCE_DEFINITIONS) {
+    for (const definition of [KALEIDOSCOPE, BLACK_GRAIL]) {
       expect(definition.sources.length).toBeGreaterThanOrEqual(2);
       expect(definition.sources.every(({ checkedAt }) => checkedAt === "2026-08-10"))
         .toBe(true);
