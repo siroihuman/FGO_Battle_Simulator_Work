@@ -9,6 +9,7 @@ import { BattleRng } from "../src/core/rng";
 import {
   INITIAL_SERVANT_DEFINITIONS,
   AJISUKITAKAHIKONE_NO_KAMI,
+  FENRIR,
   DOMINATION_FOREIGNER,
   HONDA_TADAKATSU,
   LIGHT_KOYANSKAYA,
@@ -65,6 +66,7 @@ describe("initial servant definitions", () => {
       "honda-tadakatsu",
       "domination-foreigner",
       "ajisukitakahikone-no-kami",
+      "fenrir",
       "lucifera",
       "mother-mary",
     ]);
@@ -92,6 +94,11 @@ describe("initial servant definitions", () => {
       level: 120,
       hp: 21_242,
       attack: 13_489,
+    });
+    expect(FENRIR.levelStats.at(-1)).toEqual({
+      level: 120,
+      hp: 16_112,
+      attack: 16_813,
     });
     expect(SEN_NO_RIKYU.levelStats.at(-1)).toEqual({
       level: 120,

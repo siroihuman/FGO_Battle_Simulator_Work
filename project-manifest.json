@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "ajisukitakahikone-no-kami-implemented-and-accepted",
+  "status": "fenrir-implemented-awaiting-user-acceptance",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -680,6 +680,7 @@
         "honda-tadakatsu",
         "domination-foreigner",
         "ajisukitakahikone-no-kami",
+        "fenrir",
         "lucifera",
         "mother-mary"
       ],
@@ -862,6 +863,32 @@
         "noblePhantasmPrimaryHitCount": 9,
         "noblePhantasmAdditionalHitCount": 9,
         "noblePhantasmAdditionalAttackAlwaysActivates": true,
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
+        "name": "フェンリル",
+        "collectionNo": 58,
+        "dataId": "fenrir",
+        "classificationCategory": 1,
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "source": "https://w.atwiki.jp/siroi_human/pages/329.html",
+        "sourceCheckedAt": "2026-08-21",
+        "activeSkillCount": 3,
+        "classSkillCount": 4,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "upgraded_only",
+        "noblePhantasmHitCount": 5,
+        "noblePhantasmFixedSpecialAttack": {
+          "requiredTargetTrait": "天の力",
+          "multiplierPermille": 1500
+        },
+        "noblePhantasmPostHpReduction": {
+          "amount": 1000,
+          "canDefeat": true
+        },
         "battleSuspendSchemaVersion": 4,
         "dataSchemaVersion": "1.38.0"
       },

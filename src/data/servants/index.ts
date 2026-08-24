@@ -5,5 +5,6 @@ export * from "./initialServants";
 export * from "./dominationForeigner";
 export * from "./hondaTadakatsu";
 export * from "./ajisukitakahikoneNoKami";
+export * from "./fenrir";
 export * from "./motherMary";
 export * from "./senNoRikyu";
