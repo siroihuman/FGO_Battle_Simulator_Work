@@ -63,6 +63,7 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "Quick攻撃時防御力ダウン": "Buffatk",
   "呪い": "Curse",
   "毎ターンHP回復": "Hpregen",
+  "HP回復量アップ": "Healpowup",
   "最大HPアップ": "Maxhpup",
   "ターゲット集中": "Tauntup",
   "対粛清防御": "Specialinvincible",

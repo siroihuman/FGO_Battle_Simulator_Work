@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createBattleAttackDataRegistry,
 } from "../src/core/battle/actionData";
-import { findUnitLocation } from "../src/core/battle/formation";
+import { findUnitLocation, orderedLocations } from "../src/core/battle/formation";
 import { initializeBattleLoadout } from "../src/core/battle/loadout";
 import { resolveDirectAllyExchange } from "../src/core/battle/replacement";
 import { createBattleSession } from "../src/core/battle/session";
@@ -16,9 +16,13 @@ import {
   INITIAL_CRAFT_ESSENCE_DEFINITIONS,
   INITIAL_CRAFT_ESSENCE_REGISTRY,
   LIGHT_KOYANSKAYA_BOND,
+  LUCIFERA_BOND,
+  MOTHER_MARY_BOND,
   SEN_NO_RIKYU_BOND,
 } from "../src/data/craftEssences";
 import { createEffectRuntimeCounters } from "../src/effects/runtime";
+import { resolveSideTurnEnd } from "../src/effects/turnEnd";
+import { collectTriggerActivations } from "../src/effects/triggers";
 import { presentUnitEffects } from "../src/ui/effectPresentation";
 import { combatantData } from "./helpers/attackData";
 import { unit } from "./helpers/battle";
@@ -79,6 +83,63 @@ function initialized() {
   return { result, rng };
 }
 
+function motherMaryState() {
+  return createBattleState({
+    ally: {
+      frontline: [
+        unit("mary", "ally", {
+          dataId: "mother-mary",
+          hp: 9_000,
+          traits: ["領域外の生命"],
+        }),
+        unit("outside-front", "ally", {
+          dataId: "honda-tadakatsu",
+          hp: 9_000,
+          traits: ["領域外の生命"],
+        }),
+        unit("ally-c", "ally", { dataId: "fenrir" }),
+      ],
+      reserve: [unit("outside-reserve", "ally", {
+        dataId: "honda-tadakatsu",
+        hp: 9_000,
+        traits: ["領域外の生命"],
+      })],
+    },
+    waves: [{
+      enemy: {
+        frontline: [unit("enemy-a", "enemy"), null, null],
+        reserve: [],
+      },
+    }],
+    enemyFrontlineLimit: 3,
+  });
+}
+
+function motherMaryAttackRegistry() {
+  return createBattleAttackDataRegistry([
+    combatantData("mary", "mother-mary", { attack: 10_000 }),
+    combatantData("outside-front", "honda-tadakatsu", { attack: 10_000 }),
+    combatantData("ally-c", "fenrir", { attack: 10_000 }),
+    combatantData("outside-reserve", "honda-tadakatsu", { attack: 10_000 }),
+  ]);
+}
+
+function motherMaryInitialized() {
+  const rng = new BattleRng("mother-mary-bond-aura");
+  const result = initializeBattleLoadout({
+    state: motherMaryState(),
+    rng,
+    counters: createEffectRuntimeCounters(),
+    attackRegistry: motherMaryAttackRegistry(),
+    craftEssenceRegistry: INITIAL_CRAFT_ESSENCE_REGISTRY,
+    selection: {
+      mysticCodeDataId: null,
+      craftEssenceDataIdByInstanceId: { mary: "mother-mary-bond" },
+    },
+  });
+  return { result, rng };
+}
+
 function battleUnit(
   formation: ReturnType<typeof state>["formation"],
   instanceId: string,
@@ -110,6 +171,23 @@ describe("bond Craft Essences", () => {
       "koyanskaya-of-light",
     ]);
     expect(SEN_NO_RIKYU_BOND.eligibleServantDataIds).toEqual(["sen-no-rikyu"]);
+    expect(FENRIR_BOND.startEffects[0].action).toMatchObject({
+      kind: "apply_effects",
+      effects: expect.arrayContaining([expect.objectContaining({
+        template: expect.objectContaining({
+          stableId: "fenrir-bond-buster-np-state",
+          trigger: expect.objectContaining({ activationRatePermille: 300 }),
+        }),
+      })]),
+    });
+    expect(LUCIFERA_BOND.startEffects[0].action).toMatchObject({
+      kind: "apply_effects",
+      effects: [expect.objectContaining({
+        template: expect.objectContaining({
+          stableId: "lucifera-bond-np-damage-state",
+        }),
+      })],
+    });
   });
 
   it("rejects a bond essence before mutating state when the exact servant data ID does not match", () => {
@@ -192,5 +270,74 @@ describe("bond Craft Essences", () => {
     expect(presentUnitEffects(session, inactiveRecipient).some(
       ({ applied }) => applied.stableId === "domination-foreigner-bond-human-allies-attack-state",
     )).toBe(false);
+  });
+
+  it("activates Fenrir's bond NP trigger only for a normal Buster attack", () => {
+    const rng = new BattleRng("fenrir-bond-trigger");
+    const result = initializeBattleLoadout({
+      state: state(),
+      rng,
+      counters: createEffectRuntimeCounters(),
+      attackRegistry: attackRegistry(),
+      craftEssenceRegistry: INITIAL_CRAFT_ESSENCE_REGISTRY,
+      selection: {
+        mysticCodeDataId: null,
+        craftEssenceDataIdByInstanceId: { "ally-c": "fenrir-bond" },
+      },
+    });
+    const locations = orderedLocations(result.state.formation, "ally", false);
+    const triggerIds = (cardType: "arts" | "buster") => collectTriggerActivations(
+      locations,
+      {
+        timing: "on_attack",
+        actorInstanceId: "ally-c",
+        actorSide: "ally",
+        attackKind: "normal_command",
+        cardType,
+      },
+    ).map(({ effect }) => effect.stableId);
+
+    expect(triggerIds("buster")).toContain("fenrir-bond-buster-np-state");
+    expect(triggerIds("arts")).not.toContain("fenrir-bond-buster-np-state");
+  });
+
+  it("keeps Mother Mary's trait-limited recurring recovery active only for the current frontline", () => {
+    const { result, rng } = motherMaryInitialized();
+    const firstEnd = resolveSideTurnEnd(
+      result.state.formation,
+      "ally",
+      result.counters,
+      rng.stream("effects"),
+    );
+    expect(battleUnit(firstEnd.formation, "mary").hp).toBe(9_750);
+    expect(battleUnit(firstEnd.formation, "outside-front").hp).toBe(9_650);
+    expect(battleUnit(firstEnd.formation, "outside-reserve").hp).toBe(9_000);
+
+    const entered = resolveDirectAllyExchange(
+      { ...result.state, formation: firstEnd.formation },
+      "outside-front",
+      "outside-reserve",
+    );
+    const secondEnd = resolveSideTurnEnd(
+      entered.state.formation,
+      "ally",
+      firstEnd.counters,
+      rng.stream("effects"),
+    );
+    expect(battleUnit(secondEnd.formation, "outside-front").hp).toBe(9_650);
+    expect(battleUnit(secondEnd.formation, "outside-reserve").hp).toBe(9_650);
+
+    const sourceWithdrawn = resolveDirectAllyExchange(
+      { ...entered.state, formation: secondEnd.formation },
+      "mary",
+      "outside-front",
+    );
+    const thirdEnd = resolveSideTurnEnd(
+      sourceWithdrawn.state.formation,
+      "ally",
+      secondEnd.counters,
+      rng.stream("effects"),
+    );
+    expect(battleUnit(thirdEnd.formation, "outside-reserve").hp).toBe(9_650);
   });
 });

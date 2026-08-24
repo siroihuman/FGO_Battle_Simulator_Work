@@ -209,11 +209,17 @@ export const FENRIR_BOND: CraftEssenceDefinition = {
     kind: "effect",
     stableId: "fenrir-bond-critical",
     order: 1,
-    description: "フェンリル装備時のみ、自身のクリティカル威力を30%アップ",
+    description: "フェンリル装備時のみ、自身のクリティカル威力を30%アップ＆Buster通常攻撃時確率30%でNPを10%増やす状態を付与",
     target: { relation: "self", selection: "single" },
-    action: { kind: "apply_effects", effects: [{ template: { stableId: "fenrir-bond-critical-state", name: "クリティカル威力アップ", effectType: COMMON_EFFECT_TYPES.criticalDamage, category: "buff", value: 300, removalPolicy: "unremovable" } }] },
+    action: {
+      kind: "apply_effects",
+      effects: [
+        { template: { stableId: "fenrir-bond-critical-state", name: "クリティカル威力アップ", effectType: COMMON_EFFECT_TYPES.criticalDamage, category: "buff", value: 300, removalPolicy: "unremovable" } },
+        { template: { stableId: "fenrir-bond-buster-np-state", name: "Buster通常攻撃時NP増加", effectType: "trigger", category: "buff", removalPolicy: "unremovable", trigger: { timing: "on_attack", activationRatePermille: 300, condition: { attackKinds: ["normal_command"], cardTypes: ["buster"] }, actions: [{ target: { relation: "self", selection: "single" }, action: { kind: "change_np", amount: 1_000 } }] } } },
+      ],
+    },
   }],
-  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/329.html", checkedAt: "2026-08-24", note: "絆礼装「六つのありえざるもの」の名称、星4Lv80・ATK100・HP100、クリティカル威力30%を照合。" }],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/329.html", checkedAt: "2026-08-24", note: "絆礼装「六つのありえざるもの」の名称、星4Lv80・ATK100・HP100、クリティカル威力30%とBuster通常攻撃時確率30%のNP10%増加を照合。" }],
 };
 
 export const LUCIFERA_BOND: CraftEssenceDefinition = {
@@ -226,15 +232,11 @@ export const LUCIFERA_BOND: CraftEssenceDefinition = {
     kind: "effect",
     stableId: "lucifera-bond-self-effects",
     order: 1,
-    description: "ルシフェラ装備時のみ、自身の宝具威力を30%アップ＆毎ターンHP500回復状態を付与＆Buster通常攻撃時確率30%でNPを10%増やす状態を付与",
+    description: "ルシフェラ装備時のみ、自身の宝具威力を30%アップ",
     target: { relation: "self", selection: "single" },
     action: {
       kind: "apply_effects",
-      effects: [
-        { template: { stableId: "lucifera-bond-np-damage-state", name: "宝具威力アップ", effectType: COMMON_EFFECT_TYPES.noblePhantasmDamage, category: "buff", value: 300, removalPolicy: "unremovable" } },
-        { template: { stableId: "lucifera-bond-recurring-heal-state", name: "毎ターンHP回復", effectType: COMMON_EFFECT_TYPES.recurringHpRecovery, category: "buff", value: 500, removalPolicy: "unremovable", trigger: SELF_TURN_END_HEAL(500) } },
-        { template: { stableId: "lucifera-bond-buster-np-state", name: "Buster通常攻撃時NP増加", effectType: "trigger", category: "buff", removalPolicy: "unremovable", trigger: { timing: "on_attack", activationRatePermille: 300, condition: { attackKinds: ["normal_command"], cardTypes: ["buster"] }, actions: [{ target: { relation: "self", selection: "single" }, action: { kind: "change_np", amount: 1_000 } }] } } },
-      ],
+      effects: [{ template: { stableId: "lucifera-bond-np-damage-state", name: "宝具威力アップ", effectType: COMMON_EFFECT_TYPES.noblePhantasmDamage, category: "buff", value: 300, removalPolicy: "unremovable" } }],
     },
   }],
   fieldEffects: [{
@@ -259,11 +261,17 @@ export const MOTHER_MARY_BOND: CraftEssenceDefinition = {
     kind: "effect",
     stableId: "mother-mary-bond-outside-domain-recovery",
     order: 1,
-    description: "聖母マリア装備時のみ、自身がフィールドにいる間、〔領域外の生命〕特性の味方全体のHP回復量を30%アップ",
+    description: "聖母マリア装備時のみ、自身がフィールドにいる間、〔領域外の生命〕特性の味方全体のHP回復量を30%アップ＆毎ターンHP回復状態を500付与",
     target: { relation: "allies", selection: "all", includeReserve: true, requiredTraits: ["領域外の生命"] },
-    action: { kind: "apply_effects", effects: [{ template: { stableId: "mother-mary-bond-outside-domain-recovery-state", name: "HP回復量アップ", effectType: COMMON_EFFECT_TYPES.receivedHpRecovery, category: "buff", value: 300, removalPolicy: "unremovable" } }] },
+    action: {
+      kind: "apply_effects",
+      effects: [
+        { template: { stableId: "mother-mary-bond-outside-domain-recovery-state", name: "HP回復量アップ", effectType: COMMON_EFFECT_TYPES.receivedHpRecovery, category: "buff", value: 300, removalPolicy: "unremovable" } },
+        { template: { stableId: "mother-mary-bond-outside-domain-recurring-heal-state", name: "毎ターンHP回復", effectType: COMMON_EFFECT_TYPES.recurringHpRecovery, category: "buff", value: 500, removalPolicy: "unremovable", trigger: SELF_TURN_END_HEAL(500) } },
+      ],
+    },
   }],
-  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/781.html", checkedAt: "2026-08-24", note: "絆礼装「聖母の揺籃」の名称、星4Lv80・ATK100・HP100、〔領域外の生命〕味方へのHP回復量30%を照合。" }],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/781.html", checkedAt: "2026-08-24", note: "絆礼装「聖母の揺籃」の名称、星4Lv80・ATK100・HP100、〔領域外の生命〕味方へのHP回復量30%と毎ターンHP500回復を照合。" }],
 };
 
 export const LIGHT_KOYANSKAYA_BOND: CraftEssenceDefinition = {

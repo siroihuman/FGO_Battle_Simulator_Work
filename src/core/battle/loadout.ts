@@ -85,6 +85,7 @@ function fieldAuraEffect(
             ...template.flags,
             fieldAuraSourceInstanceId: sourceInstanceId,
             fieldAuraBaseValue: template.value as number,
+            fieldAuraActive: false,
           },
         },
       })),

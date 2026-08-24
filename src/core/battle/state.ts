@@ -816,10 +816,16 @@ export function setBattleFormation(
       const source = effect.flags.fieldAuraSourceInstanceId;
       const base = effect.flags.fieldAuraBaseValue;
       if (typeof source !== "string" || typeof base !== "number") return effect;
-      const value = frontlineIds.has(source) && frontlineIds.has(unit.instanceId)
-        ? base
-        : 0;
-      return effect.value === value ? effect : { ...effect, value };
+      const active = frontlineIds.has(source) && frontlineIds.has(unit.instanceId);
+      const value = active ? base : 0;
+      if (effect.value === value && effect.flags.fieldAuraActive === active) {
+        return effect;
+      }
+      return {
+        ...effect,
+        value,
+        flags: { ...effect.flags, fieldAuraActive: active },
+      };
     });
     return effects.every((effect, index) => effect === unit.effects[index])
       ? unit

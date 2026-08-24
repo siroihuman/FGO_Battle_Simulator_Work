@@ -1448,7 +1448,7 @@ const requiredUiAssets = [
     "Npgainturn", "Stargainturn", "NPOvercharge", "Npchargeup", "NPGainUpDmg",
     "Quickdamageup", "Curse", "Defensedown", "Invinciblepierce", "Ignoredefense",
     "Defenseup", "Npseal", "Tauntup", "Hpregen", "Maxhpup", "Specialinvincible",
-    "Avoid", "Busterresistdown", "Changeclass", "Busterabsorpt",
+    "Avoid", "Busterresistdown", "Changeclass", "Busterabsorpt", "Healpowup",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
