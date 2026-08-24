@@ -267,7 +267,13 @@ export function presentUnitEffects(
   unit: BattleUnitState,
 ): PresentedEffect[] {
   const index = metadataIndex(session);
-  return unit.effects.map((effect) => {
+  return unit.effects.filter((effect) => {
+    const auraSource = effect.flags.fieldAuraSourceInstanceId;
+    const auraBaseValue = effect.flags.fieldAuraBaseValue;
+    return typeof auraSource !== "string"
+      || typeof auraBaseValue !== "number"
+      || effect.value === auraBaseValue;
+  }).map((effect) => {
     const source = metadataForEffect(index, effect);
     const sourceIdentity = source
       ? `${source.sourceInstanceId}:${source.sourceStableId}`

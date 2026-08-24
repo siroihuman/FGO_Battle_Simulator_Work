@@ -86,6 +86,7 @@ export function collectTriggerActivations(
       .filter(
         (effect) =>
           (location.area === "frontline" || effect.flags.activeWhileReserve === true)
+          && effect.flags.fieldAuraActive !== false
           &&
           effect.trigger?.timing === event.timing
           && conditionMatches(effect.trigger.condition, owner, event),

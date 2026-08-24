@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "fenrir-implemented-awaiting-user-acceptance",
+  "status": "bond-craft-essences-implemented-awaiting-user-acceptance",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -355,6 +355,17 @@
     "craftEssenceStartEffectExecution": "declarative_passive_initialization",
     "craftEssenceStartEffectsIncludeReserve": true,
     "craftEssenceStatusRemovalPolicy": "unremovable",
+    "craftEssenceEligibleServantDataIds": "exact_data_id_only_ui_filtered_and_engine_rejected_before_mutation",
+    "craftEssenceFieldEffects": {
+      "target": "all_allies_including_reserve",
+      "application": "declarative_passive_initialization",
+      "activeWhen": "source_and_recipient_are_both_ally_frontline",
+      "inactiveValue": 0,
+      "uiInactiveValueDisplay": "hidden",
+      "formationRefresh": "set_battle_formation",
+      "saveSchemaChange": false,
+      "dataSchemaChange": false
+    },
     "initialCraftEssenceDataRegistry": "src/data/craftEssences/initialCraftEssences.ts",
     "kaleidoscopeStartNpUnits": 10000,
     "blackGrailNoblePhantasmDamagePermille": 800,
@@ -1016,6 +1027,86 @@
         "level": 100,
         "effectTarget": "equipped_ally_instance",
         "source": "https://appmedia.jp/fategrandorder/103128",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "傷ひとつなき具足",
+        "dataId": "honda-tadakatsu-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["honda-tadakatsu"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/274.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "一九二八年二月号",
+        "dataId": "domination-foreigner-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["domination-foreigner"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/766.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "二谷を渡る玉",
+        "dataId": "ajisukitakahikone-no-kami-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["ajisukitakahikone-no-kami"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/50.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "六つのありえざるもの",
+        "dataId": "fenrir-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["fenrir"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/329.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "六罪牽く黄金車",
+        "dataId": "lucifera-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["lucifera"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/795.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "聖母の揺籃",
+        "dataId": "mother-mary-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["mother-mary"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/781.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "コヤンスカヤの野望～東海岸版～",
+        "dataId": "koyanskaya-of-light-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["koyanskaya-of-light"],
+        "source": "https://w.atwiki.jp/f_go/pages/5141.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "水の如く花の如く",
+        "dataId": "sen-no-rikyu-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["sen-no-rikyu"],
+        "source": "https://w.atwiki.jp/f_go/pages/5723.html",
         "implementationStatus": "implemented"
       }
     ],

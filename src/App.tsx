@@ -397,7 +397,11 @@ export function AllySlotEditor({
           })}
         >
           <option value="">未選択</option>
-          {INITIAL_CRAFT_ESSENCE_DEFINITIONS.map((craftEssence) => (
+          {INITIAL_CRAFT_ESSENCE_DEFINITIONS.filter((craftEssence) =>
+            !definition
+            || craftEssence.eligibleServantDataIds === undefined
+            || craftEssence.eligibleServantDataIds.includes(definition.dataId)
+          ).map((craftEssence) => (
             <option key={craftEssence.dataId} value={craftEssence.dataId}>
               {craftEssence.name}（最大解放・Lv{craftEssence.level}）
             </option>
