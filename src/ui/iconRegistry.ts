@@ -27,6 +27,9 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "神殺しの魔狼": "skill-damage-up",
   "魔狼阻む三本の拘束": "skill-np-charge",
   "凍気迸る獣の四脚": "skill-card-buster-star-weight",
+  "六文銭、風雲を裂く": "skill-card-buster-up",
+  "不惜身命": "skill-guts",
+  "真田の赤備え": "skill-immune-invincibility",
   "狂化": "class-mad-enhancement",
   "野性": "skill-star-rate-up",
   "対魔力": "class-magic-resistance",
@@ -71,6 +74,8 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "Buster攻撃耐性ダウン": "Busterresistdown",
   "防御時クラス相性不利": "Changeclass",
   "Busterカードのスター集中度アップ": "Busterabsorpt",
+  "ガッツ": "Gutsstatus",
+  "被ダメージカット": "DmgResistUp",
 };
 
 function publicAssetPath(path: string): string {
