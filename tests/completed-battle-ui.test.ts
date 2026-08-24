@@ -252,7 +252,7 @@ describe("completed battle UI selectors", () => {
       .toEqual(expect.arrayContaining([null, 2]));
   });
 
-  it("presents every registered noble-phantasm effect with its exact Wiki wording", () => {
+  it("presents every registered noble-phantasm effect on its own detail line", () => {
     const started = session();
     const detail = presentNoblePhantasmDetail(
       started.loop.state.formation.ally.frontline[0],
@@ -266,22 +266,22 @@ describe("completed battle UI selectors", () => {
       LIGHT_KOYANSKAYA.noblePhantasm.effects.length,
     );
     expect(detail?.descriptions).toContain(
-      "＋敵全体に強力な攻撃[Lv]　Buster(x1.5)　",
+      "＋敵全体に強力な攻撃[Lv]：300% / 400% / 450% / 475% / 500%",
     );
     expect(detail?.descriptions).toContain(
-      "＋味方全体のNPを少し増やす<OC:効果UP>",
+      "＋味方全体のNPを少し増やす<OC:効果UP>：10% / 15% / 20% / 25% / 30%",
     );
     const luciferaDetail = presentNoblePhantasmDetail(
       started.loop.state.formation.ally.frontline[1],
     );
     expect(luciferaDetail?.descriptions).toContain(
-      "＆〔悪〕特攻<OC:特攻威力UP>　Buster(x1.5)　",
+      "＆〔悪〕特攻<OC:特攻威力UP>：150% / 162.5% / 175% / 187.5% / 200%",
     );
     expect(LUCIFERA.activeSkills[2].effects.map(({ description }) => description))
       .toEqual([
         "〔悪〕特性の味方全体のスキルチャージを1進める",
-        "＋味方単体のNPを倍化する[Lv]",
-        "＆「ターン終了時に自身の強化状態を解除する状態」を付与〖デメリット〗",
+        "＋味方単体のNPを倍化する[Lv]：100%",
+        "＆「ターン終了時に自身の強化状態を解除する状態」を付与【デメリット】",
       ]);
   });
 

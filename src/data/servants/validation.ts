@@ -121,9 +121,6 @@ function assertNpAttack(
   stableIds: Set<string>,
 ): void {
   registerStableId(effect.stableId, `${name}.stableId`, stableIds);
-  if (effect.description.trim().length === 0) {
-    throw new RangeError(`${name}.description must not be blank`);
-  }
   assertPositiveInteger(effect.order, `${name}.order`);
   if (effect.targetScope !== "single" && effect.targetScope !== "all") {
     throw new RangeError(`${name}.targetScope is invalid`);
@@ -139,9 +136,6 @@ function assertNpAttack(
       `${name}.specialAttack.stableId`,
       stableIds,
     );
-    if (effect.specialAttack.description.trim().length === 0) {
-      throw new RangeError(`${name}.specialAttack.description must not be blank`);
-    }
     const hasFixedMultiplier =
       effect.specialAttack.multiplierPermille !== undefined;
     const hasOverchargeMultipliers =
@@ -176,9 +170,6 @@ function assertNpAttack(
       `${name}.additionalAttack.stableId`,
       stableIds,
     );
-    if (effect.additionalAttack.description.trim().length === 0) {
-      throw new RangeError(`${name}.additionalAttack.description must not be blank`);
-    }
     assertHitWeights(
       effect.additionalAttack.hitWeights,
       `${name}.additionalAttack.hitWeights`,
