@@ -150,5 +150,12 @@ describe("No.058 フェンリル", () => {
     expect(unspecifiedEffectNames(effects)).toEqual([]);
     expect(registeredStatusIconPath(effects.find(({ effectType }) => effectType === COMMON_EFFECT_TYPES.starFocus)!)).toContain("Busterabsorpt.webp");
     expect(registeredStatusIconPath(effects.find(({ effectType }) => effectType === COMMON_EFFECT_TYPES.invincibilityPierce)!)).toContain("Invinciblepierce.webp");
+    expect(registeredStatusIconPath({
+      ...effects.find(({ effectType }) => effectType === COMMON_EFFECT_TYPES.invincibilityPierce)!,
+      name: "Busterカード性能アップ",
+      effectType: COMMON_EFFECT_TYPES.cardPerformance,
+      value: 100,
+      flags: { cardType: "buster" },
+    })).toContain("Busterupstatus.webp");
   });
 });

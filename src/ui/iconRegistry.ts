@@ -44,6 +44,7 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
 };
 
 const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
+  "Busterカード性能アップ": "Busterupstatus",
   "Artsカード性能アップ": "Artsupstatus",
   "Quickカード性能アップ": "Quickupstatus",
   "スター発生率アップ": "Stargainup",
