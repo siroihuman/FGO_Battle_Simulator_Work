@@ -379,37 +379,17 @@ export function presentNoblePhantasmDetail(
     !definition
     || definition.noblePhantasm.stableId !== unit.noblePhantasm.stableId
   ) return null;
-  const rateSeries = (values: readonly number[]) =>
-    values.map((value) => `${value / 10}%`).join(" / ");
   const descriptions = [...definition.noblePhantasm.effects]
     .sort((left, right) => left.order - right.order)
     .flatMap((effect) => {
       if (effect.kind === "effect") return effect.description.split("\n");
-      const target = effect.targetScope === "all" ? "敵全体" : "敵単体";
-      const attack = effect.specialAttack
-        ? `＆強力な攻撃[Lv]：${rateSeries(effect.damageMultiplierPermilleByLevel)}`
-        : `＋${target}に強力な攻撃[Lv]：${rateSeries(effect.damageMultiplierPermilleByLevel)}`;
-      const additionalAttack = effect.additionalAttack
-        ? `＆オーバーチャージで追加で強力な攻撃<OC:威力UP>：${rateSeries(effect.additionalAttack.damageMultiplierPermilleByOvercharge)}`
-        : null;
-      if (!effect.specialAttack) {
-        return additionalAttack ? [attack, additionalAttack] : [attack];
-      }
-      const traits = effect.specialAttack.requiredTargetTraits
-        ?.map((trait) =>
-          trait.endsWith("の力")
-            ? `〔${trait}を持つ敵〕`
-            : `〔${trait}〕`
-        )
-        .join("・") ?? "条件付き";
       return [
-        attack,
-        effect.specialAttack.multiplierPermille !== undefined
-          ? `＆${traits}特攻：${effect.specialAttack.multiplierPermille / 10}%`
-          : `＆${traits}特攻<OC:特攻威力UP>：${rateSeries(effect.specialAttack.multiplierPermilleByOvercharge ?? [])}`,
-        ...(additionalAttack ? [additionalAttack] : []),
+        ...effect.description.split("\n"),
+        ...(effect.specialAttack?.description.split("\n") ?? []),
+        ...(effect.additionalAttack?.description.split("\n") ?? []),
       ];
-    });
+    })
+    .filter((description, index, all) => index === 0 || description !== all[index - 1]);
   return {
     title: definition.noblePhantasm.name,
     rank: definition.noblePhantasm.rank,
