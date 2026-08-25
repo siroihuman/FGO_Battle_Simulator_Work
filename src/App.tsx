@@ -16,6 +16,8 @@ import {
   resolveBattleSessionAllySkill,
   resolveBattleSessionMysticCodeSkill,
   resolveBattleSessionTurn,
+  restartBattleSession,
+  restartBattleSessionWithSeed,
   restoreBattleSession,
   serializeBattleSuspendSave,
   type BattleSession,
@@ -75,6 +77,7 @@ import {
   createEmptyInitialBattleSetup,
   createInitialBattleSession,
   emptyInitialAllySlot,
+  generateReplayableSeed,
   initialAllySelectionForServant,
   SERVANT_FOU_MAX,
   SERVANT_FOU_MIN,
@@ -1131,7 +1134,7 @@ function copySeed(seed: string, onMessage: (message: string) => void) {
   }
 }
 
-function ResultOverlay({ session, onReturn, onFixedSeed, onCopy }: { session: BattleSession; onReturn: () => void; onFixedSeed: () => void; onCopy: () => void }) {
+function ResultOverlay({ session, onReturn, onFixedSeed, onCopy, onRestartSameSeed, onRestartDifferentSeed }: { session: BattleSession; onReturn: () => void; onFixedSeed: () => void; onCopy: () => void; onRestartSameSeed: () => void; onRestartDifferentSeed: () => void }) {
   const state = session.loop.state;
   const status = presentBattleStatus(state, session.loop.rng.seed);
   const allies = [...state.formation.ally.frontline.filter((unit): unit is BattleUnitState => unit !== null), ...state.formation.ally.reserve];
@@ -1153,7 +1156,7 @@ function ResultOverlay({ session, onReturn, onFixedSeed, onCopy }: { session: Ba
       }}>
         <p className="section-kicker">RESULT</p><h2 id="result-heading">{status.outcome}</h2>
         <dl className="detail-list"><div><dt>最終Wave</dt><dd>{status.wave}</dd></div><div><dt>ターン</dt><dd>{status.battleTurn}</dd></div><div><dt>今回のシード</dt><dd>{status.seed}</dd></div><div><dt>生存状況</dt><dd>{allies.map((unit) => `${unit.name}：${unit.alive ? `生存 HP ${unit.hp.toLocaleString()}` : "退場"}`).join(" / ")}</dd></div></dl>
-        <div className="result-actions"><button className="primary-button" type="button" autoFocus onClick={onReturn}>設定へ戻る</button><button type="button" onClick={onCopy}>今回のシードをコピー</button><button type="button" onClick={onFixedSeed}>固定シードとして設定へ戻す</button></div>
+        <div className="result-actions"><button className="primary-button" type="button" autoFocus onClick={onRestartSameSeed}>同じシードで戦闘をやり直す</button><button type="button" onClick={onRestartDifferentSeed}>違うシードで戦闘をやり直す</button><button type="button" onClick={onReturn}>設定へ戻る</button><button type="button" onClick={onCopy}>今回のシードをコピー</button><button type="button" onClick={onFixedSeed}>固定シードとして設定へ戻す</button></div>
       </section>
     </div>
   );
@@ -1437,6 +1440,22 @@ export function BattleScreen({
     finishPlayback("確定結果の演出をスキップしました。");
   }
 
+  function restartBattle(sameSeed: boolean) {
+    if (playback) return;
+    const restarted = sameSeed
+      ? restartBattleSession(session)
+      : restartBattleSessionWithSeed(session, generateReplayableSeed());
+    onSessionChange(restarted);
+    setSelectedCardIds([]);
+    setTargetInstanceId(firstLivingEnemyId(restarted));
+    setPendingSkill(null);
+    setDetail(null);
+    setAllyTab("frontline");
+    setOperationMessage(sameSeed
+      ? "同じシードで戦闘を最初からやり直しました。"
+      : "違うシードで戦闘を最初からやり直しました。");
+  }
+
   function executeTurn() {
     if (playback) return;
     const result = resolveBattleSessionTurn(session, {
@@ -1611,7 +1630,7 @@ export function BattleScreen({
       <section className="battle-header panel" aria-labelledby="status-heading">
         <div><p className="eyebrow">{EMBER_GATHERING_SABER_EXTREME.name}</p><h1 id="status-heading">戦闘状況</h1></div>
         <dl className="battle-meta"><div><dt>Wave</dt><dd>{battleStatus.wave}</dd></div><div><dt>戦闘ターン</dt><dd>{battleStatus.battleTurn}</dd></div><div><dt>Waveターン</dt><dd>{battleStatus.waveTurn}</dd></div><div><dt>結果</dt><dd>{battleStatus.outcome}</dd></div><div className="seed-meta"><dt>今回のシード</dt><dd>{battleStatus.seed}</dd></div></dl>
-        <div className="button-row seed-actions"><button type="button" disabled={Boolean(playback)} onClick={() => copySeed(battleStatus.seed, setOperationMessage)}>今回のシードをコピー</button><button type="button" disabled={threeSelected || Boolean(playback)} onClick={() => onFixedSeedToSetup(battleStatus.seed)}>固定シードとして設定へ戻す</button></div>
+        <div className="button-row seed-actions"><button type="button" disabled={Boolean(playback)} onClick={() => restartBattle(true)}>同じシードで戦闘をやり直す</button><button type="button" disabled={Boolean(playback)} onClick={() => restartBattle(false)}>違うシードで戦闘をやり直す</button><button type="button" disabled={Boolean(playback)} onClick={() => copySeed(battleStatus.seed, setOperationMessage)}>今回のシードをコピー</button><button type="button" disabled={threeSelected || Boolean(playback)} onClick={() => onFixedSeedToSetup(battleStatus.seed)}>固定シードとして設定へ戻す</button></div>
       </section>
 
       <section className="panel" aria-labelledby="enemy-heading">
@@ -1640,7 +1659,7 @@ export function BattleScreen({
       {detail && <DetailModal detail={detail} onClose={() => setDetail(null)} />}
       {pendingSkill && <SkillTargetModal pending={pendingSkill} session={session} onConfirm={(targetId, orderChange) => resolveSkill(pendingSkill.skill, targetId, orderChange)} onClose={() => setPendingSkill(null)} />}
       {playbackFrame && playback && <PlaybackOverlay key={playback.index} notice={playbackFrame.notice} summaries={playbackFrame.summaries} hpTransitions={playbackFrame.hpTransitions} npTransitions={playbackFrame.npTransitions} damageAmounts={playbackFrame.damageAmounts} index={playback.index} total={playback.frames.length} onPrevious={showPreviousPlaybackFrame} onNext={showNextPlaybackFrame} onSkip={skipPlayback} />}
-      {state.outcome !== "ongoing" && !playback && <ResultOverlay session={session} onReturn={onReturnToSetup} onFixedSeed={() => onFixedSeedToSetup(session.loop.rng.seed)} onCopy={() => copySeed(session.loop.rng.seed, setOperationMessage)} />}
+      {state.outcome !== "ongoing" && !playback && <ResultOverlay session={session} onReturn={onReturnToSetup} onFixedSeed={() => onFixedSeedToSetup(session.loop.rng.seed)} onCopy={() => copySeed(session.loop.rng.seed, setOperationMessage)} onRestartSameSeed={() => restartBattle(true)} onRestartDifferentSeed={() => restartBattle(false)} />}
     </main>
   );
 }

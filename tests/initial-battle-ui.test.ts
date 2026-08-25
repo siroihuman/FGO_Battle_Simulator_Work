@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { AllySlotEditor, App, normalizeFouValue, normalizeStoredSetup } from "../src/App";
+import { AllySlotEditor, App, BattleScreen, normalizeFouValue, normalizeStoredSetup } from "../src/App";
 import {
   parseBattleSuspendSave,
   resolveBattleSessionTurn,
@@ -496,5 +496,17 @@ describe("minimum initial battle UI adapter", () => {
       onChange: () => {},
     }));
     expect(sanadaMarkup).toContain(SANADA_YUKIMURA_BOND.name);
+  });
+
+  it("renders same-seed and different-seed restart controls in the battle screen", () => {
+    const markup = renderToStaticMarkup(createElement(BattleScreen, {
+      session: createInitialBattleSession(completeSetup("restart-controls")),
+      onSessionChange: () => undefined,
+      onReturnToSetup: () => undefined,
+      onFixedSeedToSetup: () => undefined,
+    }));
+
+    expect(markup).toContain("同じシードで戦闘をやり直す");
+    expect(markup).toContain("違うシードで戦闘をやり直す");
   });
 });
