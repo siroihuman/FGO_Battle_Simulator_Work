@@ -14,6 +14,7 @@ import { createEffectRuntimeCounters } from "../src/effects/runtime";
 import { resolveAllySkillUse } from "../src/effects/skillExecution";
 import { registeredServantWikiUrl } from "../src/ui/battleUi";
 import {
+  registeredSkillIconPath,
   registeredStatusIconPath,
   unspecifiedEffectNames,
 } from "../src/ui/iconRegistry";
@@ -126,6 +127,12 @@ describe("No.105 李広", () => {
   });
 
   it("resolves the three upgraded skills and class skills with common effects", () => {
+    expect(registeredSkillIconPath("飛将軍"))
+      .toContain("skill-card-quick-up.png");
+    expect(registeredSkillIconPath("白虎星の咆哮"))
+      .toContain("skill-attack-up.png");
+    expect(registeredSkillIconPath("虎穿ちの眼"))
+      .toContain("skill-ignore-evasion.png");
     const { source, state } = baseState();
     const registry = createBattleActionEffectDataRegistry([source.actionEffectData]);
     const first = resolveAllySkillUse({
