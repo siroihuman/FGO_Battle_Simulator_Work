@@ -9,3 +9,4 @@ export * from "./fenrir";
 export * from "./motherMary";
 export * from "./senNoRikyu";
 export * from "./sanadaYukimura";
+export * from "./liGuang";

@@ -13,6 +13,7 @@ import {
 import type {
   AttackRngStreams,
 } from "../core/battle/attack";
+import type { BattleUnitState } from "../core/battle/types";
 import {
   resolveBattleAttackSequence,
   type BattleAttackSequenceResolution,
@@ -64,7 +65,10 @@ import {
   declaredActionScalingRequirements,
   type EnemyNoblePhantasmContext,
 } from "../effects/declarations";
-import { COMMON_EFFECT_TYPES } from "../effects/modifiers";
+import {
+  COMMON_EFFECT_TYPES,
+  sumEffectModifiers,
+} from "../effects/modifiers";
 import type {
   EnemyActionRequest,
   EnemyPrioritySkillRequest,
@@ -332,10 +336,15 @@ function targetIds(
 
 function resolveEnemyCritical(
   action: EnemyAttackActionData,
+  source: BattleUnitState,
   criticalRng: DeterministicRng | undefined,
 ): boolean {
   if (action.kind !== "normal_attack") return false;
-  const rate = action.criticalChancePermille ?? 0;
+  const rate = Math.max(0, Math.min(
+    1_000,
+    (action.criticalChancePermille ?? 0)
+      + sumEffectModifiers(source, COMMON_EFFECT_TYPES.criticalChance, []),
+  ));
   if (rate === 0) return false;
   if (rate === 1_000) return true;
   if (!criticalRng) {
@@ -719,6 +728,7 @@ export function resolveEnemyAttacks(
               request.kind === "noble_phantasm",
             isCritical: resolveEnemyCritical(
               action,
+              source,
               input.criticalRng,
             ),
             cardDamageValuePermille:

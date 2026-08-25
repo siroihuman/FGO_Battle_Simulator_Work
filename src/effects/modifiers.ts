@@ -30,6 +30,8 @@ export const COMMON_EFFECT_TYPES = {
   maxHpChange: "max_hp_change",
   cardPerformance: "card_performance",
   cardResistance: "card_resistance",
+  /** Additive enemy normal-attack critical chance in permille. */
+  criticalChance: "critical_chance",
   criticalDamage: "critical_damage",
   fixedDamage: "fixed_damage",
   noblePhantasmDamage: "noble_phantasm_damage",

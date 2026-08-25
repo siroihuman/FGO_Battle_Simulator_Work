@@ -369,7 +369,7 @@ if (manifest) {
       && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
         === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
       && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary", "sanada-yukimura"])
+        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary", "sanada-yukimura", "li-guang"])
       && servantOriginTabs.tabBrowseMutation === "none"
       && servantOriginTabs.currentSelectionOutsideTabs === true,
     "編成の公式／オリジナル区分とNo.順が一致しません"
@@ -397,10 +397,11 @@ if (manifest) {
   );
   const fenrir = specifiedServants.find(({ dataId }) => dataId === "fenrir");
   const sanadaYukimura = specifiedServants.find(({ dataId }) => dataId === "sanada-yukimura");
+  const liGuang = specifiedServants.find(({ dataId }) => dataId === "li-guang");
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
   const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 7
+    specifiedServants.length === 8
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -430,7 +431,7 @@ if (manifest) {
   assert(
     sanadaYukimura?.collectionNo === 94
       && sanadaYukimura?.classificationCategory === 1
-      && sanadaYukimura?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && sanadaYukimura?.implementationStatus === "implemented_and_accepted"
       && sanadaYukimura?.activeSkillCount === 3
       && sanadaYukimura?.classSkillCount === 2
       && sanadaYukimura?.noblePhantasmCount === 1
@@ -440,6 +441,21 @@ if (manifest) {
       && sanadaYukimura?.battleSuspendSchemaVersion === 4
       && sanadaYukimura?.dataSchemaVersion === "1.38.0",
     "指定コンテンツに真田信繁の登録状態がありません"
+  );
+  assert(
+    liGuang?.collectionNo === 105
+      && liGuang?.classificationCategory === 1
+      && liGuang?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && liGuang?.activeSkillCount === 3
+      && liGuang?.classSkillCount === 3
+      && liGuang?.noblePhantasmCount === 1
+      && liGuang?.noblePhantasmRevision === "upgraded_only"
+      && liGuang?.noblePhantasmHitCount === 9
+      && liGuang?.enemyCriticalChanceModifier
+        === "additive_permille_clamped_to_0_1000_normal_attack_only"
+      && liGuang?.battleSuspendSchemaVersion === 4
+      && liGuang?.dataSchemaVersion === "1.38.0",
+    "指定コンテンツに李広の登録状態がありません"
   );
   assert(
     ajisukitakahikoneNoKami?.collectionNo === 57
@@ -834,7 +850,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "sanada-yukimura-implemented-awaiting-user-acceptance"
+    manifest.status === "li-guang-implemented-awaiting-user-acceptance"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -864,6 +880,19 @@ if (manifest) {
       && effectDurationBoundaries.rngSequenceChange === false
       && effectDurationBoundaries.uiRecalculates === false,
     "状態期限の所持者側・相手側終了仕様が一致しません"
+  );
+  const enemyNormalCriticalChance = manifest.coreRules.enemyNormalCriticalChance;
+  assert(
+    enemyNormalCriticalChance.effectType === "critical_chance"
+      && enemyNormalCriticalChance.combination
+        === "base_action_permille_plus_source_effects"
+      && JSON.stringify(enemyNormalCriticalChance.clamp) === JSON.stringify([0, 1000])
+      && enemyNormalCriticalChance.appliesTo === "normal_attack_only"
+      && enemyNormalCriticalChance.zeroAndFullRateConsumeCriticalRng === false
+      && enemyNormalCriticalChance.battleSuspendSchemaChange === false
+      && enemyNormalCriticalChance.dataSchemaChange === false
+      && enemyNormalCriticalChance.uiRecalculates === false,
+    "敵通常攻撃クリティカル発生率補正の仕様が一致しません"
   );
   const completedUi = manifest.coreRules.completedUiSpecification;
   assert(
@@ -1466,7 +1495,7 @@ const requiredUiAssets = [
     "Quickdamageup", "Curse", "Defensedown", "Invinciblepierce", "Ignoredefense",
     "Defenseup", "Npseal", "Tauntup", "Hpregen", "Maxhpup", "Specialinvincible",
     "Avoid", "Busterresistdown", "Changeclass", "Busterabsorpt", "Healpowup",
-    "Gutsstatus",
+    "Gutsstatus", "Critchndown", "Surehit",
   ].map((name) => `public/assets/status-icons/${name}.webp`),
 ];
 for (const path of requiredUiAssets) {
