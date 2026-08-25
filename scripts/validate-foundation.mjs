@@ -1,4 +1,4 @@
-import { readFile, access } from "node:fs/promises";
+import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import process from "node:process";
 
@@ -1473,12 +1473,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.107「サルバドール・ダリ」")
+    && startHere.includes("共有スキル・状態アイコン素材")
     && startHere.includes("具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`]")
-    && startHere.includes("実画面受入とPR統合を待つ")
+    && startHere.includes("PRの受入と統合を待つ")
     && startHere.includes("中断保存形式4・データ1.38.0")
     && startHere.includes("No.059「那須与一」"),
-  "作業開始ページにサルバドール・ダリの実装状態と次作業がありません"
+  "作業開始ページに共有アイコン素材の実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1519,6 +1519,15 @@ const requiredUiAssets = [
 for (const path of requiredUiAssets) {
   if (!(await exists(path))) errors.push(`指定済みUI画像がありません: ${path}`);
 }
+const [sharedSkillIconFiles, sharedStatusIconFiles] = await Promise.all([
+  readdir("public/assets/skill-icons"),
+  readdir("public/assets/status-icons"),
+]);
+assert(
+  sharedSkillIconFiles.filter((name) => name.endsWith(".png")).length >= 175
+    && sharedStatusIconFiles.filter((name) => name.endsWith(".webp")).length >= 164,
+  "共有スキル・状態アイコン素材が不足しています",
+);
 
 const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
 assert(implementationStatus.includes("## 現在地点"), "実装状況に現在地点がありません");
