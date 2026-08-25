@@ -382,6 +382,7 @@ export function resolveAttack(input: ResolveAttackInput): AttackResolution {
         attackContext,
         attackSourceDefense,
         input.rng.effects,
+        attackSourceDefense.source,
       );
       if (!attackDefense.damageAllowed) {
         return {
@@ -461,6 +462,7 @@ export function resolveAttack(input: ResolveAttackInput): AttackResolution {
           hitContext,
           hitSourceDefense,
           input.rng.effects,
+          hitSourceDefense.source,
         );
         current.target = hitDefense.target;
         countsAsSuccessfulHit = hitDefense.countsAsSuccessfulHit;

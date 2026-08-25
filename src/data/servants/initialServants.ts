@@ -19,6 +19,7 @@ import { SEN_NO_RIKYU } from "./senNoRikyu";
 import { SANADA_YUKIMURA } from "./sanadaYukimura";
 import { LI_GUANG } from "./liGuang";
 import { SALVADOR_DALI } from "./salvadorDali";
+import { AGRIPPA } from "./agrippa";
 
 const PASSIVE = {
   category: "buff" as const,
@@ -217,6 +218,7 @@ export const OFFICIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
 ].sort(byCollectionNumber);
 
 export const ORIGINAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
+  AGRIPPA,
   HONDA_TADAKATSU,
   AJISUKITAKAHIKONE_NO_KAMI,
   FENRIR,

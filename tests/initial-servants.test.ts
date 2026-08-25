@@ -66,6 +66,7 @@ describe("initial servant definitions", () => {
       "sen-no-rikyu",
       "honda-tadakatsu",
       "domination-foreigner",
+      "agrippa",
       "ajisukitakahikone-no-kami",
       "fenrir",
       "lucifera",

@@ -36,6 +36,9 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "溶解する時計": "skill-np-gauge-down",
   "記憶の固執": "skill-guts",
   "偏執狂的批判的方法": "skill-attack-down",
+  "御身のために": "skill-attack-defense-up",
+  "尽くす事こそ我が喜び": "skill-card-arts-up",
+  "共に、安寧と平和で護られた国を": "skill-defense-up",
   "狂化": "class-mad-enhancement",
   "野性": "skill-star-rate-up",
   "対魔力": "class-magic-resistance",
@@ -110,6 +113,9 @@ function statusIconId(effect: AppliedEffect): string | null {
   }
   if (effect.effectType === COMMON_EFFECT_TYPES.defense) {
     return effect.value < 0 ? "Defensedown" : "Defenseup";
+  }
+  if (effect.effectType === COMMON_EFFECT_TYPES.specialDefense) {
+    return "Defenseup";
   }
   if (
     effect.effectType === COMMON_EFFECT_TYPES.cardPerformance

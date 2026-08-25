@@ -118,7 +118,7 @@ describe("No.105 李広", () => {
       damageMultiplierPermilleByLevel: [6_000, 8_000, 9_000, 9_500, 10_000],
     });
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 57, 58, 62, 70, 94, 105, 107]);
+      .toEqual([7, 24, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(initialAllySelectionForServant(LI_GUANG.dataId))
       .toMatchObject({ level: 90, noblePhantasmLevel: 1 });
     expect(registeredServantWikiUrl(LI_GUANG.dataId))

@@ -11,3 +11,4 @@ export * from "./senNoRikyu";
 export * from "./sanadaYukimura";
 export * from "./liGuang";
 export * from "./salvadorDali";
+export * from "./agrippa";

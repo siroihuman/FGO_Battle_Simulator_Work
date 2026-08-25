@@ -3,6 +3,7 @@ import { assertSafeInteger } from "../core/numeric";
 import type { DeterministicRng } from "../core/rng";
 import { COMMON_EFFECT_TYPES } from "./modifiers";
 import { consumeUnitEffectUse } from "./runtime";
+import { hasBattleTrait } from "./traits";
 import type { AppliedEffect } from "./types";
 
 export type DefenseConsumptionUnit = "attack" | "hit";
@@ -141,6 +142,7 @@ function consumptionUnit(effect: AppliedEffect): DefenseConsumptionUnit {
 function effectMatchesContext(
   effect: AppliedEffect,
   context: AttackDefenseContext,
+  attacker: BattleUnitState | null,
 ): boolean {
   if (consumptionUnit(effect) !== context.phase) return false;
   const attackKind = flagString(effect, "attackKind");
@@ -154,6 +156,11 @@ function effectMatchesContext(
   const cardType = flagString(effect, "cardType");
   if (cardType && cardType !== context.cardType) return false;
   if (flagBoolean(effect, "criticalOnly") && !context.isCritical) return false;
+  const requiredAttackerTrait = flagString(effect, "requiredAttackerTrait");
+  if (requiredAttackerTrait && !attacker) return false;
+  if (requiredAttackerTrait && !hasBattleTrait(attacker!, requiredAttackerTrait)) {
+    return false;
+  }
   return true;
 }
 
@@ -161,13 +168,14 @@ function matchingEffects(
   unit: BattleUnitState | null,
   effectType: string,
   context: AttackDefenseContext,
+  attacker: BattleUnitState | null = null,
 ): AppliedEffect[] {
   if (!unit) return [];
   return unit.effects
     .filter(
       (effect) =>
         effect.effectType === effectType
-        && effectMatchesContext(effect, context),
+        && effectMatchesContext(effect, context, attacker),
     )
     .sort(
       (left, right) => left.registrationOrder - right.registrationOrder,
@@ -307,6 +315,7 @@ export function resolveAttackTargetDefense(
   context: AttackDefenseContext,
   capabilities: AttackDefenseCapabilities,
   rng: DeterministicRng,
+  attacker: BattleUnitState | null = null,
 ): AttackTargetDefenseResolution {
   const {
     sureHit,
@@ -318,7 +327,12 @@ export function resolveAttackTargetDefense(
   let protection: ActivatedProtection | undefined;
 
   for (const effectType of PROTECTION_PRIORITY) {
-    const candidates = matchingEffects(currentTarget, effectType, context);
+    const candidates = matchingEffects(
+      currentTarget,
+      effectType,
+      context,
+      attacker,
+    );
     const activated = candidates.find((effect) =>
       rollProtectionActivation(effect, rng)
     );
@@ -371,7 +385,7 @@ export function resolveAttackTargetDefense(
   const targetMatches = Object.fromEntries(
     TARGET_DAMAGE_EFFECT_TYPES.map((effectType) => [
       effectType,
-      matchingEffects(currentTarget, effectType, context),
+      matchingEffects(currentTarget, effectType, context, attacker),
     ]),
   ) as Record<(typeof TARGET_DAMAGE_EFFECT_TYPES)[number], AppliedEffect[]>;
 
@@ -444,6 +458,7 @@ export function resolveAttackDefense(
     context,
     sourceResolution,
     rng,
+    sourceResolution.source,
   );
   return {
     ...targetResolution,
