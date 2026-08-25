@@ -152,7 +152,9 @@ export function declaredActionTargetSelectionIssue(
   if (!selectedTargetInstanceId) {
     return "selected_target_required";
   }
-  const everyTargetIsValid = selectedEffects.every((effect) =>
+  // A conditional entry may legitimately have no target for the selected
+  // unit. The action is usable when at least one single-target entry applies.
+  const someTargetIsValid = selectedEffects.some((effect) =>
     resolveTargetLocations(
       state.formation,
       sourceInstanceId,
@@ -162,7 +164,7 @@ export function declaredActionTargetSelectionIssue(
       },
     ).length === 1
   );
-  return everyTargetIsValid ? null : "selected_target_invalid";
+  return someTargetIsValid ? null : "selected_target_invalid";
 }
 
 /** Validates a selected target for an external source on one battle side. */
@@ -179,7 +181,7 @@ export function externalDeclaredActionTargetSelectionIssue(
   );
   if (selectedEffects.length === 0) return null;
   if (!selectedTargetInstanceId) return "selected_target_required";
-  const everyTargetIsValid = selectedEffects.every((effect) =>
+  const someTargetIsValid = selectedEffects.some((effect) =>
     resolveTargetLocationsFromSide(
       state.formation,
       sourceSide,
@@ -189,7 +191,7 @@ export function externalDeclaredActionTargetSelectionIssue(
       },
     ).length === 1
   );
-  return everyTargetIsValid ? null : "selected_target_invalid";
+  return someTargetIsValid ? null : "selected_target_invalid";
 }
 
 export function declaredActionEffectsStopAttackHits(

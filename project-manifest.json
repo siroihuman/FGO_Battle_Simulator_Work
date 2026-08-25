@@ -427,6 +427,7 @@
       "overcharge"
     ],
     "declaredActionSingleTargetResolvedAtExecution": true,
+    "declaredActionConditionalSingleTargetPolicy": "accept_if_any_single_target_effect_matches_selected_target",
     "declaredActionUnsupportedPolicy": "reject_before_state_or_rng_change",
     "declaredUnitStateActions": [
       "advance_skill_cooldowns",

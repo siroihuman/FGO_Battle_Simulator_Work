@@ -770,6 +770,11 @@ if (manifest) {
     "宣言効果の単体対象は実行時に解決しなければなりません"
   );
   assert(
+    manifest.coreRules.declaredActionConditionalSingleTargetPolicy
+      === "accept_if_any_single_target_effect_matches_selected_target",
+    "条件付き単体効果は有効な1件があればスキルを成立させなければなりません"
+  );
+  assert(
     manifest.coreRules.declaredActionUnsupportedPolicy === "reject_before_state_or_rng_change",
     "未対応の宣言効果は状態・乱数変更前に拒否しなければなりません"
   );

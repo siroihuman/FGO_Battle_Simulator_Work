@@ -178,4 +178,51 @@ describe("No.056 アグリッパ", () => {
       expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.invincibility, remainingUses: 1 }),
     ]) });
   });
+
+  it("uses Skills 2 and 3 on a non-first-emperor ally while skipping only the conditional additions", () => {
+    const { source, state } = stateWithAgrippa();
+    const registry = createBattleActionEffectDataRegistry([source.actionEffectData]);
+    const skill2 = resolveAllySkillUse({
+      state,
+      registry,
+      sourceInstanceId: "agrippa",
+      selectedTargetInstanceId: "ordinary",
+      skillStableId: "agrippa-joy-of-service",
+      counters: createEffectRuntimeCounters(),
+      rng: new BattleRng("agrippa-skill-two-ordinary").stream("effects"),
+    });
+    expect(skill2).toMatchObject({ accepted: true });
+    if (!skill2.accepted) return;
+    expect(skill2.effects.effects.map(({ outcome }) => outcome))
+      .toEqual(["resolved", "resolved", "no_target", "no_target"]);
+    expect(findUnitLocation(skill2.state.formation, "ordinary")?.unit)
+      .toMatchObject({
+        np: 2_000,
+        effects: expect.arrayContaining([
+          expect.objectContaining({
+            effectType: COMMON_EFFECT_TYPES.cardPerformance,
+            value: 200,
+          }),
+        ]),
+      });
+
+    const skill3 = resolveAllySkillUse({
+      state,
+      registry,
+      sourceInstanceId: "agrippa",
+      selectedTargetInstanceId: "ordinary",
+      skillStableId: "agrippa-country-of-peace",
+      counters: createEffectRuntimeCounters(),
+      rng: new BattleRng("agrippa-skill-three-ordinary").stream("effects"),
+    });
+    expect(skill3).toMatchObject({ accepted: true });
+    if (!skill3.accepted) return;
+    expect(skill3.effects.effects.map(({ outcome }) => outcome))
+      .toEqual(["resolved", "resolved", "no_target", "no_target", "no_target"]);
+    expect(findUnitLocation(skill3.state.formation, "ordinary")?.unit.effects)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.defense, value: 200 }),
+        expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.specialDefense, value: 300 }),
+      ]));
+  });
 });
