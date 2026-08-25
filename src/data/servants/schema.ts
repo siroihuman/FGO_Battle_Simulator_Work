@@ -73,6 +73,8 @@ export type ServantEffectDefinition = DeclaredActionEffect;
 export interface ServantNoblePhantasmSpecialAttack {
   stableId: string;
   requiredTargetTraits?: readonly string[];
+  /** Requires at least one ordinary, removable debuff on each target. */
+  requiresRemovableTargetDebuff?: boolean;
   multiplierPermille?: number;
   multiplierPermilleByOvercharge?: readonly [
     number,

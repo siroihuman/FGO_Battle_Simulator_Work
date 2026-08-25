@@ -46,6 +46,8 @@ export interface NoblePhantasmAttackData {
   ];
   /** Every listed trait must be effective on the target at damage setup. */
   specialAttackRequiredTargetTraits?: readonly string[];
+  /** Requires one or more removable debuffs on the target at damage setup. */
+  specialAttackRequiresRemovableTargetDebuff?: boolean;
   /** Optional second packet that always emits after the main NP attack. */
   additionalAttack?: {
     stableId: string;
@@ -281,19 +283,24 @@ function validateCombatant(data: CombatantAttackData): void {
         `${data.instanceId}.${noblePhantasm.stableId} cannot define both fixed and OC special-attack multipliers`,
       );
     }
-    if (noblePhantasm.specialAttackRequiredTargetTraits) {
+    if (
+      noblePhantasm.specialAttackRequiredTargetTraits
+      || noblePhantasm.specialAttackRequiresRemovableTargetDebuff
+    ) {
       if (
         noblePhantasm.specialAttackPermille === undefined
         && !noblePhantasm.specialAttackPermilleByOvercharge
       ) {
         throw new RangeError(
-          `${data.instanceId}.${noblePhantasm.stableId}.specialAttackRequiredTargetTraits requires special-attack multipliers`,
+          `${data.instanceId}.${noblePhantasm.stableId} special-attack conditions requires special-attack multipliers`,
         );
       }
-      validateTraitIds(
-        noblePhantasm.specialAttackRequiredTargetTraits,
-        `${data.instanceId}.${noblePhantasm.stableId}.specialAttackRequiredTargetTraits`,
-      );
+      if (noblePhantasm.specialAttackRequiredTargetTraits) {
+        validateTraitIds(
+          noblePhantasm.specialAttackRequiredTargetTraits,
+          `${data.instanceId}.${noblePhantasm.stableId}.specialAttackRequiredTargetTraits`,
+        );
+      }
     }
     if (noblePhantasm.additionalAttack) {
       assertNonEmptyKey(

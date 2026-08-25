@@ -1288,6 +1288,19 @@ summary {
   transition: width 600ms ease;
 }
 
+.fou-preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.3rem;
+}
+
+.fou-preset-buttons button {
+  min-width: 3.8rem;
+  padding: 0.2rem 0.35rem;
+  font-size: 0.78rem;
+}
+
 @media (max-width: 43.99rem) {
   .unit-grid,
   .card-grid {

@@ -163,6 +163,14 @@ function assertNpAttack(
         `${name}.specialAttack.requiredTargetTraits`,
       );
     }
+    if (
+      effect.specialAttack.requiresRemovableTargetDebuff !== undefined
+      && typeof effect.specialAttack.requiresRemovableTargetDebuff !== "boolean"
+    ) {
+      throw new RangeError(
+        `${name}.specialAttack.requiresRemovableTargetDebuff must be boolean`,
+      );
+    }
   }
   if (effect.additionalAttack) {
     registerStableId(

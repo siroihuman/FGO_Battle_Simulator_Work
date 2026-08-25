@@ -15,7 +15,14 @@ import {
 } from "./attackModifiers";
 import { findUnitLocation } from "./formation";
 import type { BattleState } from "./state";
+import type { BattleUnitState } from "./types";
 import { hasAllBattleTraits } from "../../effects/traits";
+
+function hasRemovableDebuff(target: BattleUnitState): boolean {
+  return target.effects.some((effect) =>
+    effect.category === "debuff" && effect.removalPolicy !== "unremovable"
+  );
+}
 
 export interface AttackCalculationData {
   cardType: AttackModifierCardType;
@@ -34,6 +41,8 @@ export interface AttackCalculationData {
   npSpecialAttackPermille?: number;
   /** Every listed trait must be effective on each target individually. */
   npSpecialAttackRequiredTargetTraits?: readonly string[];
+  /** Requires one or more ordinary removable debuffs on each target. */
+  npSpecialAttackRequiresRemovableTargetDebuff?: boolean;
 }
 
 export interface PreparedAttackInputResult {
@@ -63,7 +72,8 @@ function assertActionData(action: AttackCalculationData): void {
     }
   }
   if (
-    action.npSpecialAttackRequiredTargetTraits
+    (action.npSpecialAttackRequiredTargetTraits
+      || action.npSpecialAttackRequiresRemovableTargetDebuff)
     && action.npSpecialAttackPermille === undefined
   ) {
     throw new RangeError(
@@ -161,7 +171,8 @@ export function prepareBattleAttackInput(
     const specialAttackMatches = hasAllBattleTraits(
       target,
       action.npSpecialAttackRequiredTargetTraits ?? [],
-    );
+    ) && (!action.npSpecialAttackRequiresRemovableTargetDebuff
+      || hasRemovableDebuff(target));
     return {
       targetInstanceId,
       damage: {

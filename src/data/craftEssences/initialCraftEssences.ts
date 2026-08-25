@@ -400,6 +400,33 @@ export const LI_GUANG_BOND: CraftEssenceDefinition = {
   sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/915.html", checkedAt: "2026-08-25", note: "効果、星4Lv80・ATK100・HP100を照合。絆礼装名「桃李の下の蹊」はユーザー指定。" }],
 };
 
+export const SALVADOR_DALI_BOND: CraftEssenceDefinition = {
+  schemaVersion: CRAFT_ESSENCE_DATA_SCHEMA_VERSION,
+  dataId: "salvador-dali-bond",
+  name: "死してなお",
+  ...BOND_CRAFT_ESSENCE,
+  eligibleServantDataIds: ["salvador-dali"],
+  startEffects: [
+    {
+      kind: "effect",
+      stableId: "salvador-dali-bond-np-damage",
+      order: 1,
+      description: "自身の宝具威力をアップ",
+      target: { relation: "self", selection: "single" },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "salvador-dali-bond-np-damage-state", name: "宝具威力アップ", effectType: COMMON_EFFECT_TYPES.noblePhantasmDamage, category: "buff", value: 300, removalPolicy: "unremovable" } }] },
+    },
+    {
+      kind: "effect",
+      stableId: "salvador-dali-bond-instant-death-success",
+      order: 2,
+      description: "＆即死付与成功率をアップ",
+      target: { relation: "self", selection: "single" },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "salvador-dali-bond-instant-death-success-state", name: "即死付与成功率アップ", effectType: COMMON_EFFECT_TYPES.instantDeathSuccess, category: "buff", value: 1_000, removalPolicy: "unremovable" } }] },
+    },
+  ],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/922.html", checkedAt: "2026-08-25", note: "絆礼装「死してなお」の名称はユーザー指定。星4Lv80・ATK100・HP100、宝具威力30%・即死付与成功率100%を照合。" }],
+};
+
 export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   KALEIDOSCOPE,
   BLACK_GRAIL,
@@ -413,6 +440,7 @@ export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   LIGHT_KOYANSKAYA_BOND,
   SEN_NO_RIKYU_BOND,
   LI_GUANG_BOND,
+  SALVADOR_DALI_BOND,
 ] as const;
 
 export const INITIAL_CRAFT_ESSENCE_REGISTRY = createCraftEssenceDataRegistry(

@@ -211,6 +211,15 @@ function optionNumber(value: string): number | null {
   return value === "" ? null : Number(value);
 }
 
+/** Keeps free-form Fou input within the supported integer range immediately. */
+export function normalizeFouValue(value: number): number {
+  if (!Number.isFinite(value)) return SERVANT_FOU_MIN;
+  return Math.min(
+    SERVANT_FOU_MAX,
+    Math.max(SERVANT_FOU_MIN, Math.trunc(value)),
+  );
+}
+
 function allyName(selection: InitialAllySlotSelection): string {
   return selection.servantDataId
     ? servantDefinition(INITIAL_SERVANT_REGISTRY, selection.servantDataId)?.name
@@ -360,9 +369,16 @@ export function AllySlotEditor({
               ...selection,
               hpFou: event.target.value === ""
                 ? SERVANT_FOU_MIN
-                : Number(event.target.value),
+                : normalizeFouValue(Number(event.target.value)),
             })}
           />
+          <span className="fou-preset-buttons" aria-label={`${label} HPフォウ定型値`}>
+            {[0, 1_000, 2_000, 3_000].map((value) => (
+              <button key={value} type="button" disabled={!definition} onClick={() => onChange({ ...selection, hpFou: value })}>
+                {value.toLocaleString()}
+              </button>
+            ))}
+          </span>
         </label>
         <label>
           ATKフォウ
@@ -379,9 +395,16 @@ export function AllySlotEditor({
               ...selection,
               attackFou: event.target.value === ""
                 ? SERVANT_FOU_MIN
-                : Number(event.target.value),
+                : normalizeFouValue(Number(event.target.value)),
             })}
           />
+          <span className="fou-preset-buttons" aria-label={`${label} ATKフォウ定型値`}>
+            {[0, 1_000, 2_000, 3_000].map((value) => (
+              <button key={value} type="button" disabled={!definition} onClick={() => onChange({ ...selection, attackFou: value })}>
+                {value.toLocaleString()}
+              </button>
+            ))}
+          </span>
         </label>
       </div>
       <p className="setup-field-note">各0～3000の整数で指定します。</p>

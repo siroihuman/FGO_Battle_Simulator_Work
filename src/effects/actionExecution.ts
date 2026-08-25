@@ -305,6 +305,20 @@ function preparedAction(
         typeof effect.action.amount === "number" ? undefined : amount,
     };
   }
+  if (effect.action.kind === "instant_death") {
+    const effectRatePermille = resolveDeclaredActionInteger(
+      effect.action.options.effectRatePermille,
+      context,
+    );
+    return {
+      kind: "common",
+      action: {
+        kind: "instant_death",
+        options: { ...effect.action.options, effectRatePermille },
+      },
+      resolvedAmount: effectRatePermille,
+    };
+  }
   if (effect.action.kind === "gain_stars") {
     const amount = resolveDeclaredActionInteger(
       effect.action.amount,

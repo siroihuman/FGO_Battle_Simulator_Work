@@ -397,6 +397,8 @@ function resolveAllyActionData(
             ],
         npSpecialAttackRequiredTargetTraits:
           noblePhantasm.specialAttackRequiredTargetTraits,
+        npSpecialAttackRequiresRemovableTargetDebuff:
+          noblePhantasm.specialAttackRequiresRemovableTargetDebuff,
       },
     },
   };

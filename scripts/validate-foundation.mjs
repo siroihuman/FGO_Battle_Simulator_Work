@@ -369,7 +369,7 @@ if (manifest) {
       && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
         === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
       && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary", "sanada-yukimura", "li-guang"])
+        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary", "sanada-yukimura", "li-guang", "salvador-dali"])
       && servantOriginTabs.tabBrowseMutation === "none"
       && servantOriginTabs.currentSelectionOutsideTabs === true,
     "編成の公式／オリジナル区分とNo.順が一致しません"
@@ -382,6 +382,7 @@ if (manifest) {
       && servantFouSetup.maximum === 3000
       && servantFouSetup.integerOnly === true
       && servantFouSetup.default === 0
+      && JSON.stringify(servantFouSetup.presetValues) === JSON.stringify([0, 1000, 2000, 3000])
       && servantFouSetup.legacyStoredMissingValue === 0
       && servantFouSetup.applicationOrder === "selected_level_stats_then_fou_then_craft_essence"
       && servantFouSetup.uiRecalculation === false
@@ -398,10 +399,11 @@ if (manifest) {
   const fenrir = specifiedServants.find(({ dataId }) => dataId === "fenrir");
   const sanadaYukimura = specifiedServants.find(({ dataId }) => dataId === "sanada-yukimura");
   const liGuang = specifiedServants.find(({ dataId }) => dataId === "li-guang");
+  const salvadorDali = specifiedServants.find(({ dataId }) => dataId === "salvador-dali");
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
   const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 8
+    specifiedServants.length === 9
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -445,7 +447,7 @@ if (manifest) {
   assert(
     liGuang?.collectionNo === 105
       && liGuang?.classificationCategory === 1
-      && liGuang?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && liGuang?.implementationStatus === "implemented_and_accepted"
       && liGuang?.activeSkillCount === 3
       && liGuang?.classSkillCount === 3
       && liGuang?.noblePhantasmCount === 1
@@ -456,6 +458,20 @@ if (manifest) {
       && liGuang?.battleSuspendSchemaVersion === 4
       && liGuang?.dataSchemaVersion === "1.38.0",
     "指定コンテンツに李広の登録状態がありません"
+  );
+  assert(
+    salvadorDali?.collectionNo === 107
+      && salvadorDali?.classificationCategory === 1
+      && salvadorDali?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && salvadorDali?.activeSkillCount === 3
+      && salvadorDali?.classSkillCount === 2
+      && salvadorDali?.noblePhantasmCount === 1
+      && salvadorDali?.noblePhantasmRevision === "upgraded_only"
+      && salvadorDali?.noblePhantasmHitCount === 4
+      && salvadorDali?.noblePhantasmSpecialAttack === "removable_debuff_only_fixed_1500_permille"
+      && salvadorDali?.battleSuspendSchemaVersion === 4
+      && salvadorDali?.dataSchemaVersion === "1.38.0",
+    "指定コンテンツにサルバドール・ダリの登録状態がありません"
   );
   assert(
     ajisukitakahikoneNoKami?.collectionNo === 57
@@ -850,7 +866,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "li-guang-implemented-awaiting-user-acceptance"
+    manifest.status === "salvador-dali-implemented-awaiting-user-acceptance"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1240,9 +1256,10 @@ if (manifest) {
     ["水の如く花の如く", "sen-no-rikyu-bond", "sen-no-rikyu", "https://w.atwiki.jp/f_go/pages/5723.html"],
     ["六文の渡し賃", "sanada-yukimura-bond", "sanada-yukimura", "https://w.atwiki.jp/siroi_human/pages/813.html"],
     ["桃李の下の蹊", "li-guang-bond", "li-guang", "https://w.atwiki.jp/siroi_human/pages/915.html"],
+    ["死してなお", "salvador-dali-bond", "salvador-dali", "https://w.atwiki.jp/siroi_human/pages/922.html"],
   ];
   assert(
-    initialCraftEssences.length === 12
+    initialCraftEssences.length === 13
       && initialCraftEssences[0]?.name === "カレイドスコープ"
       && initialCraftEssences[0]?.dataId === "kaleidoscope"
       && initialCraftEssences[0]?.rarity === 5
@@ -1264,7 +1281,7 @@ if (manifest) {
           && craftEssence.source === source
           && craftEssence.implementationStatus === "implemented";
       }),
-    "概念礼装2枚と絆礼装10枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
+    "概念礼装2枚と絆礼装11枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
   );
 
   const initialEnemies = manifest.initialContent?.enemies ?? [];
@@ -1456,12 +1473,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.094「真田信繁」")
+    && startHere.includes("No.107「サルバドール・ダリ」")
     && startHere.includes("具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`]")
     && startHere.includes("実画面受入とPR統合を待つ")
     && startHere.includes("中断保存形式4・データ1.38.0")
     && startHere.includes("No.059「那須与一」"),
-  "作業開始ページに真田信繁の実装状態と次作業がありません"
+  "作業開始ページにサルバドール・ダリの実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -2038,7 +2055,7 @@ assert(
   initialContent.includes("### No.362 千利休")
     && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
     && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
-    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア、No.094 真田信繁"),
+    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア、No.094 真田信繁、No.105 李広、No.107 サルバドール・ダリ"),
   "具体データ仕様に千利休と編成区分の採用範囲がありません"
 );
 assert(
@@ -2077,10 +2094,11 @@ assert(
   "具体データ仕様に真田信繁の採用範囲がありません"
 );
 assert(
-  initialContent.includes("六文の渡し賃")
-    && initialContent.includes("`sanada-yukimura-bond`")
-    && initialContent.includes("絆礼装10枚"),
-  "具体データ仕様に真田信繁の絆礼装がありません"
+  initialContent.includes("死してなお")
+    && initialContent.includes("`salvador-dali-bond`")
+    && initialContent.includes("解除可能な弱体状態がある対象だけへの固定150%特攻")
+    && initialContent.includes("絆礼装11枚"),
+  "具体データ仕様にサルバドール・ダリの絆礼装と解除可能弱体特攻がありません"
 );
 assert(
   initialContent.includes("### No.070 聖母マリア")
