@@ -422,6 +422,34 @@ export function createBattleSession(
 }
 
 /**
+ * Starts over from the exact initial snapshot retained by a session. This
+ * restores the pre-draw RNG positions as well as the initial state, so the
+ * first hand and all later fixed-seed results match a newly started battle.
+ */
+export function restartBattleSession(session: BattleSession): BattleSession {
+  return createSessionFromInitial(
+    session.initial,
+    session.registry,
+    session.actionEffectRegistry,
+    session.mysticCodeRegistry,
+  );
+}
+
+/**
+ * Starts over from the same initialized formation and loadout with a newly
+ * supplied concrete seed. The new RNG begins before the first hand is drawn.
+ */
+export function restartBattleSessionWithSeed(
+  session: BattleSession,
+  seed: string,
+): BattleSession {
+  return createSessionFromInitial({
+    ...session.initial,
+    rng: new BattleRng(seed).snapshot(),
+  }, session.registry, session.actionEffectRegistry, session.mysticCodeRegistry);
+}
+
+/**
  * Resolves one user operation and accumulates its completed turn log. Invalid
  * card submissions are retained in replay history but intentionally add no
  * turn log because the battle engine did not execute a turn.

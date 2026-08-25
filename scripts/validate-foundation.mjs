@@ -38,6 +38,16 @@ try {
 if (manifest) {
   assert(/^\d+\.\d+\.\d+$/.test(manifest.specVersion), "specVersion は x.y.z 形式である必要があります");
   assert(manifest.coreRules.battleType === "annihilation_only", "戦闘形式は全滅戦だけでなければなりません");
+  assert(
+    manifest.coreRules.battleScreenRestartSameSeed
+      === "reuse_initial_snapshot_and_pre_draw_rng"
+      && manifest.coreRules.battleScreenRestartDifferentSeed
+        === "new_concrete_seed_with_same_initial_state"
+      && manifest.coreRules.battleScreenRestartClearsHistoryAndLogs === true
+      && manifest.coreRules.battleScreenRestartSuspendSchemaChange === false
+      && manifest.coreRules.battleScreenRestartDataSchemaChange === false,
+    "戦闘画面の同一・別シードやり直し規則が一致しません"
+  );
   assert(manifest.coreRules.specialVictoryConditions === false, "特殊勝利条件は無効でなければなりません");
   assert(manifest.coreRules.specialDefeatConditions === false, "特殊敗北条件は無効でなければなりません");
   assert(manifest.coreRules.maxWaves === 3, "最大Wave数は3でなければなりません");
@@ -886,7 +896,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "agrippa-implemented-awaiting-user-acceptance"
+    manifest.status === "battle-restart-controls-implemented-awaiting-user-acceptance"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1921,10 +1931,21 @@ assert(
 const uiAndStorage = await readText("docs/specs/UI_AND_STORAGE.md");
 const uiStyles = await readText("src/styles.css");
 const appSource = await readText("src/App.tsx");
+const battleSessionSource = await readText("src/core/battle/session.ts");
 const effectPresentation = await readText("src/ui/effectPresentation.ts");
 const iconRegistry = await readText("src/ui/iconRegistry.ts");
 const initialBattleUi = await readText("src/ui/initialBattle.ts");
 const battleUi = await readText("src/ui/battleUi.ts");
+assert(
+  uiAndStorage.includes("同じシードで戦闘をやり直す")
+    && uiAndStorage.includes("違うシードで戦闘をやり直す")
+    && calculationsAndRng.includes("`BattleSession.initial`")
+    && appSource.includes("restartBattleSessionWithSeed")
+    && appSource.includes("generateReplayableSeed")
+    && battleSessionSource.includes("export function restartBattleSession(")
+    && battleSessionSource.includes("export function restartBattleSessionWithSeed("),
+  "戦闘画面の同一・別シードやり直し仕様または接続がありません"
+);
 assert(
   uiAndStorage.includes("敵宝具の任意の宝具Lv・OC文脈")
     && uiAndStorage.includes("UIは段階選択、配列参照、文脈補完"),

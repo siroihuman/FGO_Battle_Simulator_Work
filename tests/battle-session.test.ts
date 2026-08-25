@@ -7,6 +7,8 @@ import {
   createBattleSuspendSave,
   parseBattleSuspendSave,
   replayBattleSession,
+  restartBattleSession,
+  restartBattleSessionWithSeed,
   resolveBattleSessionTurn,
   restoreBattleSession,
   serializeBattleSuspendSave,
@@ -112,6 +114,35 @@ describe("battle session persistence and replay", () => {
       before: { battleTurn: 1 },
       after: { battleTurn: 2 },
     });
+  });
+
+  it("restarts from the initial snapshot with either the original or a new seed", () => {
+    const started = createSession("restart-original");
+    const initialState = JSON.parse(JSON.stringify(started.loop.state));
+    const initialRng = started.loop.rng.snapshot();
+    let progressed = resolveBattleSessionTurn(started, {
+      cardIds: firstThreeCardIds(started),
+    }).session;
+
+    const sameSeed = restartBattleSession(progressed);
+    expect(sameSeed.loop.state).toEqual(initialState);
+    expect(sameSeed.loop.rng.snapshot()).toEqual(initialRng);
+    expect(sameSeed.operationHistory).toEqual([]);
+    expect(sameSeed.inputLogs).toEqual([]);
+    expect(sameSeed.turnLogs).toEqual([]);
+
+    const differentSeed = restartBattleSessionWithSeed(
+      progressed,
+      "restart-different",
+    );
+    expect(differentSeed.initial.state).toEqual(progressed.initial.state);
+    expect(differentSeed.initial.counters).toEqual(progressed.initial.counters);
+    expect(differentSeed.initial.rng.seed).toBe("restart-different");
+    expect(differentSeed.loop.rng.seed).toBe("restart-different");
+    expect(differentSeed.loop.rng.snapshot()).not.toEqual(initialRng);
+    expect(differentSeed.operationHistory).toEqual([]);
+    expect(differentSeed.inputLogs).toEqual([]);
+    expect(differentSeed.turnLogs).toEqual([]);
   });
 
   it("restores the exact input boundary and continues with identical state, logs, and RNG", () => {
