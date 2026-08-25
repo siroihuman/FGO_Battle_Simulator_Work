@@ -5,13 +5,13 @@
 ## 現在地点
 
 - フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加
-- 状態: No.105「李広」と絆礼装「桃李の下の蹊」は`main`へ統合済み。No.107「サルバドール・ダリ」と絆礼装「死してなお」、解除可能な弱体状態限定の宝具特攻、フォウ強化の定型値・範囲補正を実装し、自動検査を完了した。ユーザー環境の実画面受入とPR統合を待つ。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布、6乱数列は変更していない。
+- 状態: No.105「李広」と絆礼装「桃李の下の蹊」、No.107「サルバドール・ダリ」と絆礼装「死してなお」は`main`へ統合済み。今後の実装用に共有スキル・状態アイコン素材を先行登録し、自動検査を完了した。PRの受入と統合を待つ。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布、6乱数列は変更していない。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. サルバドール・ダリのユーザー環境の実画面確認を行い、3スキル、Arts耐性ダウン、解除可能な弱体状態だけへの特攻、OC別即死、絆礼装「死してなお」、フォウ自由入力の範囲補正と4定型ボタンを確認する。合格ならPRを`main`へ統合する。
+1. 共有スキル・状態アイコン素材の追加PRを確認し、合格なら`main`へ統合する。
 2. 統合後、`SERVANT_CLASSIFICATION.md`のカテゴリ1・No.順へ戻り、次の未実装対象No.059「那須与一」の具体データ確認・実装可能性確認へ進む。
 
 阿遅鉏高日子根神は[`qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md`](qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md)、本多忠勝は[`qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md`](qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md)、期限境界の修正は[`qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md`](qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md)、聖母マリアは[`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)、千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)を参照します。具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`](SERVANT_CLASSIFICATION.md)の確定済みカテゴリを確認します。
