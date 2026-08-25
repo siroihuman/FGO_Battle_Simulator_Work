@@ -11,6 +11,7 @@ import { resolveAttackModifierTotals } from "../src/core/battle/attackModifiers"
 import { BattleRng } from "../src/core/rng";
 import {
   DOMINATION_FOREIGNER_BOND,
+  AGRIPPA_BOND,
   FENRIR_BOND,
   HONDA_TADAKATSU_BOND,
   INITIAL_CRAFT_ESSENCE_DEFINITIONS,
@@ -154,7 +155,7 @@ function battleUnit(
 
 describe("bond Craft Essences", () => {
   it("registers all requested bond essences with exact wearer restrictions and fixed Lv80 stats", () => {
-    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(13);
+    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(14);
     for (const definition of INITIAL_CRAFT_ESSENCE_DEFINITIONS.filter(
       ({ eligibleServantDataIds }) => eligibleServantDataIds !== undefined,
     )) {
@@ -177,6 +178,10 @@ describe("bond Craft Essences", () => {
     expect(LI_GUANG_BOND).toMatchObject({
       name: "桃李の下の蹊",
       eligibleServantDataIds: ["li-guang"],
+    });
+    expect(AGRIPPA_BOND).toMatchObject({
+      name: "船嘴の黄金冠",
+      eligibleServantDataIds: ["agrippa"],
     });
     expect(LIGHT_KOYANSKAYA_BOND.eligibleServantDataIds).toEqual([
       "koyanskaya-of-light",
@@ -233,6 +238,10 @@ describe("bond Craft Essences", () => {
         kind: "apply_effects",
         effects: [expect.objectContaining({ template: expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.npGain, value: 150 }) })],
       }),
+    ]);
+    expect(AGRIPPA_BOND.fieldEffects?.map(({ description }) => description)).toEqual([
+      "自身がフィールドにいる間、味方全体のArtsカード性能をアップ",
+      "＋味方全体の〔初代ローマ皇帝〕の防御力をアップ",
     ]);
   });
 

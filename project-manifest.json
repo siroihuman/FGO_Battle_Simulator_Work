@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "salvador-dali-implemented-awaiting-user-acceptance",
+  "status": "agrippa-implemented-awaiting-user-acceptance",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -225,6 +225,7 @@
     "initialBattleUiSuspendFlow": "serialize_parse_and_direct_restore",
     "initialBattleUiRecalculatesBattleValues": false,
     "servantDefaultDemeritApplicationRatePermille": 5000,
+    "specialDefenseRequiredAttackerTrait": "effective_attack_source_trait_only",
     "servantDefaultDemeritRateAppliesWhenSourceRateMissing": true,
     "servantDemeritUsesDebuffResistanceAndImmunity": true,
     "initialAttributeAffinitiesPermille": {
@@ -426,6 +427,7 @@
       "overcharge"
     ],
     "declaredActionSingleTargetResolvedAtExecution": true,
+    "declaredActionConditionalSingleTargetPolicy": "accept_if_any_single_target_effect_matches_selected_target",
     "declaredActionUnsupportedPolicy": "reject_before_state_or_rng_change",
     "declaredUnitStateActions": [
       "advance_skill_cooldowns",
@@ -700,6 +702,7 @@
       "originalServantDataIdsInCollectionNumberOrder": [
         "honda-tadakatsu",
         "domination-foreigner",
+        "agrippa",
         "ajisukitakahikone-no-kami",
         "fenrir",
         "lucifera",
@@ -871,6 +874,25 @@
         "dataSchemaVersion": "1.38.0"
       },
       {
+        "name": "アグリッパ",
+        "collectionNo": 56,
+        "dataId": "agrippa",
+        "classificationCategory": 1,
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "source": "https://w.atwiki.jp/siroi_human/pages/300.html",
+        "sourceCheckedAt": "2026-08-25",
+        "activeSkillCount": 3,
+        "classSkillCount": 2,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "upgraded_only",
+        "noblePhantasmHitCount": 4,
+        "specialDefenseRequiredAttackerTrait": "対人",
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
         "name": "阿遅鉏高日子根神",
         "collectionNo": 57,
         "dataId": "ajisukitakahikone-no-kami",
@@ -995,7 +1017,7 @@
         "classificationCategory": 1,
         "schemaVersion": 1,
         "contentRevision": "current_upgraded_only",
-        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "implementationStatus": "implemented_and_accepted",
         "source": "https://w.atwiki.jp/siroi_human/pages/922.html",
         "sourceCheckedAt": "2026-08-25",
         "activeSkillCount": 3,
@@ -1208,6 +1230,16 @@
         "level": 80,
         "eligibleServantDataIds": ["salvador-dali"],
         "source": "https://w.atwiki.jp/siroi_human/pages/922.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "船嘴の黄金冠",
+        "dataId": "agrippa-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["agrippa"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/300.html",
         "implementationStatus": "implemented"
       }
     ],

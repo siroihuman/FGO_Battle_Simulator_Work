@@ -65,7 +65,7 @@ describe("No.058 フェンリル", () => {
       { kind: "attack", order: 2, targetScope: "all", hitWeights: [1, 1, 1, 1, 1], damageMultiplierPermilleByLevel: [3_000, 4_000, 4_500, 4_750, 5_000], specialAttack: { requiredTargetTraits: ["天の力"], multiplierPermille: 1_500 } },
       { kind: "effect", order: 3, action: { kind: "reduce_hp", amount: 1_000, canDefeat: true } },
     ]);
-    expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo)).toEqual([7, 24, 57, 58, 62, 70, 94, 105, 107]);
+    expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo)).toEqual([7, 24, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(initialAllySelectionForServant("fenrir")).toMatchObject({ level: 90, noblePhantasmLevel: 1 });
     expect(registeredServantWikiUrl("fenrir")).toBe("https://w.atwiki.jp/siroi_human/pages/329.html");
     expect(fenrir().unresolvedEffectStableIds).toEqual([]);

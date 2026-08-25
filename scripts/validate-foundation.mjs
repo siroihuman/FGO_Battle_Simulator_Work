@@ -369,7 +369,7 @@ if (manifest) {
       && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
         === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
       && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary", "sanada-yukimura", "li-guang", "salvador-dali"])
+        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "agrippa", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary", "sanada-yukimura", "li-guang", "salvador-dali"])
       && servantOriginTabs.tabBrowseMutation === "none"
       && servantOriginTabs.currentSelectionOutsideTabs === true,
     "編成の公式／オリジナル区分とNo.順が一致しません"
@@ -399,11 +399,12 @@ if (manifest) {
   const fenrir = specifiedServants.find(({ dataId }) => dataId === "fenrir");
   const sanadaYukimura = specifiedServants.find(({ dataId }) => dataId === "sanada-yukimura");
   const liGuang = specifiedServants.find(({ dataId }) => dataId === "li-guang");
+  const agrippa = specifiedServants.find(({ dataId }) => dataId === "agrippa");
   const salvadorDali = specifiedServants.find(({ dataId }) => dataId === "salvador-dali");
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
   const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 9
+    specifiedServants.length === 10
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -462,7 +463,7 @@ if (manifest) {
   assert(
     salvadorDali?.collectionNo === 107
       && salvadorDali?.classificationCategory === 1
-      && salvadorDali?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && salvadorDali?.implementationStatus === "implemented_and_accepted"
       && salvadorDali?.activeSkillCount === 3
       && salvadorDali?.classSkillCount === 2
       && salvadorDali?.noblePhantasmCount === 1
@@ -472,6 +473,20 @@ if (manifest) {
       && salvadorDali?.battleSuspendSchemaVersion === 4
       && salvadorDali?.dataSchemaVersion === "1.38.0",
     "指定コンテンツにサルバドール・ダリの登録状態がありません"
+  );
+  assert(
+    agrippa?.collectionNo === 56
+      && agrippa?.classificationCategory === 1
+      && agrippa?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && agrippa?.activeSkillCount === 3
+      && agrippa?.classSkillCount === 2
+      && agrippa?.noblePhantasmCount === 1
+      && agrippa?.noblePhantasmRevision === "upgraded_only"
+      && agrippa?.noblePhantasmHitCount === 4
+      && agrippa?.specialDefenseRequiredAttackerTrait === "対人"
+      && agrippa?.battleSuspendSchemaVersion === 4
+      && agrippa?.dataSchemaVersion === "1.38.0",
+    "指定コンテンツにアグリッパの登録状態がありません"
   );
   assert(
     ajisukitakahikoneNoKami?.collectionNo === 57
@@ -755,6 +770,11 @@ if (manifest) {
     "宣言効果の単体対象は実行時に解決しなければなりません"
   );
   assert(
+    manifest.coreRules.declaredActionConditionalSingleTargetPolicy
+      === "accept_if_any_single_target_effect_matches_selected_target",
+    "条件付き単体効果は有効な1件があればスキルを成立させなければなりません"
+  );
+  assert(
     manifest.coreRules.declaredActionUnsupportedPolicy === "reject_before_state_or_rng_change",
     "未対応の宣言効果は状態・乱数変更前に拒否しなければなりません"
   );
@@ -866,7 +886,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "salvador-dali-implemented-awaiting-user-acceptance"
+    manifest.status === "agrippa-implemented-awaiting-user-acceptance"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1257,9 +1277,10 @@ if (manifest) {
     ["六文の渡し賃", "sanada-yukimura-bond", "sanada-yukimura", "https://w.atwiki.jp/siroi_human/pages/813.html"],
     ["桃李の下の蹊", "li-guang-bond", "li-guang", "https://w.atwiki.jp/siroi_human/pages/915.html"],
     ["死してなお", "salvador-dali-bond", "salvador-dali", "https://w.atwiki.jp/siroi_human/pages/922.html"],
+    ["船嘴の黄金冠", "agrippa-bond", "agrippa", "https://w.atwiki.jp/siroi_human/pages/300.html"],
   ];
   assert(
-    initialCraftEssences.length === 13
+    initialCraftEssences.length === 14
       && initialCraftEssences[0]?.name === "カレイドスコープ"
       && initialCraftEssences[0]?.dataId === "kaleidoscope"
       && initialCraftEssences[0]?.rarity === 5
@@ -1281,7 +1302,7 @@ if (manifest) {
           && craftEssence.source === source
           && craftEssence.implementationStatus === "implemented";
       }),
-    "概念礼装2枚と絆礼装11枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
+    "概念礼装2枚と絆礼装12枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
   );
 
   const initialEnemies = manifest.initialContent?.enemies ?? [];
@@ -1473,12 +1494,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("共有スキル・状態アイコン素材")
+    && startHere.includes("No.056「アグリッパ」")
     && startHere.includes("具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`]")
-    && startHere.includes("PRの受入と統合を待つ")
+    && startHere.includes("実画面受入とPR統合を待つ")
     && startHere.includes("中断保存形式4・データ1.38.0")
     && startHere.includes("No.059「那須与一」"),
-  "作業開始ページに共有アイコン素材の実装状態と次作業がありません"
+  "作業開始ページにアグリッパの実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1557,6 +1578,8 @@ assert(
     && implementationStatus.includes("No.058「フェンリル」")
     && implementationStatus.includes("〔天の力〕固定150%特攻")
     && implementationStatus.includes("`canDefeat: true`")
+    && implementationStatus.includes("No.056「アグリッパ」")
+    && implementationStatus.includes("`requiredAttackerTrait`")
     && implementationStatus.includes("No.094「真田信繁」")
     && implementationStatus.includes("防御無視は攻撃前に登録し同一宝具攻撃で消費する")
     && implementationStatus.includes("`skill-guts`")
@@ -2064,7 +2087,7 @@ assert(
   initialContent.includes("### No.362 千利休")
     && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
     && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
-    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア、No.094 真田信繁、No.105 李広、No.107 サルバドール・ダリ"),
+    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.056 アグリッパ、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア、No.094 真田信繁、No.105 李広、No.107 サルバドール・ダリ"),
   "具体データ仕様に千利休と編成区分の採用範囲がありません"
 );
 assert(
@@ -2106,8 +2129,16 @@ assert(
   initialContent.includes("死してなお")
     && initialContent.includes("`salvador-dali-bond`")
     && initialContent.includes("解除可能な弱体状態がある対象だけへの固定150%特攻")
-    && initialContent.includes("絆礼装11枚"),
+    && initialContent.includes("絆礼装12枚"),
   "具体データ仕様にサルバドール・ダリの絆礼装と解除可能弱体特攻がありません"
+);
+assert(
+  initialContent.includes("### No.056 アグリッパ")
+    && initialContent.includes("`agrippa`")
+    && initialContent.includes("requiredAttackerTrait")
+    && initialContent.includes("\"対人\"")
+    && initialContent.includes("`Defenseup`"),
+  "具体データ仕様にアグリッパの特防と絆礼装がありません"
 );
 assert(
   initialContent.includes("### No.070 聖母マリア")
