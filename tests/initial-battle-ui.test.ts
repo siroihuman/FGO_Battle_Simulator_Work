@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { AllySlotEditor, App, normalizeStoredSetup } from "../src/App";
+import { AllySlotEditor, App, normalizeFouValue, normalizeStoredSetup } from "../src/App";
 import {
   parseBattleSuspendSave,
   resolveBattleSessionTurn,
@@ -199,6 +199,19 @@ describe("minimum initial battle UI adapter", () => {
     expect(() => createInitialBattleSession(setup)).toThrow(
       "前衛1のHPフォウを0～3000の整数で入力してください。",
     );
+  });
+
+  it("clamps free-form Fou input and renders four preset buttons for each stat", () => {
+    expect(normalizeFouValue(-1)).toBe(0);
+    expect(normalizeFouValue(3_001)).toBe(3_000);
+    expect(normalizeFouValue(1_234.9)).toBe(1_234);
+    const markup = renderToStaticMarkup(createElement(AllySlotEditor, {
+      label: "前衛1", required: true, selection: ally(), onChange: () => undefined,
+    }));
+    expect(markup).toContain('aria-label="前衛1 HPフォウ定型値"');
+    expect(markup).toContain('aria-label="前衛1 ATKフォウ定型値"');
+    expect((markup.match(/>1,000</g) ?? [])).toHaveLength(2);
+    expect((markup.match(/>3,000</g) ?? [])).toHaveLength(2);
   });
 
   it("keeps duplicate servant instances and each Lv, NP level, and Craft Essence independent", () => {
@@ -443,7 +456,7 @@ describe("minimum initial battle UI adapter", () => {
 
   it("uses only registered initial selection sources and renders labeled mobile-safe controls", () => {
     expect(Object.keys(INITIAL_MYSTIC_CODE_REGISTRY.byDataId)).toHaveLength(3);
-    expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toHaveLength(12);
+    expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toHaveLength(13);
     const markup = renderToStaticMarkup(createElement(App));
 
     expect(markup).toContain("初期戦闘設定");

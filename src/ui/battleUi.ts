@@ -395,13 +395,19 @@ export function presentNoblePhantasmDetail(
       if (!effect.specialAttack) {
         return additionalAttack ? [attack, additionalAttack] : [attack];
       }
-      const traits = effect.specialAttack.requiredTargetTraits
+      const specialAttackConditions = [
+        ...(effect.specialAttack.requiredTargetTraits
         ?.map((trait) =>
           trait.endsWith("の力")
             ? `〔${trait}を持つ敵〕`
             : `〔${trait}〕`
         )
-        .join("・") ?? "条件付き";
+        ?? []),
+        ...(effect.specialAttack.requiresRemovableTargetDebuff
+          ? ["〔弱体状態(解除不能な状態は除く)〕"]
+          : []),
+      ];
+      const traits = specialAttackConditions.join("・") || "条件付き";
       return [
         attack,
         effect.specialAttack.multiplierPermille !== undefined

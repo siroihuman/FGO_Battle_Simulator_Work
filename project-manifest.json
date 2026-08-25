@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "li-guang-implemented-awaiting-user-acceptance",
+  "status": "salvador-dali-implemented-awaiting-user-acceptance",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -705,7 +705,8 @@
         "lucifera",
         "mother-mary",
         "sanada-yukimura",
-        "li-guang"
+        "li-guang",
+        "salvador-dali"
       ],
       "tabBrowseMutation": "none",
       "currentSelectionOutsideTabs": true
@@ -718,6 +719,7 @@
       "maximum": 3000,
       "integerOnly": true,
       "default": 0,
+      "presetValues": [0, 1000, 2000, 3000],
       "legacyStoredMissingValue": 0,
       "applicationOrder": "selected_level_stats_then_fou_then_craft_essence",
       "uiRecalculation": false,
@@ -974,7 +976,7 @@
         "classificationCategory": 1,
         "schemaVersion": 1,
         "contentRevision": "current_upgraded_only",
-        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "implementationStatus": "implemented_and_accepted",
         "source": "https://w.atwiki.jp/siroi_human/pages/915.html",
         "sourceCheckedAt": "2026-08-25",
         "activeSkillCount": 3,
@@ -983,6 +985,25 @@
         "noblePhantasmRevision": "upgraded_only",
         "noblePhantasmHitCount": 9,
         "enemyCriticalChanceModifier": "additive_permille_clamped_to_0_1000_normal_attack_only",
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
+        "name": "サルバドール・ダリ",
+        "collectionNo": 107,
+        "dataId": "salvador-dali",
+        "classificationCategory": 1,
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "source": "https://w.atwiki.jp/siroi_human/pages/922.html",
+        "sourceCheckedAt": "2026-08-25",
+        "activeSkillCount": 3,
+        "classSkillCount": 2,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "upgraded_only",
+        "noblePhantasmHitCount": 4,
+        "noblePhantasmSpecialAttack": "removable_debuff_only_fixed_1500_permille",
         "battleSuspendSchemaVersion": 4,
         "dataSchemaVersion": "1.38.0"
       }
@@ -1177,6 +1198,16 @@
         "level": 80,
         "eligibleServantDataIds": ["li-guang"],
         "source": "https://w.atwiki.jp/siroi_human/pages/915.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "死してなお",
+        "dataId": "salvador-dali-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["salvador-dali"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/922.html",
         "implementationStatus": "implemented"
       }
     ],

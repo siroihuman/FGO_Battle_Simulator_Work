@@ -256,6 +256,9 @@ export function createServantBattleInstance(
                         specialAttack.requiredTargetTraits,
                     }
                   : {}),
+                ...(specialAttack.requiresRemovableTargetDebuff
+                  ? { specialAttackRequiresRemovableTargetDebuff: true }
+                  : {}),
               }
             : {}),
           ...(npAttack.additionalAttack

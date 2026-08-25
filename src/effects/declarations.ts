@@ -70,6 +70,7 @@ export type DeclaredEffectAction =
       | { kind: "change_np" }
       | { kind: "heal_hp" }
       | { kind: "reduce_hp" }
+      | { kind: "instant_death" }
       | { kind: "apply_effects" }
     >
   | {
@@ -84,6 +85,11 @@ export type DeclaredEffectAction =
     }
   | (Omit<Extract<CommonAction, { kind: "reduce_hp" }>, "amount"> & {
       amount: DeclaredActionInteger;
+    })
+  | (Omit<Extract<CommonAction, { kind: "instant_death" }>, "options"> & {
+      options: Omit<Extract<CommonAction, { kind: "instant_death" }> ["options"], "effectRatePermille"> & {
+        effectRatePermille: DeclaredActionInteger;
+      };
     })
   | {
       /** Stars gained before selection use command; attack-time gains use next_command. */
@@ -215,9 +221,12 @@ export function declaredActionScalingRequirements(
       action.kind === "change_np"
       || action.kind === "heal_hp"
       || action.kind === "reduce_hp"
+      || action.kind === "instant_death"
       || action.kind === "gain_stars"
     ) {
-      values.push(action.amount);
+      values.push(action.kind === "instant_death"
+        ? action.options.effectRatePermille
+        : action.amount);
     } else if (action.kind === "apply_effects") {
       for (const spec of action.effects) {
         if (spec.template.value !== undefined) {
@@ -416,9 +425,15 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
       );
     }
   } else if (action.kind === "instant_death") {
-    assertNonNegative(
+    assertValidDeclaredActionInteger(
       action.options.effectRatePermille,
       `${name}.options.effectRatePermille`,
+    );
+    const values = typeof action.options.effectRatePermille === "number"
+      ? [action.options.effectRatePermille]
+      : action.options.effectRatePermille.values;
+    values.forEach((value, index) =>
+      assertNonNegative(value, `${name}.options.effectRatePermille.values[${index}]`)
     );
   } else if (action.kind === "apply_effects") {
     if (action.effects.length === 0) {

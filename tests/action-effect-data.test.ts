@@ -252,6 +252,45 @@ describe("declared action-effect execution", () => {
     }, {})).toThrow(/requires an execution stage/);
   });
 
+  it("resolves OC-scaled instant-death rates in the engine", () => {
+    const staged: DeclaredActionEffect = {
+      kind: "effect",
+      stableId: "oc-instant-death",
+      order: 1,
+      description: "敵単体へOCに応じた即死率を適用する",
+      target: { relation: "enemies", selection: "single" },
+      action: {
+        kind: "instant_death",
+        options: {
+          effectRatePermille: {
+            scaling: "overcharge",
+            values: [800, 1_000, 1_100, 1_150, 1_200],
+          },
+          timing: "after_damage",
+        },
+      },
+    };
+    expect(declaredActionScalingRequirements([staged])).toEqual({
+      noblePhantasmLevel: false,
+      overchargeStage: true,
+    });
+    expect(() => assertValidDeclaredActionEffect(staged, "staged"))
+      .not.toThrow();
+
+    const result = executeDeclaredActionEffects(
+      battle(),
+      "ally-a",
+      [staged],
+      { selectedTargetInstanceId: "enemy-a", overchargeStage: 3 },
+      createEffectRuntimeCounters(),
+      new BattleRng("oc-instant-death").stream("effects"),
+    );
+    expect(result.effects[0]).toMatchObject({
+      resolvedAmount: 1_100,
+      targetInstanceIds: ["enemy-a"],
+    });
+  });
+
   it("resolves OC-scaled HP reduction in the engine and preserves fixed values", () => {
     const staged: DeclaredActionEffect = {
       kind: "effect",

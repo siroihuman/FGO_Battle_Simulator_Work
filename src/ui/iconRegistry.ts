@@ -33,6 +33,9 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "飛将軍": "skill-card-quick-up",
   "白虎星の咆哮": "skill-attack-up",
   "虎穿ちの眼": "skill-ignore-evasion",
+  "溶解する時計": "skill-np-gauge-down",
+  "記憶の固執": "skill-guts",
+  "偏執狂的批判的方法": "skill-attack-down",
   "狂化": "class-mad-enhancement",
   "野性": "skill-star-rate-up",
   "対魔力": "class-magic-resistance",
@@ -76,10 +79,13 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "対粛清防御": "Specialinvincible",
   "回避": "Avoid",
   "Buster攻撃耐性ダウン": "Busterresistdown",
+  "Arts攻撃耐性ダウン": "Artsresistdown",
   "クリティカル発生率ダウン": "Critchndown",
   "防御時クラス相性不利": "Changeclass",
   "Busterカードのスター集中度アップ": "Busterabsorpt",
   "ガッツ": "Gutsstatus",
+  "魅了耐性アップ": "Resistanceup",
+  "即死付与成功率アップ": "Instapowerup",
   "被ダメージカット": "Defenseup",
 };
 

@@ -18,6 +18,7 @@ import { MOTHER_MARY } from "./motherMary";
 import { SEN_NO_RIKYU } from "./senNoRikyu";
 import { SANADA_YUKIMURA } from "./sanadaYukimura";
 import { LI_GUANG } from "./liGuang";
+import { SALVADOR_DALI } from "./salvadorDali";
 
 const PASSIVE = {
   category: "buff" as const,
@@ -221,6 +222,7 @@ export const ORIGINAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
   FENRIR,
   SANADA_YUKIMURA,
   LI_GUANG,
+  SALVADOR_DALI,
   DOMINATION_FOREIGNER,
   LUCIFERA,
   MOTHER_MARY,
