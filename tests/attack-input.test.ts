@@ -260,6 +260,86 @@ describe("attack calculation input adapter", () => {
     expect(prepared.input.sourceNpLevel).toBe(2);
   });
 
+  it("matches source modifiers against target evade or invincibility state", () => {
+    const source = addEffects(
+      unit("ally-a", "ally", {
+        dataId: "servant",
+        noblePhantasm: noblePhantasm(),
+      }),
+      [
+        modifier(
+          "np-vs-evade-or-invincibility",
+          COMMON_EFFECT_TYPES.noblePhantasmDamage,
+          500,
+          {
+            attackKind: "noble_phantasm",
+            requiredTargetEvadeOrInvincibility: true,
+          },
+        ),
+        modifier(
+          "critical-vs-evade-or-invincibility",
+          COMMON_EFFECT_TYPES.criticalDamage,
+          300,
+          {
+            criticalOnly: true,
+            requiredTargetEvadeOrInvincibility: true,
+          },
+        ),
+      ],
+    );
+    const plainTarget = unit("enemy-a", "enemy", { dataId: "enemy" });
+    const evadeTarget = addEffects(plainTarget, [
+      modifier("evade", COMMON_EFFECT_TYPES.evade, 0),
+    ]);
+    const invincibleTarget = addEffects(plainTarget, [
+      modifier("invincibility", COMMON_EFFECT_TYPES.invincibility, 0),
+    ]);
+    const bothTarget = addEffects(plainTarget, [
+      modifier("evade", COMMON_EFFECT_TYPES.evade, 0),
+      modifier("invincibility", COMMON_EFFECT_TYPES.invincibility, 0),
+    ]);
+    const solemnTarget = addEffects(plainTarget, [
+      modifier("solemn", COMMON_EFFECT_TYPES.solemnDefense, 0),
+    ]);
+    const registry = createBattleAttackDataRegistry([
+      combatantData("ally-a", "servant"),
+      combatantData("enemy-a", "enemy"),
+    ]);
+    const normalCritical = (target: BattleUnitState) =>
+      prepareBattleAttackInput(
+        battle(source, target),
+        registry,
+        "ally-a",
+        ["enemy-a"],
+        criticalBuster,
+      ).input.targets[0]?.damage;
+    const noblePhantasmAttack = (target: BattleUnitState) =>
+      prepareBattleAttackInput(
+        battle(source, target),
+        registry,
+        "ally-a",
+        ["enemy-a"],
+        {
+          ...criticalBuster,
+          isNoblePhantasm: true,
+          isCritical: false,
+          npDamageMultiplierPermille: 1_000,
+        },
+      ).input.targets[0]?.damage;
+
+    expect(normalCritical(plainTarget)?.criticalDamageModPermille).toBe(0);
+    expect(normalCritical(evadeTarget)?.criticalDamageModPermille).toBe(300);
+    expect(normalCritical(invincibleTarget)?.criticalDamageModPermille).toBe(300);
+    expect(normalCritical(bothTarget)?.criticalDamageModPermille).toBe(300);
+    expect(normalCritical(solemnTarget)?.criticalDamageModPermille).toBe(0);
+
+    expect(noblePhantasmAttack(plainTarget)?.npDamageModPermille).toBe(0);
+    expect(noblePhantasmAttack(evadeTarget)?.npDamageModPermille).toBe(500);
+    expect(noblePhantasmAttack(invincibleTarget)?.npDamageModPermille).toBe(500);
+    expect(noblePhantasmAttack(bothTarget)?.npDamageModPermille).toBe(500);
+    expect(noblePhantasmAttack(solemnTarget)?.npDamageModPermille).toBe(0);
+  });
+
   it("applies conditional NP special attack to base or granted target traits only", () => {
     const source = addEffects(
       unit("ally-a", "ally", {

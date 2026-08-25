@@ -80,6 +80,14 @@ function booleanFlag(
   return value;
 }
 
+function targetHasEvadeOrInvincibility(target: BattleUnitState): boolean {
+  return target.effects.some(
+    ({ effectType }) =>
+      effectType === COMMON_EFFECT_TYPES.evade
+      || effectType === COMMON_EFFECT_TYPES.invincibility,
+  );
+}
+
 function matchesAttack(
   effect: AppliedEffect,
   context: AttackModifierContext,
@@ -100,6 +108,12 @@ function matchesAttack(
     return false;
   }
   if (booleanFlag(effect, "criticalOnly") && !context.isCritical) {
+    return false;
+  }
+  if (
+    booleanFlag(effect, "requiredTargetEvadeOrInvincibility")
+    && !targetHasEvadeOrInvincibility(context.target)
+  ) {
     return false;
   }
   const requiredTargetTrait = stringFlag(
