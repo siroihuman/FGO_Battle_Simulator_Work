@@ -30,6 +30,9 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "六文銭、風雲を裂く": "skill-card-buster-up",
   "不惜身命": "skill-guts",
   "真田の赤備え": "skill-immune-invincibility",
+  "飛将軍": "skill-card-quick-up",
+  "白虎星の咆哮": "skill-attack-up",
+  "虎穿ちの眼": "skill-ignore-evasion",
   "狂化": "class-mad-enhancement",
   "野性": "skill-star-rate-up",
   "対魔力": "class-magic-resistance",
@@ -73,6 +76,7 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "対粛清防御": "Specialinvincible",
   "回避": "Avoid",
   "Buster攻撃耐性ダウン": "Busterresistdown",
+  "クリティカル発生率ダウン": "Critchndown",
   "防御時クラス相性不利": "Changeclass",
   "Busterカードのスター集中度アップ": "Busterabsorpt",
   "ガッツ": "Gutsstatus",
@@ -109,6 +113,11 @@ function statusIconId(effect: AppliedEffect): string | null {
   if (effect.effectType === COMMON_EFFECT_TYPES.criticalDamage && effect.value >= 0) {
     return "Critdmgup";
   }
+  if (
+    effect.effectType === COMMON_EFFECT_TYPES.criticalChance
+    && effect.value < 0
+  ) return "Critchndown";
+  if (effect.effectType === COMMON_EFFECT_TYPES.sureHit) return "Surehit";
   if (effect.effectType === COMMON_EFFECT_TYPES.starFocus) {
     return effect.value < 0 ? "Starabsoprtdown" : "Critabsup";
   }

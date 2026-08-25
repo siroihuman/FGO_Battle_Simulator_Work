@@ -443,7 +443,7 @@ describe("minimum initial battle UI adapter", () => {
 
   it("uses only registered initial selection sources and renders labeled mobile-safe controls", () => {
     expect(Object.keys(INITIAL_MYSTIC_CODE_REGISTRY.byDataId)).toHaveLength(3);
-    expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toHaveLength(11);
+    expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toHaveLength(12);
     const markup = renderToStaticMarkup(createElement(App));
 
     expect(markup).toContain("初期戦闘設定");

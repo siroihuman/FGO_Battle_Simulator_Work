@@ -327,6 +327,63 @@ function streams(seed: string) {
 }
 
 describe("enemy data-to-attack integration", () => {
+  it("applies critical-chance modifiers to enemy normal attacks and clamps before RNG", () => {
+    const initial = enemyTurn();
+    const enemy = findUnitLocation(initial.formation, "enemy-a")?.unit;
+    if (!enemy) throw new Error("敵が見つかりません");
+    const applied = applyEffect(
+      enemy,
+      {
+        stableId: "critical-chance-down",
+        name: "クリティカル発生率ダウン",
+        effectType: COMMON_EFFECT_TYPES.criticalChance,
+        category: "debuff",
+        value: -200,
+        remainingTurns: 3,
+      },
+      "ally-source",
+      createEffectRuntimeCounters(),
+    );
+    const state = {
+      ...initial,
+      formation: replaceUnit(initial.formation, applied.unit),
+    };
+    const battleRegistry = createBattleAttackDataRegistry([
+      combatantData("enemy-a", "enemy", {
+        attack: 10_000,
+        commandCardHitWeights: null,
+        extraAttackHitWeights: null,
+        enemyAttacks: [{
+          actionStableId: "enemy-normal",
+          kind: "normal_attack",
+          targetScope: "single",
+          cardType: "buster",
+          hitWeights: [1],
+          cardDamageValuePermille: 1_000,
+          criticalChancePermille: 100,
+        }],
+      }),
+    ]);
+    const rng = new BattleRng("enemy-critical-chance-down");
+    const resolved = resolveEnemyAttacks({
+      state,
+      priorityRequests: [],
+      registry: battleRegistry,
+      rng: {
+        effects: rng.stream("effects"),
+        damage: rng.stream("damage"),
+        stars: rng.stream("stars"),
+      },
+      aiRng: rng.stream("ai"),
+      criticalRng: rng.stream("critical"),
+    });
+    expect(resolved.sequence.actions[0]?.resolverDetail).toMatchObject({
+      outcome: "resolved",
+      calculation: { isCritical: false },
+    });
+    expect(rng.snapshot().streams.critical.drawCount).toBe(0);
+  });
+
   it("uses the default frontmost target and grants received NP", () => {
     const random = streams("enemy-normal-data");
     const resolved = resolveEnemyAttacks({

@@ -372,6 +372,34 @@ export const SEN_NO_RIKYU_BOND: CraftEssenceDefinition = {
   sources: [{ url: "https://w.atwiki.jp/f_go/pages/5723.html", checkedAt: "2026-08-24", note: "絆礼装「水の如く花の如く」の名称、星4Lv80・ATK100・HP100、前衛中の味方全体への〔人の力を持つ敵〕特攻20%を照合。" }],
 };
 
+export const LI_GUANG_BOND: CraftEssenceDefinition = {
+  schemaVersion: CRAFT_ESSENCE_DATA_SCHEMA_VERSION,
+  dataId: "li-guang-bond",
+  name: "桃李の下の蹊",
+  ...BOND_CRAFT_ESSENCE,
+  eligibleServantDataIds: ["li-guang"],
+  startEffects: [],
+  fieldEffects: [
+    {
+      kind: "effect",
+      stableId: "li-guang-bond-party-attack",
+      order: 1,
+      description: "自身がフィールドにいる間、味方全体の攻撃力をアップ",
+      target: { relation: "allies", selection: "all", includeReserve: true },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "li-guang-bond-party-attack-state", name: "攻撃力アップ", effectType: COMMON_EFFECT_TYPES.attack, category: "buff", value: 100, removalPolicy: "unremovable" } }] },
+    },
+    {
+      kind: "effect",
+      stableId: "li-guang-bond-party-np-gain",
+      order: 2,
+      description: "＆NP獲得量をアップ",
+      target: { relation: "allies", selection: "all", includeReserve: true },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "li-guang-bond-party-np-gain-state", name: "NP獲得量アップ", effectType: COMMON_EFFECT_TYPES.npGain, category: "buff", value: 150, removalPolicy: "unremovable" } }] },
+    },
+  ],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/915.html", checkedAt: "2026-08-25", note: "効果、星4Lv80・ATK100・HP100を照合。絆礼装名「桃李の下の蹊」はユーザー指定。" }],
+};
+
 export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   KALEIDOSCOPE,
   BLACK_GRAIL,
@@ -384,6 +412,7 @@ export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   SANADA_YUKIMURA_BOND,
   LIGHT_KOYANSKAYA_BOND,
   SEN_NO_RIKYU_BOND,
+  LI_GUANG_BOND,
 ] as const;
 
 export const INITIAL_CRAFT_ESSENCE_REGISTRY = createCraftEssenceDataRegistry(

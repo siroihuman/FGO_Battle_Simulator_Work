@@ -71,6 +71,7 @@ describe("initial servant definitions", () => {
       "lucifera",
       "mother-mary",
       "sanada-yukimura",
+      "li-guang",
     ]);
     expect(LIGHT_KOYANSKAYA.levelStats.at(-1)).toEqual({
       level: 120,

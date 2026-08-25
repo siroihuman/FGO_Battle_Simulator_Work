@@ -17,6 +17,7 @@ import { FENRIR } from "./fenrir";
 import { MOTHER_MARY } from "./motherMary";
 import { SEN_NO_RIKYU } from "./senNoRikyu";
 import { SANADA_YUKIMURA } from "./sanadaYukimura";
+import { LI_GUANG } from "./liGuang";
 
 const PASSIVE = {
   category: "buff" as const,
@@ -219,6 +220,7 @@ export const ORIGINAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
   AJISUKITAKAHIKONE_NO_KAMI,
   FENRIR,
   SANADA_YUKIMURA,
+  LI_GUANG,
   DOMINATION_FOREIGNER,
   LUCIFERA,
   MOTHER_MARY,
