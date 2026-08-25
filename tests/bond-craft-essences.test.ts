@@ -16,6 +16,7 @@ import {
   INITIAL_CRAFT_ESSENCE_DEFINITIONS,
   INITIAL_CRAFT_ESSENCE_REGISTRY,
   LIGHT_KOYANSKAYA_BOND,
+  LI_GUANG_BOND,
   LUCIFERA_BOND,
   MOTHER_MARY_BOND,
   SANADA_YUKIMURA_BOND,
@@ -153,7 +154,7 @@ function battleUnit(
 
 describe("bond Craft Essences", () => {
   it("registers all requested bond essences with exact wearer restrictions and fixed Lv80 stats", () => {
-    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(11);
+    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(12);
     for (const definition of INITIAL_CRAFT_ESSENCE_DEFINITIONS.filter(
       ({ eligibleServantDataIds }) => eligibleServantDataIds !== undefined,
     )) {
@@ -172,6 +173,10 @@ describe("bond Craft Essences", () => {
     expect(SANADA_YUKIMURA_BOND).toMatchObject({
       name: "六文の渡し賃",
       eligibleServantDataIds: ["sanada-yukimura"],
+    });
+    expect(LI_GUANG_BOND).toMatchObject({
+      name: "桃李の下の蹊",
+      eligibleServantDataIds: ["li-guang"],
     });
     expect(LIGHT_KOYANSKAYA_BOND.eligibleServantDataIds).toEqual([
       "koyanskaya-of-light",
@@ -214,6 +219,20 @@ describe("bond Craft Essences", () => {
       "自身がフィールドにいる間、味方全体のクリティカル威力をアップ",
       "＆防御力をアップ",
       "＆被ダメージ時のNP獲得量をアップ",
+    ]);
+    expect(LI_GUANG_BOND.fieldEffects?.map(({ description }) => description)).toEqual([
+      "自身がフィールドにいる間、味方全体の攻撃力をアップ",
+      "＆NP獲得量をアップ",
+    ]);
+    expect(LI_GUANG_BOND.fieldEffects?.map(({ action }) => action)).toEqual([
+      expect.objectContaining({
+        kind: "apply_effects",
+        effects: [expect.objectContaining({ template: expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.attack, value: 100 }) })],
+      }),
+      expect.objectContaining({
+        kind: "apply_effects",
+        effects: [expect.objectContaining({ template: expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.npGain, value: 150 }) })],
+      }),
     ]);
   });
 

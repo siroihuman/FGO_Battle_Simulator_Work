@@ -1,2209 +1,25 @@
-import { readFile, access } from "node:fs/promises";
-import { constants } from "node:fs";
-import process from "node:process";
-
-const errors = [];
-
-async function exists(path) {
-  try {
-    await access(path, constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function readText(path) {
-  try {
-    return await readFile(path, "utf8");
-  } catch (error) {
-    errors.push(`${path} ã‚’èª­ã¿è¾¼ã‚ã¾ã›ã‚“: ${error.message}`);
-    return "";
-  }
-}
-
-function assert(condition, message) {
-  if (!condition) errors.push(message);
-}
-
-const manifestText = await readText("project-manifest.json");
-let manifest;
-
-try {
-  manifest = JSON.parse(manifestText);
-} catch (error) {
-  errors.push(`project-manifest.json ãŒæ­£ã—ã„JSONã§ã¯ã‚ã‚Šã¾ã›ã‚“: ${error.message}`);
-}
-
-if (manifest) {
-  assert(/^\d+\.\d+\.\d+$/.test(manifest.specVersion), "specVersion ã¯ x.y.z å½¢å¼ã§ã‚ã‚‹å¿…è¦ãŒã‚ã‚Šã¾ã™");
-  assert(manifest.coreRules.battleType === "annihilation_only", "æˆ¦é—˜å½¢å¼ã¯å…¨æ»…æˆ¦ã ã‘ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(manifest.coreRules.specialVictoryConditions === false, "ç‰¹æ®Šå‹åˆ©æ¡ä»¶ã¯ç„¡åŠ¹ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(manifest.coreRules.specialDefeatConditions === false, "ç‰¹æ®Šæ•—åŒ—æ¡ä»¶ã¯ç„¡åŠ¹ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(manifest.coreRules.maxWaves === 3, "æœ€å¤§Waveæ•°ã¯3ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(manifest.coreRules.allyFrontlineRequired === 3, "å‘³æ–¹å‰è¡›å¿…é ˆæ•°ã¯3ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(manifest.coreRules.allyReserveMax === 3, "å‘³æ–¹æŽ§ãˆä¸Šé™ã¯3ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(manifest.coreRules.enemyTotalMax === 99, "æ•µå‚åŠ ä¸Šé™ã¯99ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(
-    JSON.stringify(manifest.coreRules.enemyActiveModes) === JSON.stringify([3, 6]),
-    "æ•µåŒæ™‚å‡ºç¾ãƒ¢ãƒ¼ãƒ‰ã¯3ä½“ã¨6ä½“ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(manifest.coreRules.enemyNormalActionBudget === 3, "æ•µã®é€šå¸¸è¡Œå‹•äºˆç®—ã¯3ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(
-    JSON.stringify(manifest.coreRules.enemyIndividualMaxActions) === JSON.stringify(["auto", 1, 2, 3]),
-    "æ•µå€‹åˆ¥è¡Œå‹•ä¸Šé™ã¯è‡ªå‹•ãƒ»1ãƒ»2ãƒ»3ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemyPrioritySkillsConsumeNormalActions === false,
-    "æ•µå„ªå…ˆã‚¹ã‚­ãƒ«ã¯é€šå¸¸è¡Œå‹•å›žæ•°ã‚’æ¶ˆè²»ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.completedActionBoundary === true,
-    "æ­»äº¡ãƒ»è£œå……ã¯å®Œäº†æ¸ˆã¿è¡Œå‹•ã®å¢ƒç•Œã§å‡¦ç†ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemyRetargetOrder === "rear_then_wrap",
-    "å¯¾è±¡æ¶ˆæ»…å¾Œã¯å¾Œæ–¹æž ã‹ã‚‰å‰æ–¹ã¸å›žã‚Šè¾¼ã¾ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.immediateReplacementUnconditionalTargetPriority === false,
-    "å³æ™‚è£œå……ã•ã‚ŒãŸæ•µã‚’ç„¡æ¡ä»¶ã«å„ªå…ˆã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.allySelectedCommandActionCount === 3,
-    "å‘³æ–¹ã®é¸æŠžã‚³ãƒžãƒ³ãƒ‰è¡Œå‹•æ•°ã¯3ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.extraAttackAfterBraveChain === true,
-    "Braveãƒã‚§ã‚¤ãƒ³å¾Œã¯Extra Attackã‚’äºˆå®šã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.commandExecutionRecheckedPerAction === true,
-    "å„ã‚³ãƒžãƒ³ãƒ‰è¡Œå‹•ã¯å®Ÿè¡Œç›´å‰ã«å†ç¢ºèªã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.stopCommandSequenceWithoutEnemyTarget === true,
-    "æ•µå¯¾è±¡ãŒå°½ããŸå¾Œã¯æ®‹ã‚Šã‚³ãƒžãƒ³ãƒ‰è¡Œå‹•ã‚’é–‹å§‹ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.sameOwnerSingleTargetNormalDefeatedTargetContinuation === true
-      && manifest.coreRules.sameOwnerNormalContinuationIncludesExtraAttack === true
-      && JSON.stringify(manifest.coreRules.sameOwnerNormalContinuationExcludes)
-        === JSON.stringify([
-          "noble_phantasm",
-          "all_target",
-          "different_battle_instance",
-          "unavailable_next_owner"
-        ])
-      && manifest.coreRules.continuedDefeatedTargetHits
-        === "all_overkill_actual_hp_loss_zero"
-      && manifest.coreRules.continuedDefeatedTargetDeathTriggerRepeats === false
-      && manifest.coreRules.sameOwnerNormalContinuationRngPolicy
-        === "normal_action_rng_only"
-      && manifest.coreRules.sameOwnerNormalContinuationSchemaChange === false,
-    "åŒä¸€æˆ¦é—˜å€‹ä½“ã®å˜ä½“é€šå¸¸ã‚«ãƒ¼ãƒ‰é€£ç¶šè¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemyPriorityBeforeNormalPlan === true,
-    "æ•µå„ªå…ˆã‚¹ã‚­ãƒ«å®Œäº†å¾Œã«é€šå¸¸è¡Œå‹•äºˆå®šã‚’ä½œã‚‰ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemyDefaultActionPolicy === "full_np_else_normal_attack",
-    "æ•µã®æœ€å°æ—¢å®šè¡Œå‹•ã¯ãƒ•ãƒ«ãƒãƒ£ãƒ¼ã‚¸å®å…·ã€ãã‚Œä»¥å¤–ã¯é€šå¸¸æ”»æ’ƒã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemyDataSchemaVersion === 1
-      && manifest.coreRules.enemyDataIdentity === "stable_project_id"
-      && manifest.coreRules.enemyEncounterIdentity === "battle_instance_id"
-      && manifest.coreRules.enemyDefinitionAndEncounterSeparated === true,
-    "æ•µå½¢å¼1ã¯å®‰å®šãƒ‡ãƒ¼ã‚¿IDã¨æˆ¦é—˜å€‹ä½“IDã‚’åˆ†é›¢ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemyRandomSingleTargetPolicy === "random_living_ally_frontline"
-      && manifest.coreRules.enemyRandomSingleTargetRng === "ai"
-      && manifest.coreRules.enemyCriticalRng === "critical",
-    "åˆæœŸæ•µã®ãƒ©ãƒ³ãƒ€ãƒ å˜ä½“å¯¾è±¡ã¨ã‚¯ãƒªãƒ†ã‚£ã‚«ãƒ«ã¯ç”¨é€”åˆ¥ä¹±æ•°åˆ—ã‚’ä½¿ã‚ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemyChargeIncreaseTiming === "enemy_turn_end"
-      && manifest.coreRules.enemyChargeIncreasePerTurn === 1
-      && manifest.coreRules.enemyReserveProgressionPaused === true,
-    "æ•µé€šå¸¸ãƒãƒ£ãƒ¼ã‚¸ã¯æ•µã‚¿ãƒ¼ãƒ³çµ‚äº†æ™‚ã«å‰è¡›ã ã‘1å¢—åŠ ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemyReplacementInheritsPlannedSlots === false,
-    "é€”ä¸­ç™»å ´ã—ãŸæ•µã¯é€€å ´è€…ã®äºˆå®šæ¸ˆã¿è¡Œå‹•æž ã‚’å¼•ãç¶™ã„ã§ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.stopEnemySequenceOnAllyAnnihilation === true,
-    "å‘³æ–¹å…¨æ»…å¾Œã¯æ®‹ã‚Šæ•µè¡Œå‹•ã‚’é–‹å§‹ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.damageRandomDrawsPerAllowedTarget === 1,
-    "ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’è¨±å¯ã•ã‚ŒãŸå¯¾è±¡ã”ã¨ã®ãƒ€ãƒ¡ãƒ¼ã‚¸ä¹±æ•°ã¯1å›žã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.multiTargetHitOrder === "hit_then_frontline",
-    "è¤‡æ•°å¯¾è±¡æ”»æ’ƒã¯Hitç•ªå·ã€å‰è¡›æž é †ã§å‡¦ç†ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.sourceAttackStateConsumesPerTarget === false,
-    "æ”»æ’ƒå´çŠ¶æ…‹ã‚’å…¨ä½“æ”»æ’ƒã®å¯¾è±¡ã”ã¨ã«æ¶ˆè²»ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.protectionAllowsNpAndStarWork === true,
-    "é˜²å¾¡ã«ã‚ˆã‚‹ãƒ€ãƒ¡ãƒ¼ã‚¸ç„¡åŠ¹å¾Œã‚‚NPãƒ»ã‚¹ã‚¿ãƒ¼å‡¦ç†ã‚’ç¶™ç¶šã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.attackTriggerOrder) === JSON.stringify([
-      "before_attack",
-      "on_hit_per_hit_batch",
-      "on_attack",
-      "on_damage_taken_per_target",
-      "after_attack",
-      "on_death"
-    ]),
-    "æ”»æ’ƒãƒˆãƒªã‚¬ãƒ¼ã¯æ”»æ’ƒå‰ã€Hitã€æ”»æ’ƒæ™‚ã€è¢«ãƒ€ãƒ¡ãƒ¼ã‚¸æ™‚ã€æ”»æ’ƒå¾Œã€æ­»äº¡æ™‚ã®é †ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.damageTakenTriggerAfterProtectionBlock === true,
-    "ãƒ€ãƒ¡ãƒ¼ã‚¸ç„¡åŠ¹æ™‚ã‚‚ç„¡æ¡ä»¶ã®è¢«ãƒ€ãƒ¡ãƒ¼ã‚¸æ™‚ãƒˆãƒªã‚¬ãƒ¼ã‚’å‡¦ç†ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.gutsSuppressesDeathTrigger === true,
-    "ã‚¬ãƒƒãƒ„å¾©æ´»æ™‚ã«æ­»äº¡æ™‚ãƒˆãƒªã‚¬ãƒ¼ã‚’å‡¦ç†ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.beforeDamageInstantDeathStopsAttackHits === true,
-    "ãƒ€ãƒ¡ãƒ¼ã‚¸å‰å³æ­»æˆåŠŸå¾Œã¯æ”»æ’ƒHitã‚’é–‹å§‹ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.attackDataIdentity === "battle_instance_id",
-    "æ”»æ’ƒãƒ‡ãƒ¼ã‚¿ã¯æˆ¦é—˜å€‹ä½“IDã¸çµã³ä»˜ã‘ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.duplicateDataIdsMayUseDifferentAttackData === true,
-    "åŒã˜ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆãƒ‡ãƒ¼ã‚¿IDã§ã‚‚å€‹ä½“ã”ã¨ã«åˆ¥ã®æ”»æ’ƒå€¤ã‚’è¨±å¯ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.attackInputPreparedAfterBeforeAttack === true,
-    "è¨ˆç®—å…¥åŠ›ã¯æ”»æ’ƒå‰åŠ¹æžœã®åæ˜ å¾Œã«æ§‹ç¯‰ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.missingEnemyAttackNumericData === "safe_noop",
-    "æ•µæ”»æ’ƒæ•°å€¤ã®æœªè¨­å®šã¯å®‰å…¨ãªä¸ç™ºã¨ã—ã¦æ‰±ã‚ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.defaultEnemySingleTarget === "frontmost_living_ally",
-    "æœ€å°æ•µæ”»æ’ƒã®å˜ä½“å¯¾è±¡ã¯å…ˆé ­ã®ç”Ÿå­˜å‘³æ–¹ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.cardResistanceAppliesTo) === JSON.stringify([
-      "damage",
-      "attack_np",
-      "stars"
-    ]),
-    "ã‚«ãƒ¼ãƒ‰è€æ€§ã¯ãƒ€ãƒ¡ãƒ¼ã‚¸ãƒ»æ”»æ’ƒæ™‚NPãƒ»ã‚¹ã‚¿ãƒ¼ã¸å…±é€šé©ç”¨ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(manifest.coreRules.maxBreakGauges === 10, "ãƒ–ãƒ¬ã‚¤ã‚¯ã‚²ãƒ¼ã‚¸ä¸Šé™ã¯10ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(manifest.coreRules.starCap === 99, "ã‚¹ã‚¿ãƒ¼ä¸Šé™ã¯99ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(
-    JSON.stringify(manifest.coreRules.starBuckets) === JSON.stringify(["command", "next_command"]),
-    "ã‚¹ã‚¿ãƒ¼ã¯ç¾åœ¨ä½¿ç”¨åˆ†ã¨æ¬¡å›žå‘³æ–¹ã‚³ãƒžãƒ³ãƒ‰ç”¨ã®2åŒºåˆ†ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.attackGeneratedStarsDestination === "next_command",
-    "æ”»æ’ƒã§ç™ºç”Ÿã—ãŸã‚¹ã‚¿ãƒ¼ã¯æ¬¡å›žå‘³æ–¹ã‚³ãƒžãƒ³ãƒ‰ç”¨ã¸åŠ ç®—ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.quickChainStarsDestination === "next_command",
-    "Quickãƒã‚§ã‚¤ãƒ³ã®ã‚¹ã‚¿ãƒ¼ã¯æ¬¡å›žå‘³æ–¹ã‚³ãƒžãƒ³ãƒ‰ç”¨ã¸åŠ ç®—ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.starCarryBeyondNextCommandPhase === false,
-    "æœªä½¿ç”¨ã‚¹ã‚¿ãƒ¼ã‚’æ¬¡ã®æ¬¡ã®å‘³æ–¹ã‚³ãƒžãƒ³ãƒ‰ã¸æŒã¡è¶Šã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.artsChainNpTiming === "before_first_command",
-    "Artsãƒã‚§ã‚¤ãƒ³NPã¯æœ€åˆã®ã‚³ãƒžãƒ³ãƒ‰é–‹å§‹å‰ã«åŠ ç®—ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.artsChainUniqueByInstanceId === true,
-    "Artsãƒã‚§ã‚¤ãƒ³NPã¯æˆ¦é—˜å€‹ä½“ã”ã¨ã«1å›žã ã‘åŠ ç®—ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.commandStarRandomBonuses) === JSON.stringify([50, 20, 20, 0, 0]),
-    "æ‰‹æœ­5æžšã®ã‚¹ã‚¿ãƒ¼é›†ä¸­åº¦ãƒ©ãƒ³ãƒ€ãƒ è£œæ­£ã¯50ãƒ»20ãƒ»20ãƒ»0ãƒ»0ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.commandStarDistributionCap === 50,
-    "ã‚«ãƒ¼ãƒ‰ã¸é…åˆ†ã™ã‚‹ã‚¹ã‚¿ãƒ¼ã¯æœ€å¤§50å€‹ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.commandStarPerCardCap === 10,
-    "ã‚«ãƒ¼ãƒ‰1æžšã¸é…åˆ†ã™ã‚‹ã‚¹ã‚¿ãƒ¼ã¯æœ€å¤§10å€‹ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.criticalRatePermillePerStar === 100,
-    "ã‚¹ã‚¿ãƒ¼1å€‹ã¯ã‚¯ãƒªãƒ†ã‚£ã‚«ãƒ«çŽ‡10%ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.commandStarDistributionRng === "critical",
-    "ã‚¹ã‚¿ãƒ¼é…åˆ†ã¯ã‚¯ãƒªãƒ†ã‚£ã‚«ãƒ«ç”¨ä¹±æ•°åˆ—ã‚’ä½¿ã‚ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.fixedCriticalRatesConsumeRng === false,
-    "ã‚¯ãƒªãƒ†ã‚£ã‚«ãƒ«çŽ‡0%ãƒ»100%ã¯ä¹±æ•°ã‚’æ¶ˆè²»ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.commandCardRedistributionStatus === "implemented"
-      && manifest.coreRules.commandCardRedistributionActionId === "redistribute_command_cards",
-    "ã‚«ãƒ¼ãƒ‰å†é…å¸ƒã¯å®£è¨€çš„å…±é€šæˆ¦å ´æ“ä½œã¨ã—ã¦å®Ÿè£…ã•ã‚Œã¦ã„ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.declaredBattlefieldActions)
-      === JSON.stringify(["redistribute_command_cards"]),
-    "å®£è¨€çš„å…±é€šæˆ¦å ´æ“ä½œã®ä¸€è¦§ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.commandCardRedistributionBoundary
-      === "ally_input_before_card_submission"
-      && manifest.coreRules.commandCardRedistributionSource
-        === "current_living_ally_frontline_all_normal_cards"
-      && manifest.coreRules.commandCardRedistributionDrawCount === 5
-      && manifest.coreRules.commandCardRedistributionResetsCycle === true
-      && manifest.coreRules.commandCardRedistributionAllowsPreviousHandCards === true,
-    "ã‚«ãƒ¼ãƒ‰å†é…å¸ƒã¯ã‚«ãƒ¼ãƒ‰æå‡ºå‰ã«ç¾åœ¨å‰è¡›ã®å…¨é€šå¸¸ã‚«ãƒ¼ãƒ‰ã‹ã‚‰æ–°å‘¨æœŸ5æžšã‚’é…ã‚‰ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.commandCardRedistributionIncludesNoblePhantasmCards === false
-      && manifest.coreRules.commandCardRedistributionCardsRngLogicalDraws === 5
-      && manifest.coreRules.commandCardRedistributionPreservesStarBuckets === true
-      && manifest.coreRules.commandCardRedistributionReallocatesCommandStars === true,
-    "ã‚«ãƒ¼ãƒ‰å†é…å¸ƒã®å®å…·å€™è£œãƒ»ã‚«ãƒ¼ãƒ‰ä¹±æ•°ãƒ»ã‚¹ã‚¿ãƒ¼è¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.commandCardRedistributionRejectedMutation
-      === "none_including_history_and_logs"
-      && manifest.coreRules.commandCardStarDistributionPersistence
-        === "input_boundary_state"
-      && manifest.coreRules.commandCardStarDistributionLegacyMode
-        === "legacy_on_command_confirmation",
-    "ã‚«ãƒ¼ãƒ‰å†é…å¸ƒã¯åŽŸå­çš„ã«æ‹’å¦ã—ã€å…¥åŠ›å¢ƒç•Œã‚¹ã‚¿ãƒ¼é…åˆ†ã¨æ—§æ–¹å¼ã‚’åŒºåˆ¥ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.battleLogSchemaVersion === 5,
-    "æˆ¦é—˜ãƒ­ã‚°å½¢å¼ãƒãƒ¼ã‚¸ãƒ§ãƒ³ã¯5ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.battleLogGranularity === "completed_action_or_ally_input_action",
-    "æˆ¦é—˜ãƒ­ã‚°ã¯å®Œäº†æ¸ˆã¿1è¡Œå‹•ã¾ãŸã¯å‘³æ–¹å…¥åŠ›æ“ä½œå˜ä½ã§è¨˜éŒ²ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.battleLogIncludes) === JSON.stringify([
-      "outcome",
-      "calculation",
-      "declared_effects",
-      "hits",
-      "triggers",
-      "departures",
-      "arrivals",
-      "retargeting",
-      "direct_ally_exchange",
-      "rng_audit"
-    ]),
-    "æˆ¦é—˜ãƒ­ã‚°ã®å¿…é ˆè©³ç´°ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.battleLogJsonSerializable === true,
-    "æˆ¦é—˜ãƒ­ã‚°ã¯JSONã¸ä¿å­˜å¯èƒ½ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.rngAuditChangesSequence === false,
-    "ä¹±æ•°ç›£æŸ»ã§æŠ½é¸çµæžœã‚„ä¹±æ•°ä½ç½®ã‚’å¤‰æ›´ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.fixedChanceAuditDraws === 0,
-    "ç¢ºçŽ‡0%ãƒ»100%ã®ç›£æŸ»è¨˜éŒ²ã¯ä¹±æ•°ã‚’æ¶ˆè²»ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.battleTurnStageOrder) === JSON.stringify([
-      "ally_command",
-      "ally_turn_end",
-      "enemy_turn",
-      "enemy_turn_end"
-    ]),
-    "1æˆ¦é—˜ã‚¿ãƒ¼ãƒ³ã®å‡¦ç†é †ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.acceptedCommandRequiresTurnEnd === true,
-    "æˆç«‹ã—ãŸå‘³æ–¹ã‚³ãƒžãƒ³ãƒ‰åˆ—ã®å¾Œã¯å‘³æ–¹ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚’çœç•¥ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.enemyTurnSkippedAfterAllyCheckpoint) === JSON.stringify([
-      "battle_finished",
-      "wave_advanced"
-    ]),
-    "å‘³æ–¹çµ‚äº†æ™‚åˆ¤å®šå¾Œã«æ•µã‚¿ãƒ¼ãƒ³ã‚’çœç•¥ã™ã‚‹æ¡ä»¶ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.battleTurnRngSource === "single_battle_rng",
-    "1æˆ¦é—˜ã‚¿ãƒ¼ãƒ³ã¯å˜ä¸€ã®BattleRngã‹ã‚‰ç”¨é€”åˆ¥ä¹±æ•°åˆ—ã‚’å—ã‘å–ã‚‰ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  const attackTargetRestriction = manifest.coreRules.attackTriggerEventTargetRestriction;
-  const servantOriginTabs = manifest.coreRules.servantSetupOriginTabs;
-  const servantFouSetup = manifest.coreRules.servantFouSetup;
-  assert(
-    attackTargetRestriction.property === "targetAttackEventTargets"
-      && attackTargetRestriction.allowedSelector === "non_self_all"
-      && attackTargetRestriction.resolution === "resolve_declared_selector_then_filter_to_recorded_attack_target_ids_in_formation_order"
-      && attackTargetRestriction.emptyEventTargets === "no_targets_without_inference"
-      && attackTargetRestriction.damageInputAfterBeforeAttack === true
-      && attackTargetRestriction.saveSchemaChange === false
-      && attackTargetRestriction.dataSchemaChange === false
-      && attackTargetRestriction.battleLogSchemaChange === false,
-    "æ”»æ’ƒãƒˆãƒªã‚¬ãƒ¼ã®å®Ÿå¯¾è±¡é™å®šè¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    servantOriginTabs.originSource === "explicit_registered_lists_without_name_or_url_inference"
-      && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
-      && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary", "sanada-yukimura", "li-guang"])
-      && servantOriginTabs.tabBrowseMutation === "none"
-      && servantOriginTabs.currentSelectionOutsideTabs === true,
-    "ç·¨æˆã®å…¬å¼ï¼ã‚ªãƒªã‚¸ãƒŠãƒ«åŒºåˆ†ã¨No.é †ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    servantFouSetup.hpField === "hpFou"
-      && servantFouSetup.attackField === "attackFou"
-      && servantFouSetup.independentPerBattleInstance === true
-      && servantFouSetup.minimum === 0
-      && servantFouSetup.maximum === 3000
-      && servantFouSetup.integerOnly === true
-      && servantFouSetup.default === 0
-      && servantFouSetup.legacyStoredMissingValue === 0
-      && servantFouSetup.applicationOrder === "selected_level_stats_then_fou_then_craft_essence"
-      && servantFouSetup.uiRecalculation === false
-      && servantFouSetup.rngDraws === 0
-      && servantFouSetup.battleSuspendSchemaChange === false
-      && servantFouSetup.dataSchemaChange === false,
-    "ç·¨æˆã®HPï¼ATKãƒ•ã‚©ã‚¦å…¥åŠ›è¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  const specifiedServants = manifest.specifiedContent?.servants ?? [];
-  const hondaTadakatsu = specifiedServants.find(({ dataId }) => dataId === "honda-tadakatsu");
-  const ajisukitakahikoneNoKami = specifiedServants.find(
-    ({ dataId }) => dataId === "ajisukitakahikone-no-kami"
-  );
-  const fenrir = specifiedServants.find(({ dataId }) => dataId === "fenrir");
-  const sanadaYukimura = specifiedServants.find(({ dataId }) => dataId === "sanada-yukimura");
-  const liGuang = specifiedServants.find(({ dataId }) => dataId === "li-guang");
-  const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
-  const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
-  assert(
-    specifiedServants.length === 8
-      && senNoRikyu?.collectionNo === 362
-      && senNoRikyu?.implementationStatus === "implemented_and_accepted"
-      && senNoRikyu?.activeSkillCount === 3
-      && senNoRikyu?.classSkillCount === 4
-      && senNoRikyu?.noblePhantasmCount === 1
-      && senNoRikyu?.battleSuspendSchemaVersion === 4
-      && senNoRikyu?.dataSchemaVersion === "1.38.0",
-    "æŒ‡å®šã‚³ãƒ³ãƒ†ãƒ³ãƒ„ã«åƒåˆ©ä¼‘ã®ç™»éŒ²çŠ¶æ…‹ãŒã‚ã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    fenrir?.collectionNo === 58
-      && fenrir?.classificationCategory === 1
-      && fenrir?.implementationStatus === "implemented_and_accepted"
-      && fenrir?.activeSkillCount === 3
-      && fenrir?.classSkillCount === 4
-      && fenrir?.noblePhantasmCount === 1
-      && fenrir?.noblePhantasmRevision === "upgraded_only"
-      && fenrir?.noblePhantasmHitCount === 5
-      && fenrir?.noblePhantasmFixedSpecialAttack?.requiredTargetTrait === "å¤©ã®åŠ›"
-      && fenrir?.noblePhantasmFixedSpecialAttack?.multiplierPermille === 1500
-      && fenrir?.noblePhantasmPostHpReduction?.amount === 1000
-      && fenrir?.noblePhantasmPostHpReduction?.canDefeat === true
-      && fenrir?.battleSuspendSchemaVersion === 4
-      && fenrir?.dataSchemaVersion === "1.38.0",
-    "æŒ‡å®šã‚³ãƒ³ãƒ†ãƒ³ãƒ„ã«ãƒ•ã‚§ãƒ³ãƒªãƒ«ã®ç™»éŒ²çŠ¶æ…‹ãŒã‚ã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    sanadaYukimura?.collectionNo === 94
-      && sanadaYukimura?.classificationCategory === 1
-      && sanadaYukimura?.implementationStatus === "implemented_and_accepted"
-      && sanadaYukimura?.activeSkillCount === 3
-      && sanadaYukimura?.classSkillCount === 2
-      && sanadaYukimura?.noblePhantasmCount === 1
-      && sanadaYukimura?.noblePhantasmRevision === "upgraded_only"
-      && sanadaYukimura?.noblePhantasmHitCount === 4
-      && sanadaYukimura?.noblePhantasmIgnoreDefense === "one_use_pre_attack_common_effect"
-      && sanadaYukimura?.battleSuspendSchemaVersion === 4
-      && sanadaYukimura?.dataSchemaVersion === "1.38.0",
-    "æŒ‡å®šã‚³ãƒ³ãƒ†ãƒ³ãƒ„ã«çœŸç”°ä¿¡ç¹ã®ç™»éŒ²çŠ¶æ…‹ãŒã‚ã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    liGuang?.collectionNo === 105
-      && liGuang?.classificationCategory === 1
-      && liGuang?.implementationStatus === "implemented_awaiting_user_acceptance"
-      && liGuang?.activeSkillCount === 3
-      && liGuang?.classSkillCount === 3
-      && liGuang?.noblePhantasmCount === 1
-      && liGuang?.noblePhantasmRevision === "upgraded_only"
-      && liGuang?.noblePhantasmHitCount === 9
-      && liGuang?.enemyCriticalChanceModifier
-        === "additive_permille_clamped_to_0_1000_normal_attack_only"
-      && liGuang?.battleSuspendSchemaVersion === 4
-      && liGuang?.dataSchemaVersion === "1.38.0",
-    "æŒ‡å®šã‚³ãƒ³ãƒ†ãƒ³ãƒ„ã«æŽåºƒã®ç™»éŒ²çŠ¶æ…‹ãŒã‚ã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    ajisukitakahikoneNoKami?.collectionNo === 57
-      && ajisukitakahikoneNoKami?.classificationCategory === 1
-      && ajisukitakahikoneNoKami?.implementationStatus === "implemented_and_accepted"
-      && ajisukitakahikoneNoKami?.acceptancePullRequest === 73
-      && ajisukitakahikoneNoKami?.activeSkillCount === 3
-      && ajisukitakahikoneNoKami?.classSkillCount === 3
-      && ajisukitakahikoneNoKami?.noblePhantasmCount === 1
-      && ajisukitakahikoneNoKami?.noblePhantasmRevision === "upgraded_only"
-      && ajisukitakahikoneNoKami?.noblePhantasmPrimaryHitCount === 9
-      && ajisukitakahikoneNoKami?.noblePhantasmAdditionalHitCount === 9
-      && ajisukitakahikoneNoKami?.noblePhantasmAdditionalAttackAlwaysActivates === true
-      && ajisukitakahikoneNoKami?.battleSuspendSchemaVersion === 4
-      && ajisukitakahikoneNoKami?.dataSchemaVersion === "1.38.0",
-    "æŒ‡å®šã‚³ãƒ³ãƒ†ãƒ³ãƒ„ã«é˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã®ç™»éŒ²çŠ¶æ…‹ãŒã‚ã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    hondaTadakatsu?.collectionNo === 7
-      && hondaTadakatsu?.classificationCategory === 1
-      && hondaTadakatsu?.implementationStatus === "implemented_and_accepted"
-      && hondaTadakatsu?.activeSkillCount === 3
-      && hondaTadakatsu?.classSkillCount === 1
-      && hondaTadakatsu?.noblePhantasmCount === 1
-      && hondaTadakatsu?.noblePhantasmRevision === "upgraded_only"
-      && hondaTadakatsu?.battleSuspendSchemaVersion === 4
-      && hondaTadakatsu?.dataSchemaVersion === "1.38.0",
-    "æŒ‡å®šã‚³ãƒ³ãƒ†ãƒ³ãƒ„ã«æœ¬å¤šå¿ å‹ã®ç™»éŒ²çŠ¶æ…‹ãŒã‚ã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    motherMary?.collectionNo === 70
-      && motherMary?.ascensionStage === "final"
-      && motherMary?.implementationStatus === "implemented_and_accepted"
-      && motherMary?.activeSkillCount === 3
-      && motherMary?.classSkillCount === 5
-      && motherMary?.noblePhantasmCount === 1
-      && motherMary?.battleSuspendSchemaVersion === 4
-      && motherMary?.dataSchemaVersion === "1.38.0"
-      && manifest.coreRules.servantAscensionVariantPolicy?.motherMaryStage === "final_ascension"
-      && manifest.coreRules.servantAscensionVariantPolicy?.perServantAdHocSelector === false
-      && manifest.coreRules.servantActiveSkillRankMayBeOmittedWhenSourceOmits === true,
-    "æŒ‡å®šã‚³ãƒ³ãƒ†ãƒ³ãƒ„ã«è–æ¯ãƒžãƒªã‚¢ã®æœ€çµ‚å†è‡¨ç™»éŒ²çŠ¶æ…‹ãŒã‚ã‚Šã¾ã›ã‚“"
-  );
-  const stagedHeal = manifest.coreRules.declaredStagedHealHp;
-  const stagedReduceHp = manifest.coreRules.declaredStagedReduceHp;
-  const targetFocus = manifest.coreRules.enemySingleTargetFocus;
-  const motherMaryIcons = manifest.coreRules.motherMaryIconCorrections;
-  const noblePhantasmAdditionalAttack = manifest.coreRules.noblePhantasmAdditionalAttack;
-  const countedSourceAttackModifiers = manifest.coreRules.countedSourceAttackModifiers;
-  const defensiveClassAffinityOverride = manifest.coreRules.defensiveClassAffinityOverride;
-  const ajisukitakahikoneIcons = manifest.coreRules.ajisukitakahikoneNoKamiIcons;
-  assert(
-    noblePhantasmAdditionalAttack?.dataShape === "nested_after_primary_attack"
-      && noblePhantasmAdditionalAttack?.packetOrder === "primary_then_additional"
-      && noblePhantasmAdditionalAttack?.activation === "always_even_if_target_defeated_or_multiplier_zero"
-      && noblePhantasmAdditionalAttack?.targetRetention === true
-      && noblePhantasmAdditionalAttack?.hitTriggerScope === "every_hit_in_every_packet"
-      && noblePhantasmAdditionalAttack?.actionTriggerScope === "once_for_complete_noble_phantasm_action"
-      && noblePhantasmAdditionalAttack?.sourceCountedModifierConsumption === "once_for_complete_noble_phantasm_action"
-      && noblePhantasmAdditionalAttack?.battleLogPacketField === "optional_packets"
-      && noblePhantasmAdditionalAttack?.battleLogSchemaVersion === 5
-      && noblePhantasmAdditionalAttack?.saveSchemaChange === false
-      && noblePhantasmAdditionalAttack?.dataSchemaChange === false,
-    "å®å…·è¿½åŠ æ”»æ’ƒã®å…±é€šè¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    countedSourceAttackModifiers?.attackBuffConsumption === "once_per_started_damaging_action"
-      && countedSourceAttackModifiers?.criticalBuffConsumption === "once_per_actual_critical_action"
-      && countedSourceAttackModifiers?.hitTargetAndPacketCountDoNotMultiplyConsumption === true
-      && countedSourceAttackModifiers?.zeroDamageAfterAttackStartConsumes === true
-      && countedSourceAttackModifiers?.noHitStartedDoesNotConsume === true,
-    "å›žæ•°åˆ¶æ”»æ’ƒå…ƒå¼·åŒ–ã®æ¶ˆè²»è¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    defensiveClassAffinityOverride?.effectType === "defensive_class_affinity_override"
-      && defensiveClassAffinityOverride?.resolution === "replace_incoming_class_affinity_with_fixed_permille"
-      && defensiveClassAffinityOverride?.ajisukitakahikoneNoKamiValuePermille === 1500
-      && defensiveClassAffinityOverride?.uiRecalculation === false
-      && ajisukitakahikoneIcons?.riding === "class-riding"
-      && ajisukitakahikoneIcons?.divinity === "class-divinity"
-      && ajisukitakahikoneIcons?.evade === "Avoid"
-      && ajisukitakahikoneIcons?.busterResistanceDown === "Busterresistdown"
-      && ajisukitakahikoneIcons?.defensiveClassAffinityOverride === "Changeclass",
-    "é˜²å¾¡æ™‚ã‚¯ãƒ©ã‚¹ç›¸æ€§ä¸Šæ›¸ãã¾ãŸã¯é˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã®ã‚¢ã‚¤ã‚³ãƒ³è¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(stagedHeal?.supportedScalings) === JSON.stringify(["fixed", "noble_phantasm_level", "overcharge"])
-      && stagedHeal?.resolutionSource === "engine_action_context"
-      && stagedHeal?.uiRecalculation === false
-      && stagedHeal?.saveSchemaChange === false
-      && stagedHeal?.dataSchemaChange === false,
-    "æ®µéšŽå¼HPå›žå¾©ã®å…±é€šè¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(stagedReduceHp?.supportedScalings) === JSON.stringify(["fixed", "noble_phantasm_level", "overcharge"])
-      && stagedReduceHp?.resolutionSource === "engine_action_context"
-      && stagedReduceHp?.canDefeatRequiredInData === true
-      && stagedReduceHp?.defaultLethality === "lethal_except_ally_skill_targeting_allies"
-      && stagedReduceHp?.fixedValueLogShapeUnchanged === true
-      && stagedReduceHp?.uiRecalculation === false
-      && stagedReduceHp?.saveSchemaChange === false
-      && stagedReduceHp?.dataSchemaChange === false,
-    "æ®µéšŽå¼HPæ¸›å°‘ã®å…±é€šè¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    targetFocus?.effectType === "target_focus"
-      && targetFocus?.candidateScope === "living_ally_frontline"
-      && targetFocus?.positiveValuesOnly === true
-      && targetFocus?.singleCandidateRngDraws === 0
-      && targetFocus?.multipleCandidatePolicy === "existing_action_target_policy"
-      && targetFocus?.customSelectorOverridden === true
-      && targetFocus?.allTargetUnaffected === true
-      && targetFocus?.saveSchemaChange === false
-      && targetFocus?.dataSchemaChange === false,
-    "æ•µå˜ä½“æ”»æ’ƒã®ã‚¿ãƒ¼ã‚²ãƒƒãƒˆé›†ä¸­è¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    motherMaryIcons?.targetFocus === "Tauntup"
-      && motherMaryIcons?.enemySpecialTargetFocusReserved === "Enemyfocus"
-      && motherMaryIcons?.enemySpecialTargetFocusUseRequiresExplicitUserSpecification === true
-      && motherMaryIcons?.knowledgeOfHereticSkill === "skill-hp-heal-per-turn",
-    "è–æ¯ãƒžãƒªã‚¢ã®æŒ‡å®šã‚¢ã‚¤ã‚³ãƒ³è¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.battleTurnLogSchemaVersion === 2,
-    "1æˆ¦é—˜ã‚¿ãƒ¼ãƒ³ãƒ­ã‚°å½¢å¼ãƒãƒ¼ã‚¸ãƒ§ãƒ³ã¯2ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.battleTurnLogRecordOrder) === JSON.stringify([
-      "ally_action_batch",
-      "ally_turn_end",
-      "enemy_action_batch",
-      "enemy_turn_end"
-    ]),
-    "1æˆ¦é—˜ã‚¿ãƒ¼ãƒ³ãƒ­ã‚°ã®è¨˜éŒ²é †ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.battleTurnLogIncludes) === JSON.stringify([
-      "seed",
-      "rng_positions",
-      "turn_end_activations",
-      "turn_end_star_additions",
-      "breaks",
-      "hp_settlements",
-      "enemy_charge_changes",
-      "durations",
-      "cooldowns",
-      "replacements",
-      "wave_transition",
-      "battle_outcome"
-    ]),
-    "1æˆ¦é—˜ã‚¿ãƒ¼ãƒ³ãƒ­ã‚°ã®å¿…é ˆè©³ç´°ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.battleTurnLogJsonSerializable === true,
-    "1æˆ¦é—˜ã‚¿ãƒ¼ãƒ³ãƒ­ã‚°ã¯JSONã¸ä¿å­˜å¯èƒ½ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.battleSuspendSchemaVersion === 4
-      && manifest.coreRules.battleSuspendResume === "direct_snapshot_restore"
-      && manifest.coreRules.battleSuspendLegacyMigration
-        === "schema_3_to_4_direct_snapshot_restore",
-    "ä¸­æ–­ä¿å­˜å½¢å¼4ã¯ç›´æŽ¥å†é–‹ã—ã€å½¢å¼3ã‚’å†å®Ÿè¡Œã›ãšç§»è¡Œã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.battleSuspendCardRedistributionOuterSchemaChange === false
-      && manifest.coreRules.battleSuspendCardRedistributionDataSchemaChangeOnImplementation === true
-      && manifest.coreRules.battleSuspendCardRedistributionDataSchemaVersion === "1.38.0"
-      && manifest.coreRules.battleSuspendPreRedistributionDataSchemaVersion === "1.37.0"
-      && manifest.coreRules.battleSuspendLegacyStarDistributionMigration
-        === "add_legacy_mode_without_draw_or_state_change",
-    "ã‚«ãƒ¼ãƒ‰å†é…å¸ƒå¯¾å¿œã¯å½¢å¼4ãƒ»ãƒ‡ãƒ¼ã‚¿1.38.0ã¨ä¹±æ•°éžæ¶ˆè²»ã®æ—§é…åˆ†ç§»è¡Œã‚’å¿…è¦ã¨ã—ã¾ã™"
-  );
-  assert(
-    manifest.coreRules.allySkillOperationsSavedAndReplayed === true
-      && manifest.coreRules.mysticCodeOperationsSavedAndReplayed === true
-      && manifest.coreRules.inputActionLogBatchKind === "ally_input"
-      && JSON.stringify(manifest.coreRules.inputActionLogKinds)
-        === JSON.stringify(["ally_skill", "mystic_code_skill"]),
-    "å‘³æ–¹èƒ½å‹•ã‚¹ã‚­ãƒ«æ“ä½œã¯å…¥åŠ›å¢ƒç•Œãƒ­ã‚°ãƒ»ä¿å­˜ãƒ»ãƒªãƒ—ãƒ¬ã‚¤ã¸çµ±åˆã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.dataSchemaVersion === "1.38.0"
-      && manifest.coreRules.battleSuspendSchemaVersion === 4,
-    "ã‚¹ãƒªãƒƒãƒ—ãƒ€ãƒ¡ãƒ¼ã‚¸å€åŠ å—å…¥å¾Œã‚‚ä¿å­˜å½¢å¼4ãƒ»ãƒ‡ãƒ¼ã‚¿1.38.0ã‚’å¤‰æ›´ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.specifiedContent?.mysticCodes)
-      === JSON.stringify([{
-        name: "é­”è¡“å”ä¼šåˆ¶æœ",
-        dataId: "mage-association-uniform",
-        schemaVersion: 2,
-        levelPolicy: "max",
-        implementationStatus: "implemented",
-        source: "https://w.atwiki.jp/f_go/pages/41.html",
-        sourceCheckedAt: "2026-08-11",
-        skills: [{
-          slot: 1,
-          stableId: "mage-association-full-recovery",
-          name: "å…¨ä½“å›žå¾©",
-          cooldownAtMax: 12,
-          target: "living_ally_frontline_all",
-          effects: [{ order: 1, action: "heal_hp", amount: 2800 }],
-        }, {
-          slot: 2,
-          stableId: "mage-association-spiritron-transfer",
-          name: "éœŠå­è­²æ¸¡",
-          cooldownAtMax: 15,
-          target: "selected_living_ally_frontline_single",
-          effects: [{ order: 1, action: "change_np", amount: 2000 }],
-        }, {
-          slot: 3,
-          stableId: "mage-association-command-shuffle",
-          name: "ã‚³ãƒžãƒ³ãƒ‰ã‚·ãƒ£ãƒƒãƒ•ãƒ«",
-          cooldownAtMax: 15,
-          target: "ally_battlefield_self_no_unit_selection",
-          effects: [{ order: 1, action: "redistribute_command_cards" }],
-        }],
-      }]),
-    "é­”è¡“å”ä¼šåˆ¶æœã®å½¢å¼2å…·ä½“ãƒ‡ãƒ¼ã‚¿ä»•æ§˜ãŒæ­£æœ¬ã¨ä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.initialContent?.mysticCodes)
-      === JSON.stringify([
-        "ã‚¢ãƒˆãƒ©ã‚¹é™¢åˆ¶æœ",
-        "ãƒŽãƒ¼ãƒžãƒ«ã‚«ãƒ«ãƒ‡ã‚¢åˆ¶æœ",
-        "é­”è¡“å”ä¼šåˆ¶æœ",
-      ]),
-    "åˆæœŸé­”è¡“ç¤¼è£…ãƒ¬ã‚¸ã‚¹ãƒˆãƒªã¯3ç€ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.servantDataSchemaVersion === 1,
-    "ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆãƒ‡ãƒ¼ã‚¿å½¢å¼ãƒãƒ¼ã‚¸ãƒ§ãƒ³ã¯1ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.servantDataIdentity === "stable_project_id",
-    "ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆãƒ‡ãƒ¼ã‚¿ã¯å®‰å®šã—ãŸãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆIDã‚’ä½¿ã‚ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.servantSourcePageNumberMayBeDataId === false,
-    "å‚ç…§ãƒšãƒ¼ã‚¸ç•ªå·ã‚’ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆå†…éƒ¨IDã«ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.servantContentRevision === "current_upgraded_only",
-    "ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã¯å¼·åŒ–å¾Œã®ç¾è¡Œãƒ‡ãƒ¼ã‚¿ã ã‘ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.servantActiveSkillCount === 3,
-    "ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã®ä¿æœ‰ã‚¹ã‚­ãƒ«ã¯ä¸Šä½3ã¤ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.servantNoblePhantasmCount === 1,
-    "ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã®å®å…·ã¯ä¸Šä½1ã¤ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.servantClassSkillCoverage === "all",
-    "ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã®ã‚¯ãƒ©ã‚¹ã‚¹ã‚­ãƒ«ã¯ã™ã¹ã¦ç™»éŒ²ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.servantEffectOrder === "source_order_contiguous_from_1",
-    "ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆåŠ¹æžœã¯è³‡æ–™é †ã«1ã‹ã‚‰é€£ç¶šç™»éŒ²ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.servantDuplicateInstanceSelectionsIndependent === true,
-    "é‡è¤‡ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã¯å€‹ä½“åˆ¥ã«Lvã¨å®å…·Lvã‚’é¸ã¹ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.servantUnresolvedEffectsExplicit === true,
-    "æœªæŽ¥ç¶šã®ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆåŠ¹æžœã‚’æ˜Žç¤ºã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.declaredActionValueScaling) === JSON.stringify([
-      "fixed",
-      "noble_phantasm_level",
-      "overcharge"
-    ]),
-    "å®£è¨€åŠ¹æžœã®æ•°å€¤ã¯å›ºå®šãƒ»å®å…·Lvåˆ¥ãƒ»OCåˆ¥ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.declaredActionSingleTargetResolvedAtExecution === true,
-    "å®£è¨€åŠ¹æžœã®å˜ä½“å¯¾è±¡ã¯å®Ÿè¡Œæ™‚ã«è§£æ±ºã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.declaredActionUnsupportedPolicy === "reject_before_state_or_rng_change",
-    "æœªå¯¾å¿œã®å®£è¨€åŠ¹æžœã¯çŠ¶æ…‹ãƒ»ä¹±æ•°å¤‰æ›´å‰ã«æ‹’å¦ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.declaredUnitStateActions) === JSON.stringify([
-      "advance_skill_cooldowns",
-      "increase_np_by_current_rate",
-      "change_enemy_charge",
-      "gain_stars"
-    ]),
-    "å®£è¨€åŠ¹æžœã®æˆ¦é—˜çŠ¶æ…‹æ“ä½œä¸€è¦§ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.declaredSkillCooldownMinimum === 0,
-    "ã‚¹ã‚­ãƒ«CTçŸ­ç¸®ã¯0æœªæº€ã«ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.declaredCurrentNpIncreaseRateUnit === "permille_of_current_np",
-    "ç¾åœ¨NPå€çŽ‡ã®å˜ä½ã¯ç¾åœ¨NPã«å¯¾ã™ã‚‹permilleã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.declaredEnemyChargeRange === "zero_to_charge_max",
-    "æ•µãƒãƒ£ãƒ¼ã‚¸å¢—æ¸›ã¯0ã‹ã‚‰æœ€å¤§å€¤ã®ç¯„å›²ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.declaredStarGainDestinations) === JSON.stringify([
-      "command",
-      "next_command"
-    ]),
-    "å®£è¨€ã‚¹ã‚¿ãƒ¼ç²å¾—ã¯ç¾åœ¨ä½¿ç”¨åˆ†ã¨æ¬¡å›žç”¨ã‚’æ˜Žç¤ºã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.attackTriggerContextFields) === JSON.stringify([
-      "attack_kind",
-      "card_type"
-    ]),
-    "æ”»æ’ƒãƒˆãƒªã‚¬ãƒ¼æ–‡è„ˆã¯æ”»æ’ƒç¨®åˆ¥ã¨ã‚«ãƒ¼ãƒ‰ç¨®åˆ¥ã‚’ä¿æŒã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.conditionalAttackTriggerKinds) === JSON.stringify([
-      "normal_command",
-      "noble_phantasm",
-      "extra_attack",
-      "enemy_normal_attack"
-    ]),
-    "æ¡ä»¶ä»˜ãæ”»æ’ƒãƒˆãƒªã‚¬ãƒ¼ã®æ”»æ’ƒç¨®åˆ¥ä¸€è¦§ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.conditionalAttackTriggerCardTypes) === JSON.stringify([
-      "quick",
-      "arts",
-      "buster",
-      "extra"
-    ]),
-    "æ¡ä»¶ä»˜ãæ”»æ’ƒãƒˆãƒªã‚¬ãƒ¼ã®ã‚«ãƒ¼ãƒ‰ç¨®åˆ¥ä¸€è¦§ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.conditionalAttackTriggerMismatchConsumesUse === false,
-    "æ”»æ’ƒæ¡ä»¶ä¸ä¸€è‡´æ™‚ã«ãƒˆãƒªã‚¬ãƒ¼å›žæ•°ã‚’æ¶ˆè²»ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.conditionalAttackTriggerMismatchConsumesRng === false,
-    "æ”»æ’ƒæ¡ä»¶ä¸ä¸€è‡´æ™‚ã«åŠ¹æžœä¹±æ•°ã‚’æ¶ˆè²»ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.triggerStarGainDestinationRequired === true,
-    "ãƒˆãƒªã‚¬ãƒ¼ã®ã‚¹ã‚¿ãƒ¼ç²å¾—ã¯åŠ ç®—å…ˆã‚’å¿…é ˆæŒ‡å®šã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  const turnEndStarGain = manifest.coreRules.turnEndTriggerStarGain;
-  assert(
-    turnEndStarGain.status === "accepted"
-      && turnEndStarGain.v1InitialScope === true
-      && JSON.stringify(turnEndStarGain.endingSides) === JSON.stringify([
-        "ally",
-        "enemy"
-      ])
-      && turnEndStarGain.destination === "next_command"
-      && turnEndStarGain.commandDestinationAllowed === false
-      && turnEndStarGain.starCap === 99
-      && turnEndStarGain.candidateSnapshot === "living_frontline_at_turn_end_start"
-      && JSON.stringify(turnEndStarGain.resolutionOrder) === JSON.stringify([
-        "frontline_slot",
-        "owner_trigger_priority",
-        "registration_order",
-        "child_action_order"
-      ])
-      && turnEndStarGain.additionTiming === "immediate_per_child_action_before_hp_settlement_and_later_turn_end_stages"
-      && turnEndStarGain.multipleAdditionPolicy === "sequential_cap_per_action"
-      && turnEndStarGain.reserveActivation === false
-      && turnEndStarGain.newlyFrontlinedDuringPhaseActivation === false
-      && turnEndStarGain.additionConsumesRng === false
-      && turnEndStarGain.parentProbabilityRng === "effects"
-      && JSON.stringify(turnEndStarGain.confirmedLogFields) === JSON.stringify([
-        "bucket",
-        "requested",
-        "before",
-        "added",
-        "after",
-        "overflow"
-      ])
-      && turnEndStarGain.battleSuspendSchemaChange === false
-      && turnEndStarGain.dataSchemaChange === false
-      && turnEndStarGain.battleLogSchemaChange === false
-      && turnEndStarGain.battleTurnLogSchemaChange === false
-      && turnEndStarGain.uiRecalculates === false
-      && turnEndStarGain.implementationStatus === "implemented_and_accepted",
-    "ã‚¿ãƒ¼ãƒ³çµ‚äº†ãƒˆãƒªã‚¬ãƒ¼ã®ã‚¹ã‚¿ãƒ¼ç²å¾—ä»•æ§˜ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  const effectDurationBoundaries =
-    manifest.coreRules.effectDurationBoundaries;
-  assert(
-    manifest.status === "li-guang-implemented-awaiting-user-acceptance"
-      && JSON.stringify(effectDurationBoundaries.values)
-        === JSON.stringify([
-          "owner_turn_end",
-          "opponent_turn_end",
-          "manual"
-        ])
-      && effectDurationBoundaries.offensiveBuff === "owner_turn_end"
-      && effectDurationBoundaries.defensiveBuff === "opponent_turn_end"
-      && effectDurationBoundaries.otherBuff === "opponent_turn_end"
-      && effectDurationBoundaries.defaultDebuff === "owner_turn_end"
-      && effectDurationBoundaries.turnEndTriggerActivation
-        === "owner_side_only"
-      && effectDurationBoundaries.durationCandidateSnapshot
-        === "both_living_frontlines_at_turn_end_start"
-      && JSON.stringify(effectDurationBoundaries.durationLogOrder)
-        === JSON.stringify([
-          "ending_side_frontline",
-          "opposing_side_frontline"
-        ])
-      && effectDurationBoundaries.reserveProgression === "paused"
-      && effectDurationBoundaries.newlyRegisteredDuringPhaseProgression
-        === "deferred"
-      && effectDurationBoundaries.battleSuspendSchemaChange === false
-      && effectDurationBoundaries.dataSchemaChange === false
-      && effectDurationBoundaries.battleLogSchemaChange === false
-      && effectDurationBoundaries.battleTurnLogSchemaChange === false
-      && effectDurationBoundaries.rngSequenceChange === false
-      && effectDurationBoundaries.uiRecalculates === false,
-    "çŠ¶æ…‹æœŸé™ã®æ‰€æŒè€…å´ãƒ»ç›¸æ‰‹å´çµ‚äº†ä»•æ§˜ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  const enemyNormalCriticalChance = manifest.coreRules.enemyNormalCriticalChance;
-  assert(
-    enemyNormalCriticalChance.effectType === "critical_chance"
-      && enemyNormalCriticalChance.combination
-        === "base_action_permille_plus_source_effects"
-      && JSON.stringify(enemyNormalCriticalChance.clamp) === JSON.stringify([0, 1000])
-      && enemyNormalCriticalChance.appliesTo === "normal_attack_only"
-      && enemyNormalCriticalChance.zeroAndFullRateConsumeCriticalRng === false
-      && enemyNormalCriticalChance.battleSuspendSchemaChange === false
-      && enemyNormalCriticalChance.dataSchemaChange === false
-      && enemyNormalCriticalChance.uiRecalculates === false,
-    "æ•µé€šå¸¸æ”»æ’ƒã‚¯ãƒªãƒ†ã‚£ã‚«ãƒ«ç™ºç”ŸçŽ‡è£œæ­£ã®ä»•æ§˜ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  const completedUi = manifest.coreRules.completedUiSpecification;
-  assert(
-    completedUi.decisionRange === "D-077-D-085"
-      && completedUi.acceptanceRevision === "D-097"
-      && completedUi.implementationStatus === "accepted"
-      && manifest.coreRules.servantDefaultDemeritApplicationRatePermille === 5000
-      && manifest.coreRules.servantDefaultDemeritRateAppliesWhenSourceRateMissing === true
-      && manifest.coreRules.servantDemeritUsesDebuffResistanceAndImmunity === true
-      && completedUi.defaultSeedMode === "random"
-      && completedUi.randomBlankSeedResolvedBeforeBattleRng === true
-      && JSON.stringify(completedUi.allyEffectTabs) === JSON.stringify(["class_skill", "craft_essence", "other", "combined"])
-      && completedUi.allyEffectDefaultTab === "other"
-      && JSON.stringify(completedUi.enemyEffectTabs) === JSON.stringify(["normal", "special", "combined"])
-      && completedUi.enemyEffectDefaultTab === "normal"
-      && completedUi.combinedEffectMutatesBattleState === false
-      && completedUi.rateDisplayUnit === "percent_from_permille_divided_by_10"
-      && completedUi.publicAssetUrlSource === "vite_base_url"
-      && completedUi.mysticCodeSkillPosition === "frontline_tab_bottom"
-      && completedUi.commandCardSelectionMaximum === 3
-      && JSON.stringify(completedUi.commandCardRows) === JSON.stringify(["noble_phantasm", "normal_command"])
-      && completedUi.otherEffectBadge === "remaining_turns_and_uses"
-      && completedUi.quickFirstPreviewTiming === "immediately_after_first_quick_selection_including_unselected_normal_candidates"
-      && completedUi.hpAttackNumberSource === "confirmed_action_log_target_total_damage"
-      && completedUi.hpDifferenceUsedAsAttackDamage === false
-      && completedUi.allyNpChangePresentation === "animated_bars_from_confirmed_before_and_after_np"
-      && completedUi.confirmedLogPlaybackOnly === true
-      && completedUi.defeatedTargetContinuationPlayback
-        === "confirmed_pre_boundary_state_with_hp_zero_enemy_visible_in_result_window"
-      && completedUi.defeatedTargetContinuationHpPresentation
-        === "enemy_hp_row_zero_to_zero_in_confirmed_result_window"
-      && completedUi.defeatedTargetContinuationPlaybackFrameRequiredWithoutResourceChange
-        === true
-      && completedUi.defeatedTargetDepartureVisibleAfterContinuationFrame
-        === true
-      && completedUi.defeatedTargetContinuationUiRecalculatesBattle
-        === false
-      && completedUi.playbackNavigation === "manual_previous_next"
-      && completedUi.playbackSkipPosition === "upper_right"
-      && completedUi.playbackSkipResult === "show_already_resolved_final_session_and_return_to_input_or_result"
-      && completedUi.playbackSkipRecalculatesOrMutatesBattle === false
-      && completedUi.playbackAutomaticAdvance === false
-      && completedUi.playbackStateSaved === false
-      && completedUi.servantWikiLinks === "registered_wiki_source_only_in_setup_and_battle"
-      && completedUi.skillAndNoblePhantasmDescriptions === "wiki_notation_with_registered_rates_one_effect_per_line"
-      && completedUi.battleSuspendSchemaChange === false
-      && completedUi.dataSchemaChange === false,
-    "UIå®Œæˆä»•æ§˜ã®å®Ÿè£…çŠ¶æ…‹ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.initialAttributeAffinitiesPermille)
-      === JSON.stringify({
-        earth: { sky: 900, human: 1100 },
-        sky: { earth: 1100, human: 900 },
-        human: { sky: 1100, earth: 900 },
-      }),
-    "åˆæœŸæˆ¦é—˜ã®å¤©åœ°äººç›¸æ€§è¡¨ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.noblePhantasmCardTypeChangeCategory === "buff",
-    "å®å…·ã‚«ãƒ¼ãƒ‰ç¨®åˆ¥å¤‰æ›´ã¯å¼·åŒ–çŠ¶æ…‹ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.noblePhantasmCardTypeChangeMutatesIntrinsicType === false,
-    "å®å…·ã‚«ãƒ¼ãƒ‰ç¨®åˆ¥å¤‰æ›´ã§å›ºæœ‰ã®å®å…·ã‚«ãƒ¼ãƒ‰ç¨®åˆ¥ã‚’æ›¸ãæ›ãˆã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.noblePhantasmCardTypeChangeOverlapPriority === "latest_registration",
-    "é‡è¤‡ã—ãŸå®å…·ã‚«ãƒ¼ãƒ‰ç¨®åˆ¥å¤‰æ›´ã¯æœ€æ–°ç™»éŒ²ã‚’å„ªå…ˆã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.noblePhantasmCardTypeChangePreserves) === JSON.stringify([
-      "hit_count",
-      "attack_np_rate",
-      "noble_phantasm_level",
-      "np_gauge"
-    ]),
-    "å®å…·ã‚«ãƒ¼ãƒ‰ç¨®åˆ¥å¤‰æ›´ã§ç¶­æŒã™ã‚‹å€¤ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.commandSelectionUsesEffectiveNoblePhantasmCardType === true,
-    "ã‚³ãƒžãƒ³ãƒ‰é¸æŠžã¯ç¾åœ¨æœ‰åŠ¹ãªå®å…·ã‚«ãƒ¼ãƒ‰ç¨®åˆ¥ã‚’ä½¿ã‚ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.noblePhantasmCardTypeRecheckedBeforeExecution === true,
-    "å®å…·ã‚«ãƒ¼ãƒ‰ç¨®åˆ¥ã¯å®Ÿè¡Œç›´å‰ã«å†ç¢ºèªã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.noblePhantasmDeclaredSequenceOrder) === JSON.stringify([
-      "common_before_attack",
-      "declared_before_attack",
-      "hits_on_hit_on_attack_on_damage_taken",
-      "common_after_attack",
-      "declared_after_attack",
-      "on_death",
-      "completed_action_boundary"
-    ]),
-    "å®å…·ã®å®£è¨€åŠ¹æžœãƒ»æ”»æ’ƒãƒ»æ­»äº¡ãƒ»è¡Œå‹•å¢ƒç•Œã®é †åºãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.declaredPreAttackRebuildsActiveTargets === true,
-    "å®å…·æ”»æ’ƒå‰åŠ¹æžœå¾Œã¯ç”Ÿå­˜å¯¾è±¡ã‹ã‚‰æ”»æ’ƒå…¥åŠ›ã‚’å†æ§‹ç¯‰ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.effectiveTraitSources) === JSON.stringify(["base", "active_trait_grants"]),
-    "æœ‰åŠ¹ç‰¹æ€§ã¯åŸºç¤Žç‰¹æ€§ã¨ä»˜ä¸Žä¸­ã®ç‰¹æ€§çŠ¶æ…‹ã‹ã‚‰æ§‹ç¯‰ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.traitGrantMutatesBaseTraits === false,
-    "ç‰¹æ€§ä»˜ä¸ŽçŠ¶æ…‹ã‚’åŸºç¤Žç‰¹æ€§ã¸æ›¸ãè¾¼ã‚“ã§ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.duplicateTraitGrantLifetimesIndependent === true,
-    "é‡è¤‡ã—ãŸç‰¹æ€§ä»˜ä¸ŽçŠ¶æ…‹ã®æœŸé™ã¯ç‹¬ç«‹ã—ã¦ã„ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.conditionalNpSpecialAttackTraitMatch === "all_required_traits",
-    "æ¡ä»¶ä»˜ãå®å…·ç‰¹æ”»ã¯å¿…é ˆå¯¾è±¡ç‰¹æ€§ã‚’ã™ã¹ã¦æº€ãŸã™å ´åˆã ã‘æˆç«‹ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.conditionalNpSpecialAttackTiming === "after_declared_pre_attack",
-    "æ¡ä»¶ä»˜ãå®å…·ç‰¹æ”»ã¯å®å…·æ”»æ’ƒå‰å®£è¨€åŠ¹æžœå¾Œã«åˆ¤å®šã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.conditionalNpSpecialAttackMismatchPermille === 1000,
-    "æ¡ä»¶ä¸ä¸€è‡´ã®å®å…·ç‰¹æ®Šå¨åŠ›ã¯100%ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.unresolvedDeclaredActionConsumesNpOrCharge === false,
-    "æœªå¯¾å¿œå®£è¨€åŠ¹æžœã¯å®å…·NPãƒ»æ•µãƒãƒ£ãƒ¼ã‚¸ã‚’æ¶ˆè²»ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemySkillSingleTargetSource === "ai_request",
-    "æ•µã‚¹ã‚­ãƒ«ã®å˜ä½“å¯¾è±¡ã¯AIè¦æ±‚ã‹ã‚‰æ¸¡ã•ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemySkillCompletedActionBoundary === true,
-    "æ•µã‚¹ã‚­ãƒ«åŠ¹æžœå¾Œã¯å®Œäº†æ¸ˆã¿è¡Œå‹•å¢ƒç•Œã‚’é€šã‚‰ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.declaredActionLogUsesExecutionResults === true,
-    "å®£è¨€åŠ¹æžœãƒ­ã‚°ã¯å®Ÿè¡Œæ¸ˆã¿çµæžœã‹ã‚‰ä½œã‚‰ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.enemyNoblePhantasmScaledDeclaredValues === "accepted",
-    "æ•µå®å…·ã®æ®µéšŽæ–‡è„ˆã¯çµ±åˆå—å…¥æ¸ˆã¿ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  const enemyNpContext = manifest.coreRules.enemyNoblePhantasmContext;
-  assert(
-    enemyNpContext?.scope === "battle_instance_and_action"
-      && enemyNpContext.authoringSplit === "enemy_definition_values_and_encounter_context"
-      && JSON.stringify(enemyNpContext.noblePhantasmLevels) === JSON.stringify([1, 2, 3, 4, 5])
-      && JSON.stringify(enemyNpContext.overchargeStages) === JSON.stringify([1, 2, 3, 4, 5])
-      && JSON.stringify(enemyNpContext.valueKinds) === JSON.stringify([
-        "fixed",
-        "noble_phantasm_level",
-        "overcharge",
-      ])
-      && enemyNpContext.stagedValueCount === 5
-      && enemyNpContext.requiredOnlyWhenScalingUsed === true
-      && enemyNpContext.fixedValuesRequireNoContext === true
-      && enemyNpContext.inferNoblePhantasmLevelFromEnemyLevel === false
-      && enemyNpContext.inferOverchargeFromCharge === false
-      && enemyNpContext.snapshotTiming === "enemy_noble_phantasm_preflight"
-      && JSON.stringify(enemyNpContext.sameSnapshotFor) === JSON.stringify([
-        "attack_multiplier",
-        "before_attack_declared_effects",
-        "after_attack_declared_effects",
-        "action_log",
-      ])
-      && enemyNpContext.invalidHandling === "typed_full_action_skip_before_target_charge_state_counters_and_rng"
-      && JSON.stringify(enemyNpContext.skipReasons) === JSON.stringify([
-        "enemy_noble_phantasm_context_missing",
-        "enemy_noble_phantasm_context_invalid",
-        "enemy_noble_phantasm_data_invalid",
-        "action_effects_unresolved",
-      ])
-      && enemyNpContext.selectionConsumesRng === false
-      && enemyNpContext.fixedEnemyAttackCompatibility === true
-      && JSON.stringify(enemyNpContext.saveContainers) === JSON.stringify([
-        "attackData",
-        "actionEffectData",
-      ])
-      && enemyNpContext.directResume === "restore_saved_context_values_and_logs_without_registry_recalculation"
-      && JSON.stringify(enemyNpContext.replayEquality) === JSON.stringify([
-        "state",
-        "effect_runtime_counters",
-        "six_rng_streams",
-        "action_logs",
-        "turn_logs",
-      ])
-      && enemyNpContext.uiRecalculates === false
-      && enemyNpContext.battleSuspendSchemaVersion === 4
-      && enemyNpContext.dataSchemaVersion === "1.38.0"
-      && enemyNpContext.enemyDataSchemaVersion === 1
-      && enemyNpContext.battleLogSchemaVersion === 5
-      && enemyNpContext.battleTurnLogSchemaVersion === 2
-      && enemyNpContext.fixedOnlyLogShapeUnchanged === true,
-    "æ•µå®å…·Lvãƒ»OCã®ä¿æŒã€æ®µéšŽé¸æŠžã€ä¸ç™ºã€ä¿å­˜ã€ãƒªãƒ—ãƒ¬ã‚¤ã€UIè¦å‰‡ãŒä¸æ­£ã§ã™"
-  );
-  assert(
-    enemyNpContext.implementationStatus === "accepted"
-      && JSON.stringify(enemyNpContext.implementationSources) === JSON.stringify([
-        "src/effects/declarations.ts",
-        "src/data/enemies/schema.ts",
-        "src/data/enemies/validation.ts",
-        "src/data/enemies/registry.ts",
-        "src/core/battle/actionData.ts",
-        "src/core/battle/enemyNoblePhantasmContext.ts",
-        "src/ai/enemyAttack.ts",
-        "src/core/battle/log.ts",
-      ]),
-    "æ•µå®å…·Lvãƒ»OCå…±é€šå‡¦ç†ã®å®Ÿè£…å…ƒã¾ãŸã¯å—å…¥çŠ¶æ…‹ãŒä¸æ­£ã§ã™"
-  );
-  assert(
-    manifest.coreRules.servantPassiveInitializationOrder === "formation_order_including_reserve",
-    "ã‚¯ãƒ©ã‚¹ã‚¹ã‚­ãƒ«ã¯æŽ§ãˆã‚’å«ã‚€ç·¨æˆé †ã§åˆæœŸåŒ–ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.allySkillCooldownTiming === "before_skill_effects",
-    "å‘³æ–¹ã‚¹ã‚­ãƒ«CTã¯åŠ¹æžœã‚ˆã‚Šå‰ã«è¨­å®šã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.allySkillConsumesCommandAction === false,
-    "å‘³æ–¹ã‚¹ã‚­ãƒ«ã¯ã‚³ãƒžãƒ³ãƒ‰ã‚«ãƒ¼ãƒ‰è¡Œå‹•ã‚’æ¶ˆè²»ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.allySkillCompletedActionBoundary === true,
-    "å‘³æ–¹ã‚¹ã‚­ãƒ«ã¯å®Œäº†æ¸ˆã¿è¡Œå‹•å¢ƒç•Œã‚’é€šã‚‰ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.directNpChangeUsesTargetNpLevel === true,
-    "ç›´æŽ¥NPå¢—æ¸›ã¯å¯¾è±¡è‡ªèº«ã®å®å…·Lvä¸Šé™ã‚’ä½¿ã‚ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(manifest.coreRules.enemyWithoutNoblePhantasmCharge === 0, "å®å…·æœªè¨­å®šæ•µã®ãƒãƒ£ãƒ¼ã‚¸ã¯0ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  assert(manifest.coreRules.fixedSeedReplayRequired === true, "å›ºå®šã‚·ãƒ¼ãƒ‰å†ç¾ã¯å¿…é ˆã§ã™");
-  assert(
-    manifest.coreRules.craftEssenceSlotsPerAllyInstance === 1,
-    "æ¦‚å¿µç¤¼è£…ã¯å‘³æ–¹æˆ¦é—˜å€‹ä½“ã”ã¨ã«0ï½ž1æžšã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.craftEssenceUnselectedAllowed === true,
-    "æ¦‚å¿µç¤¼è£…ã®æœªé¸æŠžã‚’è¨±å¯ã—ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.craftEssenceInventoryTracking === false,
-    "åˆæœŸç¯„å›²ã§ã¯æ¦‚å¿µç¤¼è£…ã®æ‰€æŒæžšæ•°ã‚’ç®¡ç†ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.craftEssenceDuplicateDataIdAcrossInstances === true,
-    "åŒã˜æ¦‚å¿µç¤¼è£…ã‚’è¤‡æ•°ã®å‘³æ–¹æˆ¦é—˜å€‹ä½“ã¸è£…å‚™ã§ããªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.craftEssenceInitialLimitBreak === "max",
-    "åˆæœŸæ¦‚å¿µç¤¼è£…ã¯æœ€å¤§è§£æ”¾å›ºå®šã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.craftEssenceInitialLevelPolicy === "rarity_max_fixed",
-    "åˆæœŸæ¦‚å¿µç¤¼è£…ã¯ãƒ¬ã‚¢ãƒªãƒ†ã‚£åˆ¥æœ€å¤§Lvå›ºå®šã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.craftEssenceMaxLevelByRarity) === JSON.stringify({
-      "1": 50,
-      "2": 55,
-      "3": 60,
-      "4": 80,
-      "5": 100
-    }),
-    "æ¦‚å¿µç¤¼è£…ã®ãƒ¬ã‚¢ãƒªãƒ†ã‚£åˆ¥æœ€å¤§LvãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.craftEssenceInitialEffectTarget === "equipped_ally_instance",
-    "åˆæœŸæ¦‚å¿µç¤¼è£…ã®åŠ¹æžœå¯¾è±¡ã¯è£…å‚™ã—ãŸå‘³æ–¹æˆ¦é—˜å€‹ä½“ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.craftEssenceReserveSelectable === true
-      && manifest.coreRules.craftEssenceStartEffectsIncludeReserve === true,
-    "æŽ§ãˆã‚‚æ¦‚å¿µç¤¼è£…ã®é¸æŠžãƒ»é–‹å§‹æ™‚åˆæœŸåŒ–å¯¾è±¡ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  const craftEssenceFieldEffects = manifest.coreRules.craftEssenceFieldEffects;
-  assert(
-    manifest.coreRules.craftEssenceEligibleServantDataIds
-      === "exact_data_id_only_ui_filtered_and_engine_rejected_before_mutation"
-      && craftEssenceFieldEffects.target === "all_allies_including_reserve"
-      && craftEssenceFieldEffects.application
-        === "declarative_passive_initialization"
-      && craftEssenceFieldEffects.activeWhen
-        === "source_and_recipient_are_both_ally_frontline"
-      && craftEssenceFieldEffects.inactiveValue === 0
-      && craftEssenceFieldEffects.uiInactiveValueDisplay === "hidden"
-      && craftEssenceFieldEffects.formationRefresh === "set_battle_formation"
-      && craftEssenceFieldEffects.saveSchemaChange === false
-      && craftEssenceFieldEffects.dataSchemaChange === false,
-    "çµ†ç¤¼è£…ã®åŽ³å¯†è£…å‚™å¯¾è±¡ã¨å‰è¡›é™å®šãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰åŠ¹æžœã®è¦å‰‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    manifest.coreRules.initialCraftEssenceDataRegistry
-      === "src/data/craftEssences/initialCraftEssences.ts"
-      && manifest.coreRules.kaleidoscopeStartNpUnits === 10000
-      && manifest.coreRules.blackGrailNoblePhantasmDamagePermille === 800,
-    "åˆæœŸæ¦‚å¿µç¤¼è£…ã®ç™»éŒ²å…ˆãƒ»é–‹å§‹NPãƒ»å®å…·å¨åŠ›ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.blackGrailRecurringHpReduction)
-      === JSON.stringify({ amount: 500, canDefeat: true, turnEndSettlement: null }),
-    "é»’ã®è–æ¯ã®æ¯Žã‚¿ãƒ¼ãƒ³HPæ¸›å°‘ã¯HP0å¯èƒ½ãªå…±é€šHPæ¸›å°‘ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(manifest.coreRules.slipDamageAmplification)
-      === JSON.stringify({
-        status: "accepted",
-        categories: {
-          burn: "spread_of_fire",
-          poison: "toxic",
-          curse: "evil_curse"
-        },
-        baseAggregation: "per_category_sum_before_multiplier",
-        matchingAmplifierAggregation: "sum_at_each_slip_trigger_activation",
-        percentUnit: "permille",
-        formula: "floor(category_base_total*(1000+matching_amplifier_total)/1000)_per_category",
-        rounding: "floor_per_category",
-        settlement: "existing_recovery_and_slip_simultaneous_hp1_clamp",
-        defeatBehavior: "no_break_guts_or_death",
-        reserveProgression: "paused",
-        saveSchemaChange: false,
-        dataSchemaChange: false,
-        runtimeTypeSource: "src/effects/types.ts",
-        amplifierLookupSource: "src/effects/slipDamage.ts",
-        settlementSource: "src/effects/hp.ts",
-        confirmedLogSource: "src/core/battle/turnLog.ts",
-        uiRecalculates: false
-      }),
-    "ã‚¹ãƒªãƒƒãƒ—ãƒ€ãƒ¡ãƒ¼ã‚¸å€åŠ ã®å¯¾è±¡ãƒ»åˆè¨ˆãƒ»ç™ºå‹•æ™‚å€çŽ‡ãƒ»åˆ‡æ¨ã¦ãƒ»ä¿å­˜ãƒ»UIè¦å‰‡ãŒä¸æ­£ã§ã™"
-  );
-
-  const initialCraftEssences = manifest.initialContent?.craftEssences ?? [];
-  const expectedBondCraftEssences = [
-    ["å‚·ã²ã¨ã¤ãªãå…·è¶³", "honda-tadakatsu-bond", "honda-tadakatsu", "https://w.atwiki.jp/siroi_human/pages/274.html"],
-    ["ä¸€ä¹äºŒå…«å¹´äºŒæœˆå·", "domination-foreigner-bond", "domination-foreigner", "https://w.atwiki.jp/siroi_human/pages/766.html"],
-    ["äºŒè°·ã‚’æ¸¡ã‚‹çŽ‰", "ajisukitakahikone-no-kami-bond", "ajisukitakahikone-no-kami", "https://w.atwiki.jp/siroi_human/pages/50.html"],
-    ["å…­ã¤ã®ã‚ã‚Šãˆã–ã‚‹ã‚‚ã®", "fenrir-bond", "fenrir", "https://w.atwiki.jp/siroi_human/pages/329.html"],
-    ["å…­ç½ªç‰½ãé»„é‡‘è»Š", "lucifera-bond", "lucifera", "https://w.atwiki.jp/siroi_human/pages/795.html"],
-    ["è–æ¯ã®æºç±ƒ", "mother-mary-bond", "mother-mary", "https://w.atwiki.jp/siroi_human/pages/781.html"],
-    ["ã‚³ãƒ¤ãƒ³ã‚¹ã‚«ãƒ¤ã®é‡Žæœ›ï½žæ±æµ·å²¸ç‰ˆï½ž", "koyanskaya-of-light-bond", "koyanskaya-of-light", "https://w.atwiki.jp/f_go/pages/5141.html"],
-    ["æ°´ã®å¦‚ãèŠ±ã®å¦‚ã", "sen-no-rikyu-bond", "sen-no-rikyu", "https://w.atwiki.jp/f_go/pages/5723.html"],
-    ["å…­æ–‡ã®æ¸¡ã—è³ƒ", "sanada-yukimura-bond", "sanada-yukimura", "https://w.atwiki.jp/siroi_human/pages/813.html"],
-  ];
-  assert(
-    initialCraftEssences.length === 11
-      && initialCraftEssences[0]?.name === "ã‚«ãƒ¬ã‚¤ãƒ‰ã‚¹ã‚³ãƒ¼ãƒ—"
-      && initialCraftEssences[0]?.dataId === "kaleidoscope"
-      && initialCraftEssences[0]?.rarity === 5
-      && initialCraftEssences[0]?.limitBreak === "max"
-      && initialCraftEssences[0]?.level === 100
-      && initialCraftEssences[1]?.name === "é»’ã®è–æ¯"
-      && initialCraftEssences[1]?.dataId === "black-grail"
-      && initialCraftEssences[1]?.rarity === 5
-      && initialCraftEssences[1]?.limitBreak === "max"
-      && initialCraftEssences[1]?.level === 100
-      && initialCraftEssences.slice(2).every((craftEssence, index) => {
-        const [name, dataId, eligibleDataId, source] = expectedBondCraftEssences[index];
-        return craftEssence.name === name
-          && craftEssence.dataId === dataId
-          && craftEssence.rarity === 4
-          && craftEssence.limitBreak === "max"
-          && craftEssence.level === 80
-          && JSON.stringify(craftEssence.eligibleServantDataIds) === JSON.stringify([eligibleDataId])
-          && craftEssence.source === source
-          && craftEssence.implementationStatus === "implemented";
-      }),
-    "æ¦‚å¿µç¤¼è£…2æžšã¨çµ†ç¤¼è£…9æžšã®æ­£å¼åç§°ãƒ»IDãƒ»æœ€å¤§è§£æ”¾ãƒ»Lvãƒ»è£…å‚™å¯¾è±¡ãƒ»å‚ç…§ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-
-  const initialEnemies = manifest.initialContent?.enemies ?? [];
-  assert(initialEnemies.length === 1, "åˆæœŸæ•µã¯é»Žæ˜Žã®ç‚Žè…•ï¼ˆå‰£ï¼‰1ç¨®ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“");
-  const radiantArm = initialEnemies[0] ?? {};
-  assert(
-    radiantArm.name === "é»Žæ˜Žã®ç‚Žè…•"
-      && radiantArm.dataId === "radiant-arm-of-dawn-saber"
-      && radiantArm.externalIds?.atlasAcademyServantId === 9933710
-      && radiantArm.externalIds?.atlasAcademyAiId === 1000000
-      && radiantArm.category === "normal_enemy"
-      && radiantArm.classKey === "saber"
-      && radiantArm.attributeKey === "sky"
-      && radiantArm.classAttackCoefficientPermille === 1000,
-    "é»Žæ˜Žã®ç‚Žè…•ï¼ˆå‰£ï¼‰ã®æ­£å¼åç§°ãƒ»IDãƒ»åŒºåˆ†ãƒ»ã‚¯ãƒ©ã‚¹ãƒ»å±žæ€§ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(radiantArm.traits) === JSON.stringify([
-      "å¤©ã®åŠ›",
-      "demon_unused",
-      "bonus_enemy",
-      "hand_or_door",
-      "hand",
-      "divine"
-    ])
-      && radiantArm.deathRatePermille === 200
-      && radiantArm.criticalChancePermille === 100
-      && radiantArm.attackNpRatePermille === 1000
-      && radiantArm.targetNpRatePermille === 1000
-      && radiantArm.targetStarRatePermille === 0
-      && JSON.stringify(radiantArm.nonServantUnusedAttackFields) === JSON.stringify({
-        attackNpUnits: 0,
-        receivedNpUnits: 0,
-        starRatePermille: 0,
-        starWeight: 0,
-        commandCardHitWeights: null,
-        extraAttackHitWeights: null,
-        noblePhantasms: []
-      }),
-    "é»Žæ˜Žã®ç‚Žè…•ï¼ˆå‰£ï¼‰ã®ç‰¹æ€§ãƒ»åŸºç¤ŽçŽ‡ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    radiantArm.maxActions === 1
-      && JSON.stringify(radiantArm.skills) === JSON.stringify([])
-      && JSON.stringify(radiantArm.normalAttack) === JSON.stringify({
-        stableId: "radiant-arm-of-dawn-saber-normal-attack",
-        targetScope: "single",
-        targetPolicy: "random_living_ally_frontline",
-        cardType: "quick",
-        hitWeights: [100],
-        cardDamageValuePermille: 1000
-      }),
-    "é»Žæ˜Žã®ç‚Žè…•ï¼ˆå‰£ï¼‰ã®è¡Œå‹•ä¸Šé™ãƒ»é€šå¸¸æ”»æ’ƒãƒ»ã‚¹ã‚­ãƒ«ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    JSON.stringify(radiantArm.chargeAttack) === JSON.stringify({
-      name: "æ¥­ç«",
-      stableId: "radiant-arm-of-dawn-saber-charge-attack",
-      targetScope: "single",
-      targetPolicy: "random_living_ally_frontline",
-      cardType: "arts",
-      hitWeights: [100],
-      damageMultiplierPermille: 6000,
-      chargeMax: 4,
-      levelScaling: "fixed",
-      overchargeScaling: "none"
-    }),
-    "æ¥­ç«ã¯Artsãƒ»å˜ä½“ãƒ»1Hitãƒ»å›ºå®š600%ãƒ»ãƒãƒ£ãƒ¼ã‚¸æœ€å¤§4ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  assert(
-    radiantArm.sourceCheckedAt === "2026-08-10"
-      && radiantArm.implementationStatus === "implemented",
-    "åˆæœŸæ•µã¯å‚ç…§ç¢ºèªæ—¥ã‚’æŒã¤å®Ÿè£…æ¸ˆã¿ãƒ‡ãƒ¼ã‚¿ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-
-  const initialEnemyEncounter = manifest.initialContent?.initialEnemyEncounter ?? {};
-  assert(
-    initialEnemyEncounter.dataId === "ember-gathering-saber-extreme"
-      && initialEnemyEncounter.activeMode === 3
-      && initialEnemyEncounter.replacementMode === "standard"
-      && initialEnemyEncounter.reserveCount === 0
-      && initialEnemyEncounter.breakGaugeCount === 0,
-    "æ¥µç´šåˆæœŸæˆ¦é—˜ã¯3ä½“ãƒ¢ãƒ¼ãƒ‰ãƒ»æŽ§ãˆãªã—ãƒ»ãƒ–ãƒ¬ã‚¤ã‚¯ãªã—ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-  const expectedEnemyPlacements = [
-    [
-      ["enemy-w1-1", "A", 1, 23, 27849, 4561],
-      ["enemy-w1-2", "B", 2, 22, 26649, 4401],
-      ["enemy-w1-3", "C", 3, 24, 29049, 4721]
-    ],
-    [
-      ["enemy-w2-1", "A", 1, 25, 37811, 4881],
-      ["enemy-w2-2", "B", 2, 26, 39311, 5041],
-      ["enemy-w2-3", "C", 3, 27, 40811, 5201]
-    ],
-    [
-      ["enemy-w3-1", "A", 1, 45, 136216, 8113]
-    ]
-  ];
-  const actualEnemyPlacements = (initialEnemyEncounter.waves ?? []).map((wave) =>
-    wave.map((enemy) => [
-      enemy.instanceId,
-      enemy.encounterLabel,
-      enemy.frontlineSlot,
-      enemy.level,
-      enemy.hp,
-      enemy.attack
-    ])
-  );
-  assert(
-    JSON.stringify(actualEnemyPlacements) === JSON.stringify(expectedEnemyPlacements),
-    "æ¥µç´š3 Waveãƒ»7å€‹ä½“ã®é…ç½®ãƒ»Lvãƒ»HPãƒ»ATKãŒä¸€è‡´ã—ã¾ã›ã‚“"
-  );
-  assert(
-    (initialEnemyEncounter.waves ?? []).flat().every((enemy) =>
-      enemy.enemyDataId === "radiant-arm-of-dawn-saber" && enemy.charge === 0
-    )
-      && initialEnemyEncounter.sourceCheckedAt === "2026-08-10"
-      && initialEnemyEncounter.implementationStatus === "implemented",
-    "æ¥µç´š7å€‹ä½“ã¯åŒã˜æ•µdataIdãƒ»é–‹å§‹ãƒãƒ£ãƒ¼ã‚¸0ã®å®Ÿè£…æ¸ˆã¿ãƒ‡ãƒ¼ã‚¿ã§ãªã‘ã‚Œã°ãªã‚Šã¾ã›ã‚“"
-  );
-
-  const docs = manifest.canonicalDocuments ?? [];
-  assert(new Set(docs).size === docs.length, "canonicalDocuments ã«é‡è¤‡ãŒã‚ã‚Šã¾ã™");
-  for (const path of docs) {
-    if (!(await exists(path))) errors.push(`æ­£æœ¬æ–‡æ›¸ãŒã‚ã‚Šã¾ã›ã‚“: ${path}`);
-  }
-}
-
-const mandatoryFiles = [
-  "README.md",
-  "AGENTS.md",
-  "docs/INDEX.md",
-  "docs/START_HERE.md",
-  "docs/PROJECT_RULES.md",
-  "docs/IMPLEMENTATION_STATUS.md",
-  "docs/DECISION_LOG.md",
-  "docs/NEW_CHAT_GUIDE.md",
-  "docs/HANDOFF_TEMPLATE.md",
-  "docs/qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md",
-  "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md",
-  "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md",
-  "docs/qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md",
-  "docs/qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md",
-  "docs/qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md",
-  "docs/archive/README.md",
-  "docs/archive/2026-08-04/PROJECT_RULES_v1.0.0.md",
-  "docs/archive/2026-08-04/IMPLEMENTATION_STATUS_v1.0.0.md",
-  "docs/archive/2026-08-04/DECISION_LOG_v1.0.0.md",
-  "docs/roles/SYSTEM.md",
-  "docs/roles/SERVANT.md",
-  "docs/roles/CRAFT_ESSENCE.md",
-  "docs/roles/MYSTIC_CODE.md",
-  "docs/roles/ENEMY.md",
-  "docs/roles/UI.md",
-  "docs/specs/INITIAL_DATA.md",
-  "docs/templates/SERVANT_ADDITION.md",
-  "docs/templates/CRAFT_ESSENCE_ADDITION.md",
-  "docs/templates/MYSTIC_CODE_ADDITION.md",
-  "docs/templates/ENEMY_ADDITION.md",
-  "docs/templates/BUG_REPORT.md",
-  "src/data/enemies/schema.ts",
-  "src/data/enemies/validation.ts",
-  "src/data/enemies/registry.ts",
-  "src/data/enemies/initialEnemies.ts",
-  "src/data/enemies/index.ts",
-  "src/core/battle/enemyNoblePhantasmContext.ts",
-  "src/data/servants/dominationForeigner.ts",
-  "src/data/servants/senNoRikyu.ts",
-  "src/data/servants/hondaTadakatsu.ts",
-  "src/data/servants/ajisukitakahikoneNoKami.ts",
-  "src/data/servants/fenrir.ts",
-  "src/data/servants/sanadaYukimura.ts",
-  "src/effects/noblePhantasmOvercharge.ts",
-];
-
-for (const path of mandatoryFiles) {
-  if (!(await exists(path))) errors.push(`å¿…é ˆãƒ•ã‚¡ã‚¤ãƒ«ãŒã‚ã‚Šã¾ã›ã‚“: ${path}`);
-}
-
-const agents = await readText("AGENTS.md");
-assert(agents.includes("ãƒªãƒã‚¸ãƒˆãƒªã‚’å”¯ä¸€ã®æ­£æœ¬"), "AGENTS.md ã«æ­£æœ¬è¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(agents.includes("ç‰¹æ®Šå‹åˆ©æ¡ä»¶ãƒ»ç‰¹æ®Šæ•—åŒ—æ¡ä»¶ã‚’è¿½åŠ ã™ã‚‹"), "AGENTS.md ã«ç‰¹æ®Šå‹æ•—æ¡ä»¶ã®ç¦æ­¢ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(agents.includes("docs/START_HERE.md"), "AGENTS.md ã«ä½œæ¥­é–‹å§‹ãƒšãƒ¼ã‚¸ã¸ã®æ¡ˆå†…ãŒã‚ã‚Šã¾ã›ã‚“");
-
-const startHere = await readText("docs/START_HERE.md");
-assert(startHere.includes("## ç¾åœ¨åœ°ç‚¹"), "ä½œæ¥­é–‹å§‹ãƒšãƒ¼ã‚¸ã«ç¾åœ¨åœ°ç‚¹ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(startHere.includes("## æ¬¡ã®ä½œæ¥­"), "ä½œæ¥­é–‹å§‹ãƒšãƒ¼ã‚¸ã«æ¬¡ã®ä½œæ¥­ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(startHere.includes("## å¿…é ˆè¦å‰‡"), "ä½œæ¥­é–‹å§‹ãƒšãƒ¼ã‚¸ã«å¿…é ˆè¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(
-  startHere.includes("ãƒ•ã‚§ãƒ¼ã‚º: 19ï¼v1.0åˆæœŸå®Œæˆç¯„å›²å¤–ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã®é †æ¬¡è¿½åŠ ")
-    && startHere.includes("No.094ã€ŒçœŸç”°ä¿¡ç¹ã€")
-    && startHere.includes("å…·ä½“ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã®é¸å®šå‰ã«ã¯ã€[`SERVANT_CLASSIFICATION.md`]")
-    && startHere.includes("å®Ÿç”»é¢å—å…¥ã¨PRçµ±åˆã‚’å¾…ã¤")
-    && startHere.includes("ä¸­æ–­ä¿å­˜å½¢å¼4ãƒ»ãƒ‡ãƒ¼ã‚¿1.38.0")
-    && startHere.includes("No.059ã€Œé‚£é ˆä¸Žä¸€ã€"),
-  "ä½œæ¥­é–‹å§‹ãƒšãƒ¼ã‚¸ã«çœŸç”°ä¿¡ç¹ã®å®Ÿè£…çŠ¶æ…‹ã¨æ¬¡ä½œæ¥­ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-const uiAcceptance = await readText(
-  "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
-);
-assert(
-  uiAcceptance.includes("åˆ¤å®š: æœ€çµ‚åˆæ ¼")
-    && uiAcceptance.includes("51ãƒ•ã‚¡ã‚¤ãƒ«ãƒ»525ãƒ†ã‚¹ãƒˆ")
-    && uiAcceptance.includes("ãƒ¦ãƒ¼ã‚¶ãƒ¼å®Ÿç”»é¢å—å…¥å®Œäº†")
-    && uiAcceptance.includes("v1.0åˆæœŸå®Œæˆç¯„å›²å¤–ã®å…·ä½“ã‚³ãƒ³ãƒ†ãƒ³ãƒ„è¿½åŠ å¯¾è±¡ã‚’1ä»¶ã ã‘é¸å®šã™ã‚‹"),
-  "UIå®Œæˆä»•æ§˜ã®å—å…¥å ±å‘ŠãŒæ­£æœ¬ã¨ä¸€è‡´ã—ã¾ã›ã‚“"
-);
-
-const requiredUiAssets = [
-  ...[
-    "skill-attack-up", "skill-card-buster-up", "skill-clear-debuff",
-    "skill-cooldown", "skill-damage-up", "skill-hp-heal",
-    "skill-immune-invincibility", "skill-np-charge",
-    "skill-unique-command-shuffle", "skill-unique-order-change",
-    "skill-card-quick-up", "skill-np-damafe-up", "skill-crit-damage-up",
-    "skill-hp-heal-per-turn", "skill-star-weight-up", "class-magic-resistance",
-    "class-riding", "class-divinity", "class-mad-enhancement",
-    "skill-card-buster-star-weight", "skill-star-rate-up", "skill-guts",
-  ].map((name) => `public/assets/skill-icons/${name}.png`),
-  ...[
-    "Artsupstatus", "Attackdown", "Attackup", "Buffatk", "Busterupstatus",
-    "Critabsup", "Critdmgup", "Debuffatk", "Debuffregen", "DelayedBuff",
-    "DelayedDebuff", "Dragontrait", "Invincible", "Npcardtypechange",
-    "Nppowerdown", "Nppowerup", "Powerup", "Removalresistdown",
-    "Removalresistup", "Resistancedown", "Resistanceup", "Quickupstatus",
-    "Starabsoprtdown", "Stargainup", "Statusdown", "Statusup",
-    "Npgainturn", "Stargainturn", "NPOvercharge", "Npchargeup", "NPGainUpDmg",
-    "Quickdamageup", "Curse", "Defensedown", "Invinciblepierce", "Ignoredefense",
-    "Defenseup", "Npseal", "Tauntup", "Hpregen", "Maxhpup", "Specialinvincible",
-    "Avoid", "Busterresistdown", "Changeclass", "Busterabsorpt", "Healpowup",
-    "Gutsstatus", "Critchndown", "Surehit",
-  ].map((name) => `public/assets/status-icons/${name}.webp`),
-];
-for (const path of requiredUiAssets) {
-  if (!(await exists(path))) errors.push(`æŒ‡å®šæ¸ˆã¿UIç”»åƒãŒã‚ã‚Šã¾ã›ã‚“: ${path}`);
-}
-
-const implementationStatus = await readText("docs/IMPLEMENTATION_STATUS.md");
-assert(implementationStatus.includes("## ç¾åœ¨åœ°ç‚¹"), "å®Ÿè£…çŠ¶æ³ã«ç¾åœ¨åœ°ç‚¹ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(implementationStatus.includes("## æ¬¡ã®å®Ÿè£…"), "å®Ÿè£…çŠ¶æ³ã«æ¬¡ã®å®Ÿè£…ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(
-  implementationStatus.includes("D-077ï½žD-085ã®UIå®Œæˆä»•æ§˜")
-    && implementationStatus.includes("v1.0åˆæœŸå®Œæˆç¯„å›²ã¸è¿½åŠ ")
-    && implementationStatus.includes("No.070ã€Œè–æ¯ãƒžãƒªã‚¢ã€")
-    && implementationStatus.includes("54ãƒ•ã‚¡ã‚¤ãƒ«ãƒ»551ãƒ†ã‚¹ãƒˆ")
-    && implementationStatus.includes("HPãƒ•ã‚©ã‚¦ãƒ»ATKãƒ•ã‚©ã‚¦")
-    && implementationStatus.includes("å³ä¸Šã‚¹ã‚­ãƒƒãƒ—")
-    && implementationStatus.includes("`å¤©ã®åŠ›`ç‰¹æ€§")
-    && implementationStatus.includes("`Tauntup`")
-    && implementationStatus.includes("2026-08-21ã«ãƒ¦ãƒ¼ã‚¶ãƒ¼å®Ÿç”»é¢å—å…¥ã‚’å®Œäº†")
-    && implementationStatus.includes("æœ‰é™ã‚¿ãƒ¼ãƒ³çŠ¶æ…‹ã®æ˜Žç¤ºçš„ãªæœŸé™å¢ƒç•Œ")
-    && implementationStatus.includes("54ãƒ•ã‚¡ã‚¤ãƒ«ãƒ»553ãƒ†ã‚¹ãƒˆ")
-    && implementationStatus.includes("No.007ã€Œæœ¬å¤šå¿ å‹ã€")
-    && implementationStatus.includes("å®£è¨€çš„`reduce_hp`")
-    && implementationStatus.includes("åŒã˜å‘³æ–¹æˆ¦é—˜å€‹ä½“ã®å˜ä½“é€šå¸¸ã‚«ãƒ¼ãƒ‰")
-    && implementationStatus.includes("ã‚¨ãƒ³ã‚¸ãƒ³ç¢ºå®šã®æˆ¦é—˜ä¸èƒ½å¯¾è±¡é€£ç¶šãƒ•ãƒ©ã‚°")
-    && implementationStatus.includes("ç¢ºå®šçµæžœã‚¦ã‚£ãƒ³ãƒ‰ã‚¦å†…ã¸æ’ƒç ´å¯¾è±¡ã®æ•µHPæ¬„")
-    && implementationStatus.includes("é€£ç¶šãƒ•ãƒ¬ãƒ¼ãƒ ã¨æ•µHPæ¬„ã‚’çœç•¥ã—ãªã„")
-    && implementationStatus.includes("55ãƒ•ã‚¡ã‚¤ãƒ«ãƒ»566ãƒ†ã‚¹ãƒˆ")
-    && implementationStatus.includes("No.057ã€Œé˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã€")
-    && implementationStatus.includes("ã€Œç¥žåº¦å‰£ã€ã¯æ”»æ’ƒå‰ã«æ•µå…¨ä½“ã¸")
-    && implementationStatus.includes("é˜²å¾¡æ™‚ã‚¯ãƒ©ã‚¹ç›¸æ€§ä¸åˆ©ã¯å—ã‘ã‚‹æ”»æ’ƒã®ã‚¯ãƒ©ã‚¹ç›¸æ€§ã‚’å›ºå®š150%ã¸ä¸Šæ›¸ã")
-    && implementationStatus.includes("No.058ã€Œãƒ•ã‚§ãƒ³ãƒªãƒ«ã€")
-    && implementationStatus.includes("ã€”å¤©ã®åŠ›ã€•å›ºå®š150%ç‰¹æ”»")
-    && implementationStatus.includes("`canDefeat: true`")
-    && implementationStatus.includes("No.094ã€ŒçœŸç”°ä¿¡ç¹ã€")
-    && implementationStatus.includes("é˜²å¾¡ç„¡è¦–ã¯æ”»æ’ƒå‰ã«ç™»éŒ²ã—åŒä¸€å®å…·æ”»æ’ƒã§æ¶ˆè²»ã™ã‚‹")
-    && implementationStatus.includes("`skill-guts`")
-    && implementationStatus.includes("No.059ã€Œé‚£é ˆä¸Žä¸€ã€")
-    && implementationStatus.includes("å†è‡¨æ®µéšŽã§å¤‰ã‚ã‚‹ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã®å…±é€šæ®µéšŽé¸æŠžã¯æœªå®Ÿè£…"),
-  "å®Ÿè£…çŠ¶æ³ã«ãƒ•ã‚§ãƒ³ãƒªãƒ«ã€æ—¢å­˜å—å…¥è¨˜éŒ²ã€æ¬¡ä½œæ¥­ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-const dominationForeignerAcceptance = await readText(
-  "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md"
-);
-assert(
-  dominationForeignerAcceptance.includes("åˆ¤å®š: æœ€çµ‚åˆæ ¼")
-    && dominationForeignerAcceptance.includes("ãƒ¦ãƒ¼ã‚¶ãƒ¼å®Ÿç”»é¢å—å…¥å®Œäº†")
-    && dominationForeignerAcceptance.includes("ä¿æœ‰ã‚¹ã‚­ãƒ«èª¬æ˜Žã¯Lv10å€çŽ‡ã ã‘")
-    && dominationForeignerAcceptance.includes("å®å…·Lvåˆ¥ãƒ»OCåˆ¥å€çŽ‡ã‚’ç¶­æŒ"),
-  "æ”¯é…ã®ãƒ•ã‚©ãƒ¼ãƒªãƒŠãƒ¼ã®æœ€çµ‚å®Ÿç”»é¢å—å…¥çµæžœãŒæ­£æœ¬ã¨ä¸€è‡´ã—ã¾ã›ã‚“"
-);
-
-const decisionLog = await readText("docs/DECISION_LOG.md");
-assert(
-  decisionLog.includes("## D-069 æ•µå®å…·ã®æ®µéšŽæ–‡è„ˆã‚’æˆ¦é—˜å€‹ä½“ãƒ»è¡Œå‹•ã”ã¨ã«æ˜Žç¤ºã™ã‚‹")
-    && decisionLog.includes("## D-070 æ¬¡ã®å®Ÿè£…å¯¾è±¡ã‚’æ•µå®å…·æ®µéšŽæ–‡è„ˆã®å…±é€šå‡¦ç†ã¨ã™ã‚‹")
-    && decisionLog.includes("## D-071 æ¬¡ã®ä½œæ¥­ã‚’æ•µå®å…·æ®µéšŽæ–‡è„ˆã®çµ±åˆå—å…¥æ¤œæŸ»ã¨ã™ã‚‹")
-    && decisionLog.includes("## D-072 æ¬¡ã®ä»•æ§˜åŒ–å¯¾è±¡ã‚’ã‚¿ãƒ¼ãƒ³çµ‚äº†ãƒˆãƒªã‚¬ãƒ¼ã«ã‚ˆã‚‹ã‚¹ã‚¿ãƒ¼ç²å¾—ã¨ã™ã‚‹")
-    && decisionLog.includes("## D-073 ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚¹ã‚¿ãƒ¼ç²å¾—ã‚’æ¬¡å›žå‘³æ–¹ã‚³ãƒžãƒ³ãƒ‰ç”¨ã¸é †æ¬¡åŠ ç®—ã™ã‚‹")
-    && decisionLog.includes("## D-074 æ¬¡ã®å®Ÿè£…å¯¾è±¡ã‚’ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚¹ã‚¿ãƒ¼ç²å¾—ã®å…±é€šå‡¦ç†ã¨ã™ã‚‹")
-    && decisionLog.includes("## D-075 ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚¹ã‚¿ãƒ¼ç²å¾—ã‚’v1.0åˆæœŸå®Œæˆç¯„å›²ã¸å«ã‚ã‚‹")
-    && decisionLog.includes("## D-076 æ¬¡ã®ä½œæ¥­ã‚’åˆæœŸç¯„å›²å¤–ã®å…·ä½“ã‚³ãƒ³ãƒ†ãƒ³ãƒ„è¿½åŠ å¯¾è±¡ã®é¸å®šã¨ã™ã‚‹"),
-  "æ±ºå®šè¨˜éŒ²ã«ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚¹ã‚¿ãƒ¼ã®å®Ÿè£…ãƒ»åˆæœŸç¯„å›²ãƒ»æ¬¡ä½œæ¥­ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-077 åˆæœŸè¨­å®šã¨ç¢ºå®šã‚·ãƒ¼ãƒ‰ã‚’4ã‚¿ãƒ–ã¸å›ºå®šã™ã‚‹")
-    && decisionLog.includes("## D-078 æˆ¦é—˜ç”»é¢ã®é ˜åŸŸé †ã¨æ“ä½œå¯èƒ½å¯¸æ³•ã‚’å›ºå®šã™ã‚‹")
-    && decisionLog.includes("## D-079 åŠ¹æžœè¡¨ç¤ºã‚’ç™ºç”Ÿå…ƒåˆ¥ã«ã—ã€ç™»éŒ²ãƒ»é©ç”¨æ¸ˆã¿å€¤ã ã‘ã‚’ä½¿ã†")
-    && decisionLog.includes("## D-080 ã‚¢ã‚¤ã‚³ãƒ³ã‚’ã‚¢ãƒƒãƒ—ãƒ­ãƒ¼ãƒ‰æ¸ˆã¿æ˜Žç¤ºå¯¾å¿œã ã‘ã¸é™å®šã™ã‚‹")
-    && decisionLog.includes("## D-081 ã‚¹ã‚­ãƒ«çŸ­æŠ¼ã—ãƒ»è©³ç´°ãƒ»å¯¾è±¡ç¢ºå®šã‚’åˆ†é›¢ã™ã‚‹")
-    && decisionLog.includes("## D-082 3æžšé¸æŠžæ™‚ã®å…¥åŠ›ãƒ­ãƒƒã‚¯ã¨ã‚«ãƒ¼ãƒ‰è­˜åˆ¥ã‚’å›ºå®šã™ã‚‹")
-    && decisionLog.includes("## D-083 ç¢ºå®šãƒ­ã‚°ã ã‘ã‚’å†ç”Ÿã—ã€å†ç”Ÿä¸­å…¥åŠ›ã‚’é®æ–­ã™ã‚‹")
-    && decisionLog.includes("## D-084 ãƒªã‚¶ãƒ«ãƒˆã‚’ç¢ºå®šæˆ¦é—˜ç”»é¢ã¸é‡ã­ã‚‹")
-    && decisionLog.includes("## D-085 ä¿å­˜ãƒ»å†é–‹ã‚’è¦ç´„ä»˜ããƒ»éžç ´å£Šã«ã™ã‚‹")
-    && decisionLog.includes("## D-086 UIå®Ÿç”»é¢å—å…¥ã®çŠ¶æ…‹è¡¨ç¤ºã¨ç¢ºå®šçµæžœæ¼”å‡ºã‚’è¿½è£œã™ã‚‹")
-    && decisionLog.includes("## D-087 UIå®Ÿç”»é¢å—å…¥ã®è³‡æºãƒ»çŠ¶æ…‹ãƒ»ã‚«ãƒ¼ãƒ‰è¡¨ç¤ºã‚’è¿½è£œã™ã‚‹")
-    && decisionLog.includes("## D-088 UIå®Ÿç”»é¢å—å…¥ã®é…å»¶çŠ¶æ…‹ãƒ»Wikiå°Žç·šãƒ»èª¬æ˜Žè¡¨è¨˜ã‚’è¿½è£œã™ã‚‹"),
-  "æ±ºå®šè¨˜éŒ²ã«UIå®Œæˆä»•æ§˜D-077ï½žD-085ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-089 No.024â€™ã€Œæ”¯é…ã®ãƒ•ã‚©ãƒ¼ãƒªãƒŠãƒ¼ã€ã‚’æœ€åˆã®åˆæœŸç¯„å›²å¤–ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã¨ã—ã¦ç™»éŒ²ã™ã‚‹"),
-  "æ±ºå®šè¨˜éŒ²ã«æ”¯é…ã®ãƒ•ã‚©ãƒ¼ãƒªãƒŠãƒ¼å®Ÿè£…æ–¹é‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-091 No.362ã€Œåƒåˆ©ä¼‘ã€ã¨ç·¨æˆåŒºåˆ†ã‚¿ãƒ–ã‚’è¿½åŠ ã™ã‚‹")
-    && decisionLog.includes("targetAttackEventTargets")
-    && decisionLog.includes("## D-093 No.362ã€Œåƒåˆ©ä¼‘ã€ã¨ç·¨æˆåŒºåˆ†ã‚¿ãƒ–ã‚’æœ€çµ‚å—å…¥ã¨ã™ã‚‹")
-    && decisionLog.includes("cf66a170d7af1e81f74efcf117b7ba47b6dc69b8"),
-  "æ±ºå®šè¨˜éŒ²ã«åƒåˆ©ä¼‘ã¨ç·¨æˆåŒºåˆ†ã‚¿ãƒ–ã®å®Ÿè£…æ–¹é‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-094 No.070ã€Œè–æ¯ãƒžãƒªã‚¢ã€ã®æœ€çµ‚å†è‡¨ç‰ˆã‚’ç™»éŒ²ã™ã‚‹")
-    && decisionLog.includes("`target_focus`")
-    && decisionLog.includes("å…±é€šã®å†è‡¨æ®µéšŽé¸æŠž")
-    && decisionLog.includes("å®Ÿç”»é¢å—å…¥å¾…ã¡"),
-  "æ±ºå®šè¨˜éŒ²ã«è–æ¯ãƒžãƒªã‚¢ã¨å†è‡¨æ®µéšŽã®å®Ÿè£…æ–¹é‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-095 ç·¨æˆãƒ•ã‚©ã‚¦å…¥åŠ›ã¨è–æ¯ãƒžãƒªã‚¢ã®æ­£å¼ã‚¢ã‚¤ã‚³ãƒ³ã‚’è¿½åŠ ãƒ»è¨‚æ­£ã™ã‚‹")
-    && decisionLog.includes("0ï½ž3000ã®æ•´æ•°")
-    && decisionLog.includes("`Tauntup`")
-    && decisionLog.includes("`skill-hp-heal-per-turn`"),
-  "æ±ºå®šè¨˜éŒ²ã«ç·¨æˆãƒ•ã‚©ã‚¦å…¥åŠ›ã¨è–æ¯ãƒžãƒªã‚¢ã®ã‚¢ã‚¤ã‚³ãƒ³è¨‚æ­£ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-096 ç¢ºå®šçµæžœæ¼”å‡ºã®ã‚¹ã‚­ãƒƒãƒ—ã¨åˆæœŸæˆ¦é—˜ã®å¤©åœ°äººãƒ»å¤©ç‰¹æ€§ã‚’æŽ¥ç¶šã™ã‚‹")
-    && decisionLog.includes("`powerFactorPermille: 1300`")
-    && decisionLog.includes("22401ï¼24871ï¼27316"),
-  "æ±ºå®šè¨˜éŒ²ã«æ¼”å‡ºã‚¹ã‚­ãƒƒãƒ—ã¨è–æ¯ãƒžãƒªã‚¢å®å…·ãƒ€ãƒ¡ãƒ¼ã‚¸è¨‚æ­£ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-097 No.070ã€Œè–æ¯ãƒžãƒªã‚¢ã€ã‚’æœ€çµ‚å—å…¥ã¨ã™ã‚‹")
-    && decisionLog.includes("PR #69")
-    && decisionLog.includes("v1.0åˆæœŸå®Œæˆç¯„å›²å¤–ã®å…·ä½“ã‚³ãƒ³ãƒ†ãƒ³ãƒ„è¿½åŠ å¯¾è±¡ã‚’1ä»¶ã ã‘é¸å®šã™ã‚‹"),
-  "æ±ºå®šè¨˜éŒ²ã«è–æ¯ãƒžãƒªã‚¢ã®æœ€çµ‚å—å…¥ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-098 æœ‰é™ã‚¿ãƒ¼ãƒ³çŠ¶æ…‹ã®æœŸé™ã‚’æ‰€æŒè€…å´ãƒ»ç›¸æ‰‹å´çµ‚äº†ã¸åˆ†é›¢ã™ã‚‹")
-    && decisionLog.includes("`opponent_turn_end`")
-    && decisionLog.includes("èº«ç± ã‚‹è–å‡¦å¥³")
-    && decisionLog.includes("No.007ã€Œæœ¬å¤šå¿ å‹ã€"),
-  "æ±ºå®šè¨˜éŒ²ã«çŠ¶æ…‹æœŸé™å¢ƒç•Œã®ä¿®æ­£æ–¹é‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-099 OCåˆ¥HPæ¸›å°‘ã‚’å…±é€šåŒ–ã—ã¦No.007ã€Œæœ¬å¤šå¿ å‹ã€ã‚’ç™»éŒ²ã™ã‚‹")
-    && decisionLog.includes("DeclaredActionInteger")
-    && decisionLog.includes("`canDefeat: true`")
-    && decisionLog.includes("`Npchargeup`")
-    && decisionLog.includes("No.010ã€Œã‚·ã‚°ãƒ ãƒ³ãƒ‰ã€"),
-  "æ±ºå®šè¨˜éŒ²ã«æœ¬å¤šå¿ å‹ã¨OCåˆ¥HPæ¸›å°‘ã®å®Ÿè£…æ–¹é‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-100 åŒä¸€æˆ¦é—˜å€‹ä½“ã®å˜ä½“é€šå¸¸ã‚«ãƒ¼ãƒ‰åˆ—ã¯æˆ¦é—˜ä¸èƒ½å¯¾è±¡ã¸é€£ç¶šã™ã‚‹")
-    && decisionLog.includes("æœ¬å¤šå¿ å‹Quickâ†’åŒArtsâ†’æ”¯é…ã®ãƒ•ã‚©ãƒ¼ãƒªãƒŠãƒ¼Buster")
-    && decisionLog.includes("ã™ã¹ã¦ã‚ªãƒ¼ãƒãƒ¼ã‚­ãƒ«")
-    && decisionLog.includes("çŠ¶æ…‹: æŽ¡ç”¨ï¼ˆãƒ¦ãƒ¼ã‚¶ãƒ¼å®Ÿç”»é¢åˆæ ¼ï¼‰")
-    && decisionLog.includes("## D-101 é€£ç¶šé€šå¸¸æ”»æ’ƒä¸­ã¯æ’ƒç ´å¯¾è±¡ã®HP0è¡¨ç¤ºã‚’ç¶­æŒã™ã‚‹")
-    && decisionLog.includes("ç©ºã®HPãƒãƒ¼ã€`0 â†’ 0 / æœ€å¤§HP`")
-    && decisionLog.includes("ç¢ºå®šçµæžœãƒ•ãƒ¬ãƒ¼ãƒ ã¨æ•µHPæ¬„ã‚’çœç•¥ã—ãªã„")
-    && decisionLog.includes("æ”»æ’ƒå®Œäº†ç›´å‰ã®ç¢ºå®š`BattleState`")
-    && decisionLog.includes("çŠ¶æ…‹: æŽ¡ç”¨ï¼ˆãƒ¦ãƒ¼ã‚¶ãƒ¼å®Ÿç”»é¢åˆæ ¼ï¼‰")
-    && decisionLog.includes("## D-102 No.007ã€Œæœ¬å¤šå¿ å‹ã€ã‚’æœ€çµ‚å—å…¥ã¨ã™ã‚‹")
-    && decisionLog.includes("PR #72"),
-  "æ±ºå®šè¨˜éŒ²ã«åŒä¸€æˆ¦é—˜å€‹ä½“ã®å˜ä½“é€šå¸¸ã‚«ãƒ¼ãƒ‰é€£ç¶šè¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-103 No.057ã€Œé˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã€ã¨å®å…·è¿½åŠ æ”»æ’ƒã‚’å®Ÿè£…ã™ã‚‹")
-    && decisionLog.includes("OCåˆ¥0ï¼200ï¼300ï¼400ï¼500%ã®åˆ¥9Hitæ”»æ’ƒ")
-    && decisionLog.includes("OC1ã®è¿½åŠ å€çŽ‡ãŒ0ã§ã‚‚è¿½åŠ 9Hitã‚’çœç•¥ã—ãªã„")
-    && decisionLog.includes("é˜²å¾¡æ™‚ã‚¯ãƒ©ã‚¹ç›¸æ€§ä¸åˆ©")
-    && decisionLog.includes("`Changeclass`")
-    && decisionLog.includes("ä¸­æ–­ä¿å­˜å½¢å¼4ã€ãƒ‡ãƒ¼ã‚¿1.38.0"),
-  "æ±ºå®šè¨˜éŒ²ã«é˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã¨å®å…·è¿½åŠ æ”»æ’ƒã®å®Ÿè£…æ–¹é‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-104 No.057ã€Œé˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã€ã‚’æœ€çµ‚å—å…¥ã¨ã™ã‚‹")
-    && decisionLog.includes("PR #73")
-    && decisionLog.includes("çŠ¶æ…‹: æŽ¡ç”¨ï¼ˆãƒ¦ãƒ¼ã‚¶ãƒ¼å®Ÿç”»é¢å—å…¥å®Œäº†ï¼‰")
-    && decisionLog.includes("No.010ã€Œã‚·ã‚°ãƒ ãƒ³ãƒ‰ã€ã®å…·ä½“ãƒ‡ãƒ¼ã‚¿ç¢ºèªãƒ»å®Ÿè£…å¯èƒ½æ€§ç¢ºèª"),
-  "æ±ºå®šè¨˜éŒ²ã«é˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã®æœ€çµ‚å—å…¥ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-105 No.058ã€Œãƒ•ã‚§ãƒ³ãƒªãƒ«ã€ã‚’ã‚«ãƒ†ã‚´ãƒª1ã®æ˜Žç¤ºæŒ‡å®šå¯¾è±¡ã¨ã—ã¦ç™»éŒ²ã™ã‚‹")
-    && decisionLog.includes("`fenrir`")
-    && decisionLog.includes("ã€”å¤©ã®åŠ›ã€•å›ºå®šç‰¹æ”»")
-    && decisionLog.includes("`canDefeat: true`")
-    && decisionLog.includes("`Busterabsorpt`")
-    && decisionLog.includes("No.059ã€Œé‚£é ˆä¸Žä¸€"),
-  "æ±ºå®šè¨˜éŒ²ã«ãƒ•ã‚§ãƒ³ãƒªãƒ«ã®å®Ÿè£…æ–¹é‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  decisionLog.includes("## D-109 No.094ã€ŒçœŸç”°ä¿¡ç¹ã€ã‚’ã‚«ãƒ†ã‚´ãƒª1ã®æ˜Žç¤ºæŒ‡å®šå¯¾è±¡ã¨ã—ã¦ç™»éŒ²ã™ã‚‹")
-    && decisionLog.includes("`sanada-yukimura`")
-    && decisionLog.includes("æ”»æ’ƒå‰ã«`ignore_defense`çŠ¶æ…‹ã‚’1å›žã ã‘ç™»éŒ²")
-    && decisionLog.includes("`Gutsstatus`")
-    && decisionLog.includes("çµ†ç¤¼è£…: ã€Œå…­æ–‡ã®æ¸¡ã—è³ƒã€")
-    && decisionLog.includes("No.059ã€Œé‚£é ˆä¸Žä¸€ã€"),
-  "æ±ºå®šè¨˜éŒ²ã«çœŸç”°ä¿¡ç¹ã®å®Ÿè£…æ–¹é‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-
-const enemyNpAcceptance = await readText(
-  "docs/qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md"
-);
-assert(
-  enemyNpAcceptance.includes("åˆ¤å®š: åˆæ ¼")
-    && enemyNpAcceptance.includes("åŸºæº–ã‚³ãƒŸãƒƒãƒˆ: `cc8334bcae60c3e652217d50bed7575dda9c1892`")
-    && enemyNpAcceptance.includes("ä¿å­˜å½¢å¼4ãƒ»ãƒ‡ãƒ¼ã‚¿1.38.0"),
-  "æ•µå®å…·æ®µéšŽæ–‡è„ˆã®çµ±åˆå—å…¥å ±å‘ŠãŒæ­£æœ¬ã¨ä¸€è‡´ã—ã¾ã›ã‚“"
-);
-const docsIndex = await readText("docs/INDEX.md");
-assert(
-  docsIndex.includes("qa/ENEMY_NP_CONTEXT_ACCEPTANCE_2026-08-11.md")
-    && docsIndex.includes("qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md")
-    && docsIndex.includes("qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md")
-    && docsIndex.includes("qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md")
-    && docsIndex.includes("qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md")
-    && docsIndex.includes("qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md")
-    && docsIndex.includes("qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md")
-    && docsIndex.includes("qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md")
-    && docsIndex.includes("SERVANT_CLASSIFICATION.md"),
-  "æ–‡æ›¸ç´¢å¼•ã«æœ€æ–°ã®çµ±åˆå—å…¥å ±å‘ŠãŒã‚ã‚Šã¾ã›ã‚“"
-);
-const effectDurationAcceptance = await readText(
-  "docs/qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md"
-);
-assert(
-  effectDurationAcceptance.includes("åˆ¤å®š: è‡ªå‹•æ¤œæŸ»åˆæ ¼")
-    && effectDurationAcceptance.includes("æ‰€æŒè€…å´ã‚¿ãƒ¼ãƒ³çµ‚äº†ã€ç›¸æ‰‹å´ã‚¿ãƒ¼ãƒ³çµ‚äº†ã€æ‰‹å‹•ã®3ç¨®")
-    && effectDurationAcceptance.includes("èº«ç± ã‚‹è–å‡¦å¥³")
-    && effectDurationAcceptance.includes("æ•µã‚¿ãƒ¼ãƒ³çµ‚äº†ã§2çŠ¶æ…‹ã¨ã‚‚å¤±åŠ¹")
-    && effectDurationAcceptance.includes("ä¸­æ–­ä¿å­˜å½¢å¼: 4ã®ã¾ã¾")
-    && effectDurationAcceptance.includes("ãƒ‡ãƒ¼ã‚¿ç‰ˆ: 1.38.0ã®ã¾ã¾")
-    && effectDurationAcceptance.includes("54ãƒ•ã‚¡ã‚¤ãƒ«ãƒ»553ãƒ†ã‚¹ãƒˆæˆåŠŸ")
-    && effectDurationAcceptance.includes("No.007ã€Œæœ¬å¤šå¿ å‹ã€ã®å…·ä½“ãƒ‡ãƒ¼ã‚¿ã€ä»–ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã€æ•µã€æ¦‚å¿µç¤¼è£…ã€é­”è¡“ç¤¼è£…ã®è¿½åŠ ã¯è¡Œã£ã¦ã„ã¾ã›ã‚“"),
-  "çŠ¶æ…‹æœŸé™å¢ƒç•Œã®å—å…¥è¨˜éŒ²ãŒæ­£æœ¬ã¨ä¸€è‡´ã—ã¾ã›ã‚“"
-);
-const servantClassification = await readText("docs/SERVANT_CLASSIFICATION.md");
-assert(
-  servantClassification.includes("ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆå®Ÿè£…ã‚«ãƒ†ã‚´ãƒªä¸€è¦§")
-    && servantClassification.includes("æœªè¨˜éŒ²ã®å€™è£œã‚’éŽåŽ»ãƒãƒ£ãƒƒãƒˆã‚„åç§°ã‹ã‚‰æŽ¨æ¸¬ã—ã¦ã‚«ãƒ†ã‚´ãƒª1ã¸å…¥ã‚Œãªã„")
-    && servantClassification.includes("| 001 | å…«ç™¾å±‹ãŠä¸ƒ | é€šå¸¸ | 2 |")
-    && servantClassification.includes("| 005 | é»„å¸ | é€šå¸¸ | 4 |")
-    && servantClassification.includes("| 007 | æœ¬å¤šå¿ å‹ | é€šå¸¸ | 1 |")
-    && servantClassification.includes("https://w.atwiki.jp/siroi_human/pages/274.html")
-    && servantClassification.includes("| 024â€™ | æ”¯é…ã®ãƒ•ã‚©ãƒ¼ãƒªãƒŠãƒ¼ | æ´¾ç”Ÿ | 1 |")
-    && servantClassification.includes("https://w.atwiki.jp/siroi_human/pages/766.html")
-    && servantClassification.includes("| 057 | é˜¿é…é‰é«˜æ—¥å­æ ¹ç¥ž | é€šå¸¸ | 1 |")
-    && servantClassification.includes("https://w.atwiki.jp/siroi_human/pages/50.html")
-    && servantClassification.includes("| 070 | è–æ¯ãƒžãƒªã‚¢ | é€šå¸¸ | 1 |")
-    && servantClassification.includes("https://w.atwiki.jp/siroi_human/pages/781.html")
-    && servantClassification.includes("| 027â€™ | 949ç•ªãƒšãƒ¼ã‚¸ | æ´¾ç”Ÿ | ä¿ç•™ |")
-    && servantClassification.includes("| 110 | ãƒ¢ãƒªã‚¬ãƒ³ãƒ»ãƒˆãƒ©ã‚¤ãƒ¦ãƒ¼ãƒ³ | é€šå¸¸ | 4 |")
-    && servantClassification.includes("| 475 | ç´…é–»é­”ï¼ãƒãƒ¼ã‚µãƒ¼ã‚«ãƒ¼ | å…¬å¼ | 4 |"),
-  "ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆå®Ÿè£…ã‚«ãƒ†ã‚´ãƒªä¸€è¦§ã®ç¢ºå®šè¨˜éŒ²ãŒä¸€è‡´ã—ã¾ã›ã‚“"
-);
-const motherMaryAcceptance = await readText(
-  "docs/qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md"
-);
-assert(
-  motherMaryAcceptance.includes("åˆ¤å®š: æœ€çµ‚åˆæ ¼")
-    && motherMaryAcceptance.includes("æœ€çµ‚å®Ÿç”»é¢å—å…¥æ—¥: 2026-08-21")
-    && motherMaryAcceptance.includes("æœ€çµ‚å†è‡¨")
-    && motherMaryAcceptance.includes("54ãƒ•ã‚¡ã‚¤ãƒ«ãƒ»551ãƒ†ã‚¹ãƒˆ")
-    && motherMaryAcceptance.includes("HPãƒ•ã‚©ã‚¦ãƒ»ATKãƒ•ã‚©ã‚¦")
-    && motherMaryAcceptance.includes("å³ä¸Šã‚¹ã‚­ãƒƒãƒ—")
-    && motherMaryAcceptance.includes("22401ï¼24871ï¼27316")
-    && motherMaryAcceptance.includes("`Tauntup`")
-    && motherMaryAcceptance.includes("`skill-hp-heal-per-turn`")
-    && motherMaryAcceptance.includes("`Specialinvincible`")
-    && motherMaryAcceptance.includes("æœªç¢ºèªã®å—å…¥é …ç›®ã¯ãªã„")
-    && motherMaryAcceptance.includes("PR #69")
-    && motherMaryAcceptance.includes("v1.0åˆæœŸå®Œæˆç¯„å›²å¤–ã®å…·ä½“ã‚³ãƒ³ãƒ†ãƒ³ãƒ„è¿½åŠ å¯¾è±¡ã‚’1ä»¶ã ã‘é¸å®šã™ã‚‹"),
-  "è–æ¯ãƒžãƒªã‚¢ã®å—å…¥å ±å‘ŠãŒæ­£æœ¬ã¨ä¸€è‡´ã—ã¾ã›ã‚“"
-);
-const hondaTadakatsuAcceptance = await readText(
-  "docs/qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md"
-);
-assert(
-  hondaTadakatsuAcceptance.includes("åˆ¤å®š: æœ€çµ‚åˆæ ¼ï¼ˆãƒ¦ãƒ¼ã‚¶ãƒ¼å®Ÿç”»é¢å—å…¥å®Œäº†ï¼‰")
-    && hondaTadakatsuAcceptance.includes("çµ±åˆPR: #72")
-    && hondaTadakatsuAcceptance.includes("https://w.atwiki.jp/siroi_human/pages/274.html")
-    && hondaTadakatsuAcceptance.includes("Lv80ãƒ»90ã¯å‚ç…§è¨˜éŒ²ã ã‘")
-    && hondaTadakatsuAcceptance.includes("æ”»æ’ƒå¾ŒHPæ¸›å°‘1000ï¼1500ï¼2000ï¼2500ï¼3000")
-    && hondaTadakatsuAcceptance.includes("`canDefeat: true`")
-    && hondaTadakatsuAcceptance.includes("`Invinciblepierce`")
-    && hondaTadakatsuAcceptance.includes("`Ignoredefense`")
-    && hondaTadakatsuAcceptance.includes("æœ¬å¤šå¿ å‹Quickâ†’åŒArtsâ†’æ”¯é…ã®ãƒ•ã‚©ãƒ¼ãƒªãƒŠãƒ¼Buster")
-    && hondaTadakatsuAcceptance.includes("è³‡æºå¢—æ¸›0ã§ã‚‚é€£ç¶šãƒ•ãƒ¬ãƒ¼ãƒ ã¨æ•µHPæ¬„ã‚’çœç•¥ã—ãªã„")
-    && hondaTadakatsuAcceptance.includes("55ãƒ•ã‚¡ã‚¤ãƒ«ãƒ»566ãƒ†ã‚¹ãƒˆæˆåŠŸ")
-    && hondaTadakatsuAcceptance.includes("No.010ã€Œã‚·ã‚°ãƒ ãƒ³ãƒ‰ã€"),
-  "æœ¬å¤šå¿ å‹ã¨OCåˆ¥HPæ¸›å°‘ã®å—å…¥å ±å‘ŠãŒæ­£æœ¬ã¨ä¸€è‡´ã—ã¾ã›ã‚“"
-);
-const ajisukitakahikoneAcceptance = await readText(
-  "docs/qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md"
-);
-assert(
-  ajisukitakahikoneAcceptance.includes("åˆ¤å®š: æœ€çµ‚åˆæ ¼ï¼ˆãƒ¦ãƒ¼ã‚¶ãƒ¼å®Ÿç”»é¢å—å…¥å®Œäº†ï¼‰")
-    && ajisukitakahikoneAcceptance.includes("æœ€çµ‚å®Ÿç”»é¢å—å…¥æ—¥: 2026-08-21")
-    && ajisukitakahikoneAcceptance.includes("çµ±åˆPR: #73")
-    && ajisukitakahikoneAcceptance.includes("https://w.atwiki.jp/siroi_human/pages/50.html")
-    && ajisukitakahikoneAcceptance.includes("OC1ã®å€çŽ‡0ã§ã‚‚å¿…ãš9Hit")
-    && ajisukitakahikoneAcceptance.includes("å›ºå®š150%ã¸ä¸Šæ›¸ã")
-    && ajisukitakahikoneAcceptance.includes("`Changeclass`")
-    && ajisukitakahikoneAcceptance.includes("ä¸­æ–­ä¿å­˜å½¢å¼4ã€ãƒ‡ãƒ¼ã‚¿1.38.0")
-    && ajisukitakahikoneAcceptance.includes("56ãƒ•ã‚¡ã‚¤ãƒ«ãƒ»571ãƒ†ã‚¹ãƒˆ")
-    && ajisukitakahikoneAcceptance.includes("æœªç¢ºèªã®å—å…¥é …ç›®ã¯ãªã„")
-    && ajisukitakahikoneAcceptance.includes("æœ€çµ‚åˆæ ¼ã¨ã™ã‚‹"),
-  "é˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã¨å®å…·è¿½åŠ æ”»æ’ƒã®å—å…¥å ±å‘ŠãŒæ­£æœ¬ã¨ä¸€è‡´ã—ã¾ã›ã‚“"
-);
-
-const senNoRikyuAcceptance = await readText(
-  "docs/qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md"
-);
-assert(
-  senNoRikyuAcceptance.includes("åˆ¤å®š: æœ€çµ‚åˆæ ¼")
-    && senNoRikyuAcceptance.includes("æœ€çµ‚å®Ÿç”»é¢å—å…¥æ—¥: 2026-08-15")
-    && senNoRikyuAcceptance.includes("æœªç¢ºèªã®å—å…¥é …ç›®ã¯ãªã„")
-    && senNoRikyuAcceptance.includes("53ãƒ•ã‚¡ã‚¤ãƒ«ã€538ãƒ†ã‚¹ãƒˆæˆåŠŸ")
-    && senNoRikyuAcceptance.includes("targetAttackEventTargets")
-    && senNoRikyuAcceptance.includes("ã€Œå…¬å¼ã€ã‚¿ãƒ–")
-    && senNoRikyuAcceptance.includes("ã€Œã‚ªãƒªã‚¸ãƒŠãƒ«ã€ã‚¿ãƒ–")
-    && senNoRikyuAcceptance.includes("Npchargeup")
-    && senNoRikyuAcceptance.includes("Critdmgup"),
-  "åƒåˆ©ä¼‘ãƒ»ç·¨æˆåŒºåˆ†ã‚¿ãƒ–ã®å—å…¥å ±å‘ŠãŒæ­£æœ¬ã¨ä¸€è‡´ã—ã¾ã›ã‚“"
-);
-
-const turnEndStarAcceptance = await readText(
-  "docs/qa/TURN_END_STAR_GAIN_ACCEPTANCE_2026-08-11.md"
-);
-assert(
-  turnEndStarAcceptance.includes("åˆ¤å®š: åˆæ ¼")
-    && turnEndStarAcceptance.includes("åŸºæº–mainã‚³ãƒŸãƒƒãƒˆ: `e5b13b7981aef49f9d300a967609fdcc4a5771f7`")
-    && turnEndStarAcceptance.includes("ä¸­æ–­ä¿å­˜å½¢å¼4ã€ãƒ‡ãƒ¼ã‚¿1.38.0ã€æ•µãƒ‡ãƒ¼ã‚¿å½¢å¼1ã€è¡Œå‹•ãƒ­ã‚°å½¢å¼5ã€ã‚¿ãƒ¼ãƒ³ãƒ­ã‚°å½¢å¼2")
-    && turnEndStarAcceptance.includes("v1.0åˆæœŸå®Œæˆç¯„å›²ã®æœªå®Ÿè£…ã¯0ä»¶"),
-  "ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚¹ã‚¿ãƒ¼ç²å¾—ã®çµ±åˆå—å…¥å ±å‘ŠãŒæ­£æœ¬ã¨ä¸€è‡´ã—ã¾ã›ã‚“"
-);
-
-const effectsAndTiming = await readText("docs/specs/EFFECTS_AND_TIMING.md");
-assert(
-  effectsAndTiming.includes("### æ•µå®å…·Lvãƒ»OCã¨æ®µéšŽåˆ¥å®£è¨€å€¤")
-    && effectsAndTiming.includes("values[noblePhantasmLevel - 1]")
-    && effectsAndTiming.includes("values[overchargeStage - 1]"),
-  "åŠ¹æžœä»•æ§˜ã«æ•µå®å…·æ®µéšŽæ–‡è„ˆã®å®£è¨€ãƒ»é¸æŠžè¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  effectsAndTiming.includes("### ã‚¿ãƒ¼ãƒ³çµ‚äº†ãƒˆãƒªã‚¬ãƒ¼ã®ã‚¹ã‚¿ãƒ¼ç²å¾—")
-    && effectsAndTiming.includes("`destination: next_command`ã ã‘ã‚’æœ‰åŠ¹ãªç™»éŒ²")
-    && effectsAndTiming.includes("å®ŸåŠ ç®—é‡0ã®æˆç«‹çµæžœ"),
-  "åŠ¹æžœä»•æ§˜ã«ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚¹ã‚¿ãƒ¼ã®ç™»éŒ²ãƒ»ä¸Šé™ãƒ»ãƒ­ã‚°è¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  effectsAndTiming.includes("`targetAttackEventTargets: true`")
-    && effectsAndTiming.includes("åŒã˜æ”»æ’ƒã‚¤ãƒ™ãƒ³ãƒˆã®å®Ÿå¯¾è±¡IDã ã‘")
-    && effectsAndTiming.includes("åƒåˆ©ä¼‘ã€Œå¹½çŽ„ãŸã‚‹é»’ã€"),
-  "åŠ¹æžœä»•æ§˜ã«æ”»æ’ƒã‚¤ãƒ™ãƒ³ãƒˆå®Ÿå¯¾è±¡ã¸é™å®šã™ã‚‹å…±é€šãƒˆãƒªã‚¬ãƒ¼è¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  effectsAndTiming.includes("åŒã˜æˆ¦é—˜å€‹ä½“ã®å˜ä½“é€šå¸¸ã‚«ãƒ¼ãƒ‰é€£ç¶šä¸­")
-    && effectsAndTiming.includes("å…¨Hitã‚’ã‚ªãƒ¼ãƒãƒ¼ã‚­ãƒ«")
-    && effectsAndTiming.includes("æ—¢å­˜ãƒ€ãƒ¡ãƒ¼ã‚¸ãƒ»NPãƒ»ã‚¹ã‚¿ãƒ¼ä¹±æ•°åˆ—ã‚’é€šå¸¸ã©ãŠã‚Šä½¿ç”¨"),
-  "åŠ¹æžœä»•æ§˜ã«æˆ¦é—˜ä¸èƒ½å¯¾è±¡ã¸ç¶šãå˜ä½“é€šå¸¸ã‚«ãƒ¼ãƒ‰åˆ—ã®è¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-
-const battleSystem = await readText("docs/specs/BATTLE_SYSTEM.md");
-assert(
-  battleSystem.includes("### ã‚¿ãƒ¼ãƒ³çµ‚äº†ãƒˆãƒªã‚¬ãƒ¼ã«ã‚ˆã‚‹ã‚¹ã‚¿ãƒ¼ç²å¾—")
-    && battleSystem.includes("æˆ¦é—˜çµ‚äº†æ™‚ã¯ç¹°ã‚Šä¸Šã’ãš"),
-  "æˆ¦é—˜ä»•æ§˜ã«ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚¹ã‚¿ãƒ¼ã®é †åºã¨ç¹°ä¸Šã’å¢ƒç•ŒãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  battleSystem.includes("åŒã˜æˆ¦é—˜å€‹ä½“ã®å˜ä½“é€šå¸¸ã‚«ãƒ¼ãƒ‰ãŒé€£ç¶šã™ã‚‹åŒºé–“")
-    && battleSystem.includes("æˆç«‹æ¸ˆã¿Extra Attack")
-    && battleSystem.includes("å®ŸHPæ¸›å°‘ã¯0")
-    && battleSystem.includes("æ¬¡è¡Œå‹•è€…ã®å®Ÿè¡Œä¸èƒ½"),
-  "æˆ¦é—˜ä»•æ§˜ã«å˜ä½“é€šå¸¸ã‚«ãƒ¼ãƒ‰é€£ç¶šã®å¯¾è±¡ä¿æŒå¢ƒç•ŒãŒã‚ã‚Šã¾ã›ã‚“"
-);
-
-const calculationsAndRng = await readText(
-  "docs/specs/CALCULATIONS_AND_RNG.md"
-);
-assert(
-  calculationsAndRng.includes("ã‚¿ãƒ¼ãƒ³çµ‚äº†ãƒˆãƒªã‚¬ãƒ¼ã«ã‚ˆã‚‹ã‚¹ã‚¿ãƒ¼ç²å¾—ã‚‚")
-    && calculationsAndRng.includes("ä»–ã®5ä¹±æ•°åˆ—ã¯å¤‰æ›´ã—ãªã„"),
-  "è¨ˆç®—ãƒ»ä¹±æ•°ä»•æ§˜ã«ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚¹ã‚¿ãƒ¼ã®ä¸Šé™ã¨ä¹±æ•°å¢ƒç•ŒãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  calculationsAndRng.includes("å˜ä½“é€šå¸¸ã‚«ãƒ¼ãƒ‰é€£ç¶šã«ã‚ˆã‚Š")
-    && calculationsAndRng.includes("å…¨Hitã‚’ã‚ªãƒ¼ãƒãƒ¼ã‚­ãƒ«")
-    && calculationsAndRng.includes("åˆ¤æ–­è‡ªä½“ã¯ä¹±æ•°ã‚’æ¶ˆè²»ã—ãªã„"),
-  "è¨ˆç®—ãƒ»ä¹±æ•°ä»•æ§˜ã«å˜ä½“é€šå¸¸ã‚«ãƒ¼ãƒ‰é€£ç¶šã®ã‚ªãƒ¼ãƒãƒ¼ã‚­ãƒ«è¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-
-const uiAndStorage = await readText("docs/specs/UI_AND_STORAGE.md");
-const uiStyles = await readText("src/styles.css");
-const appSource = await readText("src/App.tsx");
-const effectPresentation = await readText("src/ui/effectPresentation.ts");
-const iconRegistry = await readText("src/ui/iconRegistry.ts");
-const initialBattleUi = await readText("src/ui/initialBattle.ts");
-const battleUi = await readText("src/ui/battleUi.ts");
-assert(
-  uiAndStorage.includes("æ•µå®å…·ã®ä»»æ„ã®å®å…·Lvãƒ»OCæ–‡è„ˆ")
-    && uiAndStorage.includes("UIã¯æ®µéšŽé¸æŠžã€é…åˆ—å‚ç…§ã€æ–‡è„ˆè£œå®Œ"),
-  "UIãƒ»ä¿å­˜ä»•æ§˜ã«æ•µå®å…·æ®µéšŽæ–‡è„ˆã®ä¿å­˜ã¨éžå†è¨ˆç®—è¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  uiAndStorage.includes("ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚¹ã‚¿ãƒ¼ç²å¾—ã¯ã€ã‚¿ãƒ¼ãƒ³ãƒ­ã‚°å½¢å¼2")
-    && uiAndStorage.includes("ä¸­æ–­ä¿å­˜å½¢å¼4ãƒ»ãƒ‡ãƒ¼ã‚¿1.38.0ãƒ»è¡Œå‹•ãƒ­ã‚°å½¢å¼5ãƒ»ã‚¿ãƒ¼ãƒ³ãƒ­ã‚°å½¢å¼2ã‚’ç¶­æŒ")
-    && uiAndStorage.includes("çµ‚äº†æ™‚åŠ¹æžœã€99å€‹ä¸Šé™ã€æ¬¡å›žç”¨ç¹°ä¸Šã’ã‚’å†å®Ÿè¡Œã—ãªã„"),
-  "UIãƒ»ä¿å­˜ä»•æ§˜ã«ã‚¿ãƒ¼ãƒ³çµ‚äº†ã‚¹ã‚¿ãƒ¼ã®ç¢ºå®šãƒ­ã‚°ã¨ç‰ˆç¶­æŒè¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  uiAndStorage.includes("å‘³æ–¹åŠ¹æžœã¯ã‚¯ãƒ©ã‚¹ã‚¹ã‚­ãƒ«ï¼æ¦‚å¿µç¤¼è£…ï¼ãã®ä»–ï¼åˆç®—")
-    && uiAndStorage.includes("æ•µåŠ¹æžœã¯é€šå¸¸ï¼ç‰¹æ®Šï¼åˆç®—")
-    && uiAndStorage.includes("å€çŽ‡ã¨ã—ã¦ç™»éŒ²ã•ã‚Œã‚‹permilleå€¤ã¯è¡¨ç¤ºæ™‚ã ã‘10ã§å‰²ã£ã¦ç™¾åˆ†çŽ‡")
-    && uiAndStorage.includes("æ™‚é–“ã«ã‚ˆã‚‹è‡ªå‹•é€ã‚Šã¯è¡Œã‚ãªã„")
-    && uiAndStorage.includes("æ•µãƒ»å‘³æ–¹ã®HPãƒãƒ¼"),
-  "UIãƒ»ä¿å­˜ä»•æ§˜ã«D-086ã®çŠ¶æ…‹è¡¨ç¤ºãƒ»åˆç®—ãƒ»æ‰‹å‹•HPæ¼”å‡ºãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  uiAndStorage.includes("ã€Œå…¬å¼ã€ã€Œã‚ªãƒªã‚¸ãƒŠãƒ«ã€ã®2ã‚¿ãƒ–")
-    && uiAndStorage.includes("å…‰ã®ã‚³ãƒ¤ãƒ³ã‚¹ã‚«ãƒ¤ï¼ˆNo.314ï¼‰ã€åƒåˆ©ä¼‘ï¼ˆNo.362ï¼‰")
-    && uiAndStorage.includes("åˆ¥åŒºåˆ†ã‚¿ãƒ–ã‚’é–²è¦§ã—ãŸã ã‘ã§ã¯ç¾åœ¨é¸æŠžã‚’è§£é™¤ã—ãªã„")
-    && uiAndStorage.includes("ã‚¿ãƒ–éƒ¨åˆ†ã®æ¨ªã‚¹ã‚¯ãƒ­ãƒ¼ãƒ«ã‚’ç™ºç”Ÿã•ã›ãªã„")
-    && appSource.includes("OFFICIAL_SERVANT_DEFINITIONS")
-    && appSource.includes("ORIGINAL_SERVANT_DEFINITIONS")
-    && appSource.includes("é¸æŠžä¸­ï¼š")
-    && !appSource.includes('"å…¬å¼ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆ"')
-    && !appSource.includes('"ã‚ªãƒªã‚¸ãƒŠãƒ«ã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆ"')
-    && /\.servant-origin-tabs\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)[\s\S]*?overflow-x:\s*hidden/.test(uiStyles),
-  "ç·¨æˆUIã«å…¬å¼ï¼ã‚ªãƒªã‚¸ãƒŠãƒ«åŒºåˆ†ã€No.é †ã€é¸æŠžç¶­æŒãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  uiAndStorage.includes("HPãƒ•ã‚©ã‚¦ã¨ATKãƒ•ã‚©ã‚¦")
-    && uiAndStorage.includes("ãã‚Œãžã‚Œ0ï½ž3000ã®æ•´æ•°ã€åˆæœŸå€¤0")
-    && uiAndStorage.includes("æ¬ è½ã—ãŸHPãƒ•ã‚©ã‚¦ãƒ»ATKãƒ•ã‚©ã‚¦ã‚’ãã‚Œãžã‚Œ0")
-    && calculationsAndRng.includes("é¸æŠžLvã®HPãƒ»ATKã¸ãã‚Œãžã‚ŒåŠ ç®—ã—ãŸå¾Œã€æ¦‚å¿µç¤¼è£…")
-    && initialBattleUi.includes("export const SERVANT_FOU_MIN = 0")
-    && initialBattleUi.includes("export const SERVANT_FOU_MAX = 3_000")
-    && initialBattleUi.includes("maxHpAdjustment: selection.hpFou")
-    && initialBattleUi.includes("attackAdjustment: selection.attackFou")
-    && appSource.includes("normalizeStoredSetup")
-    && appSource.includes("hpFou: slot.hpFou ?? SERVANT_FOU_MIN")
-    && appSource.includes("attackFou: slot.attackFou ?? SERVANT_FOU_MIN"),
-  "ç·¨æˆUIãƒ»è¨ˆç®—ä»•æ§˜ãƒ»å®Ÿè£…ã«HPï¼ATKãƒ•ã‚©ã‚¦å…¥åŠ›ã¨æ—§ä¿å­˜äº’æ›ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  iconRegistry.includes('"NPç²å¾—é‡ã‚¢ãƒƒãƒ—": "Npchargeup"')
-    && iconRegistry.includes('"Quickã‚«ãƒ¼ãƒ‰NPç²å¾—é‡ã‚¢ãƒƒãƒ—": "Npchargeup"')
-    && iconRegistry.includes('"Quickã‚«ãƒ¼ãƒ‰ã®NPç²å¾—é‡ã‚¢ãƒƒãƒ—": "Npchargeup"')
-    && iconRegistry.includes('"è¢«ãƒ€ãƒ¡ãƒ¼ã‚¸æ™‚NPç²å¾—é‡ã‚¢ãƒƒãƒ—": "NPGainUpDmg"')
-    && iconRegistry.includes('"Quickã‚«ãƒ¼ãƒ‰ã®å¨åŠ›ã‚¢ãƒƒãƒ—": "Quickdamageup"')
-    && !iconRegistry.includes('"Quickã‚¯ãƒªãƒ†ã‚£ã‚«ãƒ«å¨åŠ›ã‚¢ãƒƒãƒ—": "Quickdamageup"')
-    && iconRegistry.includes('effect.effectType === COMMON_EFFECT_TYPES.criticalDamage')
-    && iconRegistry.includes('effect.effectType === COMMON_EFFECT_TYPES.starFocus'),
-  "çŠ¶æ…‹ã‚¢ã‚¤ã‚³ãƒ³ã®NPç²å¾—é‡ãƒ»è‰²é™å®šã‚¯ãƒªãƒ†ã‚£ã‚«ãƒ«ãƒ»ã‚¹ã‚¿ãƒ¼é›†ä¸­å¯¾å¿œãŒä¸€è‡´ã—ã¾ã›ã‚“"
-);
-assert(
-  iconRegistry.includes('"å¾³å·å››å¤©çŽ‹": "skill-star-weight-up"')
-    && iconRegistry.includes('"å¯¾é­”åŠ›": "class-magic-resistance"')
-    && iconRegistry.includes('"ç„¡æ•µè²«é€š": "Invinciblepierce"')
-    && iconRegistry.includes('"é˜²å¾¡ç„¡è¦–": "Ignoredefense"'),
-  "æœ¬å¤šå¿ å‹ã®æ­£å¼ã‚¹ã‚­ãƒ«ãƒ»çŠ¶æ…‹ã‚¢ã‚¤ã‚³ãƒ³å¯¾å¿œãŒä¸€è‡´ã—ã¾ã›ã‚“"
-);
-assert(
-  iconRegistry.includes('"ä¸æƒœèº«å‘½": "skill-guts"')
-    && iconRegistry.includes('"ã‚¬ãƒƒãƒ„": "Gutsstatus"')
-    && iconRegistry.includes('"è¢«ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚«ãƒƒãƒˆ": "Defenseup"')
-    && iconRegistry.includes('"è¢«ãƒ€ãƒ¡ãƒ¼ã‚¸æ™‚ã®NPç²å¾—é‡ã‚¢ãƒƒãƒ—": "NPGainUpDmg"'),
-  "çœŸç”°ä¿¡ç¹ã®æ­£å¼ã‚¹ã‚­ãƒ«ãƒ»çŠ¶æ…‹ã‚¢ã‚¤ã‚³ãƒ³å¯¾å¿œãŒä¸€è‡´ã—ã¾ã›ã‚“"
-);
-assert(
-  iconRegistry.includes('"å¤–é“ã®çŸ¥è­˜ï¼ˆå§‰ãªã‚‹ã‚‚ã®ï¼‰": "skill-hp-heal-per-turn"')
-    && iconRegistry.includes('"ã‚¿ãƒ¼ã‚²ãƒƒãƒˆé›†ä¸­": "Tauntup"')
-    && !iconRegistry.includes('"ã‚¿ãƒ¼ã‚²ãƒƒãƒˆé›†ä¸­": "Enemyfocus"'),
-  "è–æ¯ãƒžãƒªã‚¢ã®ã‚¹ã‚­ãƒ«ãƒ»ã‚¿ãƒ¼ã‚²ãƒƒãƒˆé›†ä¸­ã‚¢ã‚¤ã‚³ãƒ³å¯¾å¿œãŒä¸€è‡´ã—ã¾ã›ã‚“"
-);
-assert(
-  uiAndStorage.includes("å®Ÿç”»é¢å—å…¥ã®è³‡æºãƒ»çŠ¶æ…‹ãƒ»ã‚«ãƒ¼ãƒ‰è¡¨ç¤ºè¿½è£œï¼ˆD-087ï¼‰")
-    && uiAndStorage.includes("å¯¾è±¡åˆ¥`totalDamage`")
-    && uiAndStorage.includes("å‘³æ–¹NPãƒãƒ¼")
-    && uiAndStorage.includes("å¾Œç¶šæœªé¸æŠžã‚«ãƒ¼ãƒ‰ã«ã‚‚ç›´ã¡ã«è¡¨ç¤º")
-    && uiAndStorage.includes("å®å…·ã‚«ãƒ¼ãƒ‰ã‚’ä¸Šæ®µã€é€šå¸¸ã‚«ãƒ¼ãƒ‰ã‚’ä¸‹æ®µ"),
-  "UIãƒ»ä¿å­˜ä»•æ§˜ã«D-087ã®ãƒ€ãƒ¡ãƒ¼ã‚¸ãƒ»NPãƒ»çŠ¶æ…‹æœŸé™ãƒ»ã‚«ãƒ¼ãƒ‰è¡¨ç¤ºãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  uiAndStorage.includes("å®Ÿç”»é¢å—å…¥ã®é…å»¶çŠ¶æ…‹ãƒ»Wikiå°Žç·šãƒ»èª¬æ˜Žè¡¨è¨˜è¿½è£œï¼ˆD-088ï¼‰")
-    && uiAndStorage.includes("æ¦‚å¿µç¤¼è£…æ¬„ã®ä¸‹ã¸ç™»éŒ²æ¸ˆã¿ä¸»å‚ç…§")
-    && uiAndStorage.includes("Wikiã®åŠ¹æžœé †")
-    && uiAndStorage.includes("DelayedDebuff"),
-  "UIãƒ»ä¿å­˜ä»•æ§˜ã«D-088ã®é…å»¶çŠ¶æ…‹ãƒ»Wikiå°Žç·šãƒ»èª¬æ˜Žè¡¨è¨˜ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  /button\s*\{[\s\S]*?min-height:\s*3\.5rem/.test(uiStyles)
-    && /@media \(max-width: 43\.99rem\)[\s\S]*?\.unit-grid,[\s\S]*?overflow-x:\s*auto/.test(uiStyles)
-    && /@media \(min-width: 44rem\)[\s\S]*?\.slot-grid,[\s\S]*?\.unit-grid\s*\{\s*grid-template-columns:\s*repeat\(3/.test(uiStyles)
-    && /@media \(min-width: 44rem\)[\s\S]*?\.normal-command-card-grid\s*\{\s*grid-template-columns:\s*repeat\(5/.test(uiStyles)
-    && /\.modal-backdrop,[\s\S]*?position:\s*fixed/.test(uiStyles)
-    && /\.playback-blocker\s*\{[\s\S]*?z-index:\s*120/.test(uiStyles)
-    && /\.playback-heading-row\s*\{[\s\S]*?grid-template-columns:\s*1fr auto/.test(uiStyles)
-    && uiStyles.includes(".playback-skip-button")
-    && /\.animated-hp-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles)
-    && /\.animated-np-track span\s*\{[\s\S]*?transition:\s*width/.test(uiStyles)
-    && uiStyles.includes(".effect-expiry-badge")
-    && uiStyles.includes(".noble-phantasm-card-grid"),
-  "UIã®PCãƒ»ã‚¹ãƒžãƒ¼ãƒˆãƒ•ã‚©ãƒ³ãƒ»56pxãƒ»ãƒ¢ãƒ¼ãƒ€ãƒ«ãƒ»å†ç”Ÿé®æ–­CSSãŒä¸€è‡´ã—ã¾ã›ã‚“"
-);
-assert(
-  appSource.includes("å‰ã¸")
-    && appSource.includes("æ¬¡ã¸ï¼ˆæ“ä½œã¸æˆ»ã‚‹ï¼‰")
-    && appSource.includes("ç¢ºå®šçµæžœæ¼”å‡ºã‚’ã‚¹ã‚­ãƒƒãƒ—")
-    && appSource.includes("onSkip={skipPlayback}")
-    && appSource.includes("finishPlayback(\"ç¢ºå®šçµæžœã®æ¼”å‡ºã‚’ã‚¹ã‚­ãƒƒãƒ—ã—ã¾ã—ãŸã€‚\")")
-    && appSource.includes("confirmedHpTransitions")
-    && appSource.includes("confirmedNpTransitions")
-    && appSource.includes("confirmedAttackDamageAmounts")
-    && appSource.includes("noble-phantasm-card-grid")
-    && appSource.includes("action-description-list")
-    && appSource.includes("é­”è¡“ç¤¼è£…ã‚¹ã‚­ãƒ«ã®æ“ä½œã¯ã€Œå‰è¡›ã€ã‚¿ãƒ–ã®æœ€ä¸‹éƒ¨")
-    && effectPresentation.includes("presentCombinedEffects")
-    && effectPresentation.includes("value / 10")
-    && iconRegistry.includes("import.meta.env.BASE_URL")
-    && battleUi.includes("confirmedHpTransitions")
-    && battleUi.includes("displayedCommandCardCriticalRatePermille")
-    && battleUi.includes("presentNoblePhantasmDetail")
-    && battleUi.includes("registeredServantWikiUrl")
-    && appSource.includes("servant-wiki-link")
-    && appSource.includes("wikiã‚’é–‹ã")
-    && effectPresentation.includes("effectExpiryLabel"),
-  "UIå®Ÿè£…ã«D-086ï½žD-088ã®ç”»åƒãƒ»çŠ¶æ…‹ãƒ»ã‚«ãƒ¼ãƒ‰ãƒ»Wikiãƒ»ç¢ºå®šè³‡æºæ¼”å‡ºãŒã‚ã‚Šã¾ã›ã‚“"
-);
-const battlePresentation = await readText("src/ui/battlePresentation.ts");
-assert(
-  !battlePresentation.includes("prepareEnemyNoblePhantasmContext")
-    && !battlePresentation.includes("resolveDeclaredActionInteger")
-    && !battlePresentation.includes("npDamageMultiplierPermilleByLevel"),
-  "UIã¯æ•µå®å…·ã®æ®µéšŽé¸æŠžã‚„å€çŽ‡è§£æ±ºã‚’å†å®Ÿè£…ã—ã¦ã¯ã„ã‘ã¾ã›ã‚“"
-);
-
-const initialContent = await readText("docs/specs/INITIAL_CONTENT.md");
-assert(initialContent.includes("ã‚«ãƒ¬ã‚¤ãƒ‰ã‚¹ã‚³ãƒ¼ãƒ—"), "åˆæœŸãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«ã‚«ãƒ¬ã‚¤ãƒ‰ã‚¹ã‚³ãƒ¼ãƒ—ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(initialContent.includes("é»’ã®è–æ¯"), "åˆæœŸãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«é»’ã®è–æ¯ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(initialContent.includes("åŒã˜æ¦‚å¿µç¤¼è£…`dataId`ã‚’è¤‡æ•°"), "åˆæœŸãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«æ¦‚å¿µç¤¼è£…ã®é‡è¤‡è£…å‚™è¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(initialContent.includes("radiant-arm-of-dawn-saber"), "åˆæœŸãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«é»Žæ˜Žã®ç‚Žè…•ï¼ˆå‰£ï¼‰ã®å®‰å®šIDãŒã‚ã‚Šã¾ã›ã‚“");
-assert(initialContent.includes("æ¡ä»¶ä»˜ãåŠ¹æžœãŒä½¿ã†æ­£å¼ãªæ—¥æœ¬èªžç‰¹æ€§`å¤©ã®åŠ›`"), "åˆæœŸæ•µä»•æ§˜ã«å¤©ã®åŠ›ç‰¹æ€§ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(initialContent.includes("136,216"), "åˆæœŸãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«æ¥µç´šWave 3ã®HPãŒã‚ã‚Šã¾ã›ã‚“");
-assert(initialContent.includes("æ•µã‚¿ãƒ¼ãƒ³çµ‚äº†æ™‚"), "åˆæœŸãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«æ•µé€šå¸¸ãƒãƒ£ãƒ¼ã‚¸ã®æ™‚æœŸãŒã‚ã‚Šã¾ã›ã‚“");
-assert(
-  initialContent.includes("åŸºç¤Žä»˜ä¸ŽçŽ‡500%ï¼ˆ5000 permilleï¼‰")
-    && initialContent.includes("å¼±ä½“è€æ€§ã¨å¼±ä½“ç„¡åŠ¹"),
-  "åˆæœŸãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«ã‚¹ã‚­ãƒ«ãƒ»å®å…·ãƒ‡ãƒ¡ãƒªãƒƒãƒˆã®æ—¢å®šä»˜ä¸ŽçŽ‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  initialContent.includes("### No.024â€™ æ”¯é…ã®ãƒ•ã‚©ãƒ¼ãƒªãƒŠãƒ¼")
-    && initialContent.includes("debuff_success_basis_points")
-    && initialContent.includes("å¼·åŒ–å‰å®å…·ã‚’é¸æŠžè‚¢ã¾ãŸã¯åˆ¥å®šç¾©ã¨ã—ã¦æ®‹ã•ãªã„"),
-  "å…·ä½“ãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«æ”¯é…ã®ãƒ•ã‚©ãƒ¼ãƒªãƒŠãƒ¼ã®æŽ¡ç”¨ç¯„å›²ã¨ç²¾åº¦è¦å‰‡ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  initialContent.includes("### No.362 åƒåˆ©ä¼‘")
-    && initialContent.includes("Quickæ”»æ’ƒæ™‚ã®ãƒ€ãƒ¡ãƒ¼ã‚¸å‰ã«å®Ÿæ”»æ’ƒå¯¾è±¡ã ã‘")
-    && initialContent.includes("å…¬å¼: No.314 å…‰ã®ã‚³ãƒ¤ãƒ³ã‚¹ã‚«ãƒ¤ã€No.362 åƒåˆ©ä¼‘")
-    && initialContent.includes("ã‚ªãƒªã‚¸ãƒŠãƒ«: No.007 æœ¬å¤šå¿ å‹ã€No.024â€™ æ”¯é…ã®ãƒ•ã‚©ãƒ¼ãƒªãƒŠãƒ¼ã€No.057 é˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã€No.058 ãƒ•ã‚§ãƒ³ãƒªãƒ«ã€No.062 ãƒ«ã‚·ãƒ•ã‚§ãƒ©ã€No.070 è–æ¯ãƒžãƒªã‚¢ã€No.094 çœŸç”°ä¿¡ç¹"),
-  "å…·ä½“ãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«åƒåˆ©ä¼‘ã¨ç·¨æˆåŒºåˆ†ã®æŽ¡ç”¨ç¯„å›²ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  initialContent.includes("### No.007 æœ¬å¤šå¿ å‹")
-    && initialContent.includes("Lv80 10617ï¼8047")
-    && initialContent.includes("OCåˆ¥1000ï¼1500ï¼2000ï¼2500ï¼3000")
-    && initialContent.includes("å…±é€š`reduce_hp`ã®æ®µéšŽå€¤")
-    && initialContent.includes("`Invinciblepierce`")
-    && initialContent.includes("`Ignoredefense`"),
-  "å…·ä½“ãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«æœ¬å¤šå¿ å‹ã¨OCåˆ¥HPæ¸›å°‘ã®æŽ¡ç”¨ç¯„å›²ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  initialContent.includes("### No.057 é˜¿é…é‰é«˜æ—¥å­æ ¹ç¥ž")
-    && initialContent.includes("Lv90 16498ï¼10498")
-    && initialContent.includes("å®å…·9ï¼‹è¿½åŠ 9")
-    && initialContent.includes("OCåˆ¥0ï¼200ï¼300ï¼400ï¼500%è¿½åŠ æ”»æ’ƒ")
-    && initialContent.includes("å¯¾è±¡HPã¨OC1ã®å€çŽ‡0ã‚’å•ã‚ãšå…¨9Hit")
-    && initialContent.includes("1500permilleã¸ä¸Šæ›¸ã")
-    && initialContent.includes("`Changeclass`"),
-  "å…·ä½“ãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«é˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã¨å®å…·è¿½åŠ æ”»æ’ƒã®æŽ¡ç”¨ç¯„å›²ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  initialContent.includes("### No.058 ãƒ•ã‚§ãƒ³ãƒªãƒ«")
-    && initialContent.includes("Q5ï¼A2ï¼B2ï¼EX5ï¼å®å…·5Hit")
-    && initialContent.includes("ã€”å¤©ã®åŠ›ã€•å›ºå®š150%ç‰¹æ”»")
-    && initialContent.includes("HP1000æ¸›å°‘ï¼ˆ`canDefeat: true`ï¼‰")
-    && initialContent.includes("`Busterabsorpt`"),
-  "å…·ä½“ãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«ãƒ•ã‚§ãƒ³ãƒªãƒ«ã®æŽ¡ç”¨ç¯„å›²ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  initialContent.includes("### No.094 çœŸç”°ä¿¡ç¹")
-    && initialContent.includes("Q4ï¼A3ï¼B2ï¼EX4ï¼å®å…·4ã§")
-    && initialContent.includes("é˜²å¾¡ç„¡è¦–ã¯æ—¢å­˜`ignore_defense`çŠ¶æ…‹")
-    && initialContent.includes("`skill-guts`")
-    && initialContent.includes("`Defenseup`"),
-  "å…·ä½“ãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«çœŸç”°ä¿¡ç¹ã®æŽ¡ç”¨ç¯„å›²ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  initialContent.includes("å…­æ–‡ã®æ¸¡ã—è³ƒ")
-    && initialContent.includes("`sanada-yukimura-bond`")
-    && initialContent.includes("çµ†ç¤¼è£…9æžš"),
-  "å…·ä½“ãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«çœŸç”°ä¿¡ç¹ã®çµ†ç¤¼è£…ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  initialContent.includes("### No.070 è–æ¯ãƒžãƒªã‚¢")
-    && initialContent.includes("æœ€çµ‚å†è‡¨")
-    && initialContent.includes("OCåˆ¥HPå›žå¾©ã¯å…±é€š`heal_hp`ã®æ®µéšŽå€¤")
-    && initialContent.includes("`Tauntup`")
-    && initialContent.includes("`skill-hp-heal-per-turn`")
-    && initialContent.includes("`Specialinvincible`"),
-  "å…·ä½“ãƒ‡ãƒ¼ã‚¿ä»•æ§˜ã«è–æ¯ãƒžãƒªã‚¢ã®æŽ¡ç”¨ç¯„å›²ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-const senNoRikyu = await readText("src/data/servants/senNoRikyu.ts");
-assert(
-  senNoRikyu.includes('dataId: "sen-no-rikyu"')
-    && senNoRikyu.includes('targetAttackEventTargets: true')
-    && senNoRikyu.includes('url: "https://w.atwiki.jp/f_go/pages/5723.html"'),
-  "åƒåˆ©ä¼‘ã®ç™»éŒ²ãƒ‡ãƒ¼ã‚¿ã¨å®Ÿæ”»æ’ƒå¯¾è±¡é™å®šãƒˆãƒªã‚¬ãƒ¼ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-const motherMary = await readText("src/data/servants/motherMary.ts");
-assert(
-  motherMary.includes('dataId: "mother-mary"')
-    && motherMary.includes('collectionNo: 70')
-    && motherMary.includes('effectType: COMMON_EFFECT_TYPES.targetFocus')
-    && motherMary.includes('amount: { scaling: "overcharge"')
-    && motherMary.includes('url: "https://w.atwiki.jp/siroi_human/pages/781.html"'),
-  "è–æ¯ãƒžãƒªã‚¢ã®ç™»éŒ²ãƒ‡ãƒ¼ã‚¿ã€ã‚¿ãƒ¼ã‚²ãƒƒãƒˆé›†ä¸­ã€æ®µéšŽå¼å›žå¾©ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-const hondaTadakatsuSource = await readText("src/data/servants/hondaTadakatsu.ts");
-const ajisukitakahikoneSource = await readText(
-  "src/data/servants/ajisukitakahikoneNoKami.ts"
-);
-const fenrirSource = await readText("src/data/servants/fenrir.ts");
-const sanadaYukimuraSource = await readText("src/data/servants/sanadaYukimura.ts");
-const effectDeclarations = await readText("src/effects/declarations.ts");
-const effectActionExecution = await readText("src/effects/actionExecution.ts");
-assert(
-  hondaTadakatsuSource.includes('dataId: "honda-tadakatsu"')
-    && hondaTadakatsuSource.includes('collectionNo: 7')
-    && hondaTadakatsuSource.includes('name: "èœ»è›‰åˆ‡"')
-    && hondaTadakatsuSource.includes('scaling: "overcharge"')
-    && hondaTadakatsuSource.includes('canDefeat: true')
-    && hondaTadakatsuSource.includes('url: "https://w.atwiki.jp/siroi_human/pages/274.html"')
-    && effectDeclarations.includes('action.kind === "reduce_hp"')
-    && effectActionExecution.includes('if (effect.action.kind === "reduce_hp")'),
-  "æœ¬å¤šå¿ å‹ã®ç™»éŒ²ãƒ‡ãƒ¼ã‚¿ã¾ãŸã¯OCåˆ¥HPæ¸›å°‘ã®å…±é€šå®Ÿè£…ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  ajisukitakahikoneSource.includes('dataId: "ajisukitakahikone-no-kami"')
-    && ajisukitakahikoneSource.includes("collectionNo: 57")
-    && ajisukitakahikoneSource.includes('name: "ç¥žåº¦å‰£"')
-    && ajisukitakahikoneSource.includes("additionalAttack:")
-    && ajisukitakahikoneSource.includes("damageMultiplierPermilleByOvercharge: [0, 2_000, 3_000, 4_000, 5_000]")
-    && ajisukitakahikoneSource.includes("defensiveClassAffinityOverride")
-    && ajisukitakahikoneSource.includes('url: "https://w.atwiki.jp/siroi_human/pages/50.html"'),
-  "é˜¿é…é‰é«˜æ—¥å­æ ¹ç¥žã®ç™»éŒ²ãƒ‡ãƒ¼ã‚¿ã€å®å…·è¿½åŠ æ”»æ’ƒã€é˜²å¾¡ç›¸æ€§ä¸Šæ›¸ããŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  fenrirSource.includes('dataId: "fenrir"')
-    && fenrirSource.includes("collectionNo: 58")
-    && fenrirSource.includes('name: "å’†å“®è½Ÿãçµ‚ç„‰ã®é»„æ˜"')
-    && fenrirSource.includes('requiredTargetTraits: ["å¤©ã®åŠ›"]')
-    && fenrirSource.includes("multiplierPermille: 1_500")
-    && fenrirSource.includes("hitWeights: [1, 1, 1, 1, 1]")
-    && fenrirSource.includes("canDefeat: true")
-    && fenrirSource.includes('url: "https://w.atwiki.jp/siroi_human/pages/329.html"'),
-  "ãƒ•ã‚§ãƒ³ãƒªãƒ«ã®ç™»éŒ²ãƒ‡ãƒ¼ã‚¿ã€ç‰¹æ”»ã€å®å…·å¾ŒHPæ¸›å°‘ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  sanadaYukimuraSource.includes('dataId: "sanada-yukimura"')
-    && sanadaYukimuraSource.includes("collectionNo: 94")
-    && sanadaYukimuraSource.includes('name: "çœŸç”°ä¸¸"')
-    && sanadaYukimuraSource.includes("hitWeights: [1, 1, 1, 1]")
-    && sanadaYukimuraSource.includes("effectType: COMMON_EFFECT_TYPES.ignoreDefense")
-    && sanadaYukimuraSource.includes("remainingUses: 1")
-    && sanadaYukimuraSource.includes('url: "https://w.atwiki.jp/siroi_human/pages/813.html"'),
-  "çœŸç”°ä¿¡ç¹ã®ç™»éŒ²ãƒ‡ãƒ¼ã‚¿ã€é˜²å¾¡ç„¡è¦–ã€å‡ç­‰HitãŒã‚ã‚Šã¾ã›ã‚“"
-);
-assert(
-  initialBattleUi.includes("export const INITIAL_ATTACK_AFFINITIES")
-    && initialBattleUi.includes("earth: { sky: 900, human: 1_100 }")
-    && (await readText("src/data/enemies/initialEnemies.ts")).includes('\"å¤©ã®åŠ›\"'),
-  "åˆæœŸæˆ¦é—˜ã«å¤©åœ°äººç›¸æ€§è¡¨ã¾ãŸã¯é»Žæ˜Žã®ç‚Žè…•ã®å¤©ã®åŠ›ç‰¹æ€§ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-const initialServants = await readText("src/data/servants/initialServants.ts");
-const servantSchema = await readText("src/data/servants/schema.ts");
-assert(
-  servantSchema.includes("SERVANT_DEFAULT_DEMERIT_APPLICATION_RATE_PERMILLE = 5_000")
-    && initialServants.includes("baseRatePermille: SERVANT_DEFAULT_DEMERIT_APPLICATION_RATE_PERMILLE")
-    && initialServants.includes("lucifera-queen-buff-clear-state")
-    && !initialServants.includes("ignoreResistance: true"),
-  "åˆæœŸã‚µãƒ¼ãƒ´ã‚¡ãƒ³ãƒˆã«500%ã®é…å»¶ãƒ‡ãƒ¡ãƒªãƒƒãƒˆç™»éŒ²ãŒã‚ã‚Šã¾ã›ã‚“"
-);
-
-const archiveReadme = await readText("docs/archive/README.md");
-assert(archiveReadme.includes("IMPLEMENTATION_STATUS_v1.0.0.md"), "å®Ÿè£…çŠ¶æ³ã®å±¥æ­´ã‚¢ãƒ¼ã‚«ã‚¤ãƒ–ã¸ã®æ¡ˆå†…ãŒã‚ã‚Šã¾ã›ã‚“");
-assert(archiveReadme.includes("DECISION_LOG_v1.0.0.md"), "æ±ºå®šè¨˜éŒ²ã®å±¥æ­´ã‚¢ãƒ¼ã‚«ã‚¤ãƒ–ã¸ã®æ¡ˆå†…ãŒã‚ã‚Šã¾ã›ã‚“");
-
-for (const path of [
-  "docs/roles/SYSTEM.md",
-  "docs/roles/SERVANT.md",
-  "docs/roles/CRAFT_ESSENCE.md",
-  "docs/roles/MYSTIC_CODE.md",
-  "docs/roles/ENEMY.md"
-]) {
-  const text = await readText(path);
-  assert(text.includes("## å¤‰æ›´å¯èƒ½ç¯„å›²"), `${path} ã«å¤‰æ›´å¯èƒ½ç¯„å›²ãŒã‚ã‚Šã¾ã›ã‚“`);
-  assert(text.includes("## å®Œäº†æ¡ä»¶"), `${path} ã«å®Œäº†æ¡ä»¶ãŒã‚ã‚Šã¾ã›ã‚“`);
-}
-
-for (const path of [
-  "docs/templates/SERVANT_ADDITION.md",
-  "docs/templates/CRAFT_ESSENCE_ADDITION.md",
-  "docs/templates/MYSTIC_CODE_ADDITION.md",
-  "docs/templates/ENEMY_ADDITION.md"
-]) {
-  const text = await readText(path);
-  assert(text.includes("## å‡¦ç†åˆ†é¡ž"), `${path} ã«å‡¦ç†åˆ†é¡žãŒã‚ã‚Šã¾ã›ã‚“`);
-  assert(text.includes("## å‚ç…§è³‡æ–™"), `${path} ã«å‚ç…§è³‡æ–™ãŒã‚ã‚Šã¾ã›ã‚“`);
-  assert(text.includes("## ç¢ºèªé …ç›®"), `${path} ã«ç¢ºèªé …ç›®ãŒã‚ã‚Šã¾ã›ã‚“`);
-}
-
-if (errors.length > 0) {
-  console.error("åŸºç›¤æ¤œæŸ»ã«å¤±æ•—ã—ã¾ã—ãŸã€‚");
-  for (const error of errors) console.error(`- ${error}`);
-  process.exit(1);
-}
-
-console.log(`åŸºç›¤æ¤œæŸ»ã«æˆåŠŸã—ã¾ã—ãŸã€‚ä»•æ§˜æ›¸ãƒãƒ¼ã‚¸ãƒ§ãƒ³: ${manifest.specVersion}`);
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíß¾·Ý:-jZ.¶›­–)Þ³V–×÷'B²&VDf–ÆRÂ66W72Òg&öÒ&æöFS¦g2÷&öÖ—6W2#°¦–×÷'B²6öç7FçG2Òg&öÒ&æöFS¦g2#°¦–×÷'B&ö6W72g&öÒ&æöFS§&ö6W72#° ¦6öç7BW'&÷'2ÒµÓ° ¦7–æ2gVæ7F–öâW†—7G2‡F‚’°¢G'’°¢v—B66W72‡F‚Â6öç7FçG2äeôô²“°¢&WGW&âG'VS°¢Ò6F6‚°¢&WGW&âfÇ6S°¢Ð§Ð ¦7–æ2gVæ7F–öâ&VEFW‡B‡F‚’°¢G'’°¢&WGW&âv—B&VDf–ÆR‡F‚Â'WFc‚"“°¢Ò6F6‚†W'&÷"’°¢W'&÷'2çW6‚†G·F‡Ò8).ŠªÞ8þ‹ëÎ8(8î8¾8)3¢G¶W'&÷"æÖW76vWÖ“°¢&WGW&â"#°¢Ð§Ð ¦gVæ7F–öâ76W'B†6öæF—F–öâÂÖW76vR’°¢–b‚6öæF—F–öâ’W'&÷'2çW6‚†ÖW76vR“°§Ð ¦6öç7BÖæ–fW7EFW‡BÒv—B&VEFW‡B‚'&ö¦V7BÖÖæ–fW7Bæ§6öâ"“°¦ÆWBÖæ–fW7C° §G'’°¢Öæ–fW7BÒ¥4ôâç'6R†Öæ–fW7EFW‡B“°§Ò6F6‚†W'&÷"’°¢W'&÷'2çW6‚†&ö¦V7BÖÖæ–fW7Bæ§6öâ8ÎjÚ>8~8D¥4ôî8~8þ8.8(®8î8¾8)3¢G¶W'&÷"æÖW76vWÖ“°§Ð ¦–b†Öæ–fW7B’°¢76W'B‚õåÆBµÂåÆBµÂåÆB²BòçFW7B†Öæ–fW7Bç7V5fW'6–öâ’Â'7V5fW'6–öâ8ò‚ç’ç¢[Ú.[Èþ8~8.8(¾[ø^Šh8Î8.8(®8î8’"“°¢76W'B†Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆUG—RÓÓÒ&ææ–†–ÆF–öåööæÇ’"Â.hŠn™yŽ[Ú.[Èþ8þXZŽk¸^hŠn888~8®88(Î88®8(®8î8¾8)2"“°¢76W'B†Öæ–fW7Bæ6÷&U'VÆW2ç7V6–Åf–7F÷'”6öæF—F–öç2ÓÓÒfÇ6RÂ.x›žjè®X¹ÞXŠžiÚK»n8þxJX«ž8~8®88(Î88®8(®8î8¾8)2"“°¢76W'B†Öæ–fW7Bæ6÷&U'VÆW2ç7V6–ÄFVfVD6öæF—F–öç2ÓÓÒfÇ6RÂ.x›žjè®iY~XÉ~iÚK»n8þxJX«ž8~8®88(Î88®8(®8î8¾8)2"“°¢76W'B†Öæ–fW7Bæ6÷&U'VÆW2æÖ…vfW2ÓÓÒ2Â.iÈZJuvf^i[8ó>8~8®88(Î88®8(®8î8¾8)2"“°¢76W'B†Öæ–fW7Bæ6÷&U'VÆW2æÆÇ”g&öçFÆ–æU&WV—&VBÓÓÒ2Â.Y>ikžX˜ÞŠ¾[ø^šŽi[8ó>8~8®88(Î88®8(®8î8¾8)2"“°¢76W'B†Öæ–fW7Bæ6÷&U'VÆW2æÆÇ•&W6W'fTÖ‚ÓÓÒ2Â.Y>ikžhê~8ŽKˆ®™™8ó>8~8®88(Î88®8(®8î8¾8)2"“°¢76W'B†Öæ–fW7Bæ6÷&U'VÆW2æVæV×•F÷FÄÖ‚ÓÓÒ“’Â.i[^Xø.XªKˆ®™™8ó“ž8~8®88(Î88®8(®8î8¾8)2"“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æVæV×”7F—fTÖöFW2’ÓÓÒ¥4ôâç7G&–æv–g’…³2ÂeÒ’À¢.i[^YÎi˜.X{®xûî8:.8;Î88ž8ó>KÙ>8ƒnKÙ>8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B†Öæ–fW7Bæ6÷&U'VÆW2æVæV×”æ÷&ÖÄ7F–öä'VFvWBÓÓÒ2Â.i[^8î˜	®[‹ŽŠÎX¹^K¨Žzé~8ó>8~8®88(Î88®8(®8î8¾8)2"“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æVæV×”–æF—f–GVÄÖ„7F–öç2’ÓÓÒ¥4ôâç7G&–æv–g’…²&WFò"ÂÂ"Â5Ò’À¢.i[^X¾XŠ^ŠÎX¹^Kˆ®™™8þˆz®X¹^8;³8;³.8;³>8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æVæV×•&–÷&—G•6¶–ÆÇ46öç7VÖTæ÷&ÖÄ7F–öç2ÓÓÒfÇ6RÀ¢.i[^XJ®XXŽ8+ž8*Þ8:¾8þ˜	®[‹ŽŠÎX¹^Y¹îi[8).khŽ‹+¾8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ6ö×ÆWFVD7F–öä&÷VæF'’ÓÓÒG'VRÀ¢.jÛ¾Kª8;¾Š9ÎXX^8þZèÎK¨nkˆŽ8þŠÎX¹^8îZ(>yXÎ8~Xznyn8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æVæV×•&WF&vWD÷&FW"ÓÓÒ'&V%÷F†Vå÷w&"À¢.Zûî‹khŽk¸^[èÎ8þ[èÎikžiê8¾8(žX˜Þikž8ŽY¹î8(®‹ëÎ8î8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ–ÖÖVF–FU&WÆ6VÖVçEVæ6öæF—F–öæÅF&vWE&–÷&—G’ÓÓÒfÇ6RÀ¢.XÛ>i˜.Š9ÎXX^8^8(Î8þi[^8).xJiÚK»n8¾XJ®XXŽ8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æÆÇ•6VÆV7FVD6öÖÖæD7F–öä6÷VçBÓÓÒ2À¢.Y>ikž8î˜Žh©î8+>89î8;>88žŠÎX¹^i[8ó>8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æW‡G&GF6´gFW$'&fT6†–âÓÓÒG'VRÀ¢$'&f^888*~8*N8;>[èÎ8ôW‡G&GF6¾8).K¨ŽZé®8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæDW†V7WF–öå&V6†V6¶VEW$7F–öâÓÓÒG'VRÀ¢.YN8+>89î8;>88žŠÎX¹^8þZéþŠÎy»NX˜Þ8¾XhÞz+®Š¨Þ8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2ç7F÷6öÖÖæE6WVVæ6Uv—F†÷WDVæV×•F&vWBÓÓÒG'VRÀ¢.i[^Zûî‹8Î[Þ8Þ8þ[èÎ8þjè¾8(®8+>89î8;>88žŠÎX¹^8).™h¾Zx¾8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2ç6ÖT÷væW%6–ævÆUF&vWDæ÷&ÖÄFVfVFVEF&vWD6öçF–çVF–öâÓÓÒG'VP¢bbÖæ–fW7Bæ6÷&U'VÆW2ç6ÖT÷væW$æ÷&ÖÄ6öçF–çVF–öä–æ6ÇVFW4W‡G&GF6²ÓÓÒG'VP¢bb¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2ç6ÖT÷væW$æ÷&ÖÄ6öçF–çVF–öäW†6ÇVFW2¢ÓÓÒ¥4ôâç7G&–æv–g’…°¢&æö&ÆU÷†çF6Ò"À¢&ÆÅ÷F&vWB"À¢&F–ffW&VçEö&GFÆUö–ç7Fæ6R"À¢'Væf–Æ&ÆUöæW‡Eö÷væW" ¢Ò¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öçF–çVVDFVfVFVEF&vWD†—G0¢ÓÓÒ&ÆÅö÷fW&¶–ÆÅö7GVÅö‡öÆ÷75÷¦W&ò ¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öçF–çVVDFVfVFVEF&vWDFVF…G&–vvW%&WVG2ÓÓÒfÇ6P¢bbÖæ–fW7Bæ6÷&U'VÆW2ç6ÖT÷væW$æ÷&ÖÄ6öçF–çVF–öå&æuöÆ–7¢ÓÓÒ&æ÷&ÖÅö7F–öå÷&æuööæÇ’ ¢bbÖæ–fW7Bæ6÷&U'VÆW2ç6ÖT÷væW$æ÷&ÖÄ6öçF–çVF–öå66†VÖ6†ævRÓÓÒfÇ6RÀ¢.YÎKˆhŠn™yŽX¾KÙ>8îXÙŽKÙ>˜	®[‹Ž8*¾8;Î88ž˜
+>{i®ŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æVæV×•&–÷&—G”&Vf÷&Tæ÷&ÖÅÆâÓÓÒG'VRÀ¢.i[^XJ®XXŽ8+ž8*Þ8:¾ZèÎK¨n[èÎ8¾˜	®[‹ŽŠÎX¹^K¨ŽZé®8).KÙÎ8(ž8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æVæV×”FVfVÇD7F–öåöÆ–7’ÓÓÒ&gVÆÅöçöVÇ6Uöæ÷&ÖÅöGF6²"À¢.i[^8îiÈ[þiz.Zé®ŠÎX¹^8þ89^8:¾888:>8;Î8+ŽZéÞX[~88Þ8(ÎKº^ZIn8þ˜	®[‹ŽiK¾i(>8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æVæV×”FF66†VÖfW'6–öâÓÓÒ¢bbÖæ–fW7Bæ6÷&U'VÆW2æVæV×”FF–FVçF—G’ÓÓÒ'7F&ÆU÷&ö¦V7Eö–B ¢bbÖæ–fW7Bæ6÷&U'VÆW2æVæV×”Væ6÷VçFW$–FVçF—G’ÓÓÒ&&GFÆUö–ç7Fæ6Uö–B ¢bbÖæ–fW7Bæ6÷&U'VÆW2æVæV×”FVf–æ—F–öäæDVæ6÷VçFW%6W&FVBÓÓÒG'VRÀ¢.i[^[Ú.[Èó8þZèžZé®88~8;Î8+ô”N8ŽhŠn™yŽX¾KÙ4”N8).Xˆn™º.8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æVæV×•&æFöÕ6–ævÆUF&vWEöÆ–7’ÓÓÒ'&æFöÕöÆ—f–æuöÆÇ•ög&öçFÆ–æR ¢bbÖæ–fW7Bæ6÷&U'VÆW2æVæV×•&æFöÕ6–ævÆUF&vWE&ærÓÓÒ&’ ¢bbÖæ–fW7Bæ6÷&U'VÆW2æVæV×”7&—F–6Å&ærÓÓÒ&7&—F–6Â"À¢.X‰ÞiÉþi[^8î8:ž8;>888:XÙŽKÙ>Zûî‹8Ž8*þ8:®88n8*>8*¾8:¾8þyJŽ˜	NXŠ^K›i[X‰~8).KÛþ8(þ8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æVæV×”6†&vT–æ7&V6UF–Ö–ærÓÓÒ&VæV×•÷GW&åöVæB ¢bbÖæ–fW7Bæ6÷&U'VÆW2æVæV×”6†&vT–æ7&V6UW%GW&âÓÓÒ¢bbÖæ–fW7Bæ6÷&U'VÆW2æVæV×•&W6W'fU&öw&W76–öåW6VBÓÓÒG'VRÀ¢.i[^˜	®[‹Ž888:>8;Î8+Ž8þi[^8+þ8;Î8;>{X.K¨ni˜.8¾X˜ÞŠ¾88Z)~Xª8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æVæV×•&WÆ6VÖVçD–æ†W&—G5ÆææVE6Æ÷G2ÓÓÒfÇ6RÀ¢.˜	NKŠÞy›¾ZN8~8þi[^8þ˜ZNˆ^8îK¨ŽZé®kˆŽ8þŠÎX¹^iê8).[É^8Þ{iž8N8~8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2ç7F÷VæV×•6WVVæ6TöäÆÇ”ææ–†–ÆF–öâÓÓÒG'VRÀ¢.Y>ikžXZŽk¸^[èÎ8þjè¾8(®i[^ŠÎX¹^8).™h¾Zx¾8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æFÖvU&æFöÔG&w5W$ÆÆ÷vVEF&vWBÓÓÒÀ¢.888:8;Î8+Ž8).Š‹Xúþ8^8(Î8þZûî‹8N8Ž8î888:8;Î8+ŽK›i[8óY¹î8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ×VÇF•F&vWD†—D÷&FW"ÓÓÒ&†—E÷F†Våög&öçFÆ–æR"À¢.ŠH~i[Zûî‹iK¾i(>8ô†—NyZ®Xû~8X˜ÞŠ¾iêšn8~Xznyn8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2ç6÷W&6TGF6µ7FFT6öç7VÖW5W%F&vWBÓÓÒfÇ6RÀ¢.iK¾i(>XNx«nhX¾8).XZŽKÙ>iK¾i(>8îZûî‹8N8Ž8¾khŽ‹+¾8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2ç&÷FV7F–öäÆÆ÷w4çæE7F%v÷&²ÓÓÒG'VRÀ¢.™‹.[ê8¾8(Ž8(¾888:8;Î8+ŽxJX«ž[èÎ8($å8;¾8+ž8+þ8;ÎXznyn8).{iž{i®8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æGF6µG&–vvW$÷&FW"’ÓÓÒ¥4ôâç7G&–æv–g’…°¢&&Vf÷&UöGF6²"À¢&öåö†—E÷W%ö†—Eö&F6‚"À¢&öåöGF6²"À¢&öåöFÖvU÷F¶Vå÷W%÷F&vWB"À¢&gFW%öGF6²"À¢&öåöFVF‚ ¢Ò’À¢.iK¾i(>88Ž8:®8*Î8;Î8þiK¾i(>X˜Þ8†—N8iK¾i(>i˜.8Š*¾888:8;Î8+Ži˜.8iK¾i(>[èÎ8jÛ¾Kªi˜.8îšn8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æFÖvUF¶VåG&–vvW$gFW%&÷FV7F–öä&Æö6²ÓÓÒG'VRÀ¢.888:8;Î8+ŽxJX«ži˜.8(.xJiÚK»n8îŠ*¾888:8;Î8+Ži˜.88Ž8:®8*Î8;Î8).Xznyn8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æwWG57W&W76W4FVF…G&–vvW"ÓÓÒG'VRÀ¢.8*Î88>88N[êžkK¾i˜.8¾jÛ¾Kªi˜.88Ž8:®8*Î8;Î8).Xznyn8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ&Vf÷&TFÖvT–ç7FçDFVF…7F÷4GF6´†—G2ÓÓÒG'VRÀ¢.888:8;Î8+ŽX˜ÞXÛ>jÛ¾h‰X©þ[èÎ8þiK¾i(4†—N8).™h¾Zx¾8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æGF6´FF–FVçF—G’ÓÓÒ&&GFÆUö–ç7Fæ6Uö–B"À¢.iK¾i(>88~8;Î8+þ8þhŠn™yŽX¾KÙ4”N8Ž{Y8>K¹Ž88®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æGWÆ–6FTFF–G4Ö•W6TF–ffW&VçDGF6´FFÓÓÒG'VRÀ¢.YÎ8Ž8+^8;Î8;N8*8;>88Ž88~8;Î8+ô”N8~8(.X¾KÙ>8N8Ž8¾XŠ^8îiK¾i(>X
+N8).Š‹Xúþ8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æGF6´–çWE&W&VDgFW$&Vf÷&TGF6²ÓÓÒG'VRÀ¢.ŠˆŽzé~XZ^X©¾8þiK¾i(>X˜ÞX«žiéÎ8îXøÞiŠ[èÎ8¾jx¾zøž8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æÖ—76–ætVæV×”GF6´çVÖW&–4FFÓÓÒ'6fUöæö÷"À¢.i[^iK¾i(>i[X
+N8îiÊ®ŠŠÞZé®8þZèžXZŽ8®KˆÞy›®8Ž8~8nh›8(þ8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æFVfVÇDVæV×•6–ævÆUF&vWBÓÓÒ&g&öçFÖ÷7EöÆ—f–æuöÆÇ’"À¢.iÈ[þi[^iK¾i(>8îXÙŽKÙ>Zûî‹8þXXŽš
+Þ8îyIþZÙŽY>ikž8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æ6&E&W6—7Fæ6TÆ–W5Fò’ÓÓÒ¥4ôâç7G&–æv–g’…°¢&FÖvR"À¢&GF6µöç"À¢'7F'2 ¢Ò’À¢.8*¾8;Î88žˆ	h
+~8þ888:8;Î8+Ž8;¾iK¾i(>i˜$å8;¾8+ž8+þ8;Î8ŽX[˜	®˜žyJŽ8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B†Öæ–fW7Bæ6÷&U'VÆW2æÖ„'&V´vVvW2ÓÓÒÂ.89n8:Î8*N8*þ8+.8;Î8+ŽKˆ®™™8ó8~8®88(Î88®8(®8î8¾8)2"“°¢76W'B†Öæ–fW7Bæ6÷&U'VÆW2ç7F$6ÓÓÒ“’Â.8+ž8+þ8;ÎKˆ®™™8ó“ž8~8®88(Î88®8(®8î8¾8)2"“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2ç7F$'V6¶WG2’ÓÓÒ¥4ôâç7G&–æv–g’…²&6öÖÖæB"Â&æW‡Eö6öÖÖæB%Ò’À¢.8+ž8+þ8;Î8þxûîYÊŽKÛþyJŽXˆn8ŽjÊY¹îY>ikž8+>89î8;>88žyJŽ8ã.XË®Xˆn8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æGF6´vVæW&FVE7F'4FW7F–æF–öâÓÓÒ&æW‡Eö6öÖÖæB"À¢.iK¾i(>8~y›®yIþ8~8þ8+ž8+þ8;Î8þjÊY¹îY>ikž8+>89î8;>88žyJŽ8ŽXªzé~8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2çV–6´6†–å7F'4FW7F–æF–öâÓÓÒ&æW‡Eö6öÖÖæB"À¢%V–6¾888*~8*N8;>8î8+ž8+þ8;Î8þjÊY¹îY>ikž8+>89î8;>88žyJŽ8ŽXªzé~8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2ç7F$6''”&W–öæDæW‡D6öÖÖæE†6RÓÓÒfÇ6RÀ¢.iÊ®KÛþyJŽ8+ž8+þ8;Î8).jÊ8îjÊ8îY>ikž8+>89î8;>88ž8ŽhÈ8‹h®8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ'G46†–äçF–Ö–ærÓÓÒ&&Vf÷&Uöf—'7Eö6öÖÖæB"À¢$'G>888*~8*N8;4å8þiÈX‰Þ8î8+>89î8;>88ž™h¾Zx¾X˜Þ8¾Xªzé~8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ'G46†–åVæ—VT'”–ç7Fæ6T–BÓÓÒG'VRÀ¢$'G>888*~8*N8;4å8þhŠn™yŽX¾KÙ>8N8Ž8³Y¹î88Xªzé~8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæE7F%&æFöÔ&öçW6W2’ÓÓÒ¥4ôâç7G&–æv–g’…³SÂ#Â#ÂÂÒ’À¢.h˜¾iÊÓ^ié®8î8+ž8+þ8;Î™¸nKŠÞ[ªn8:ž8;>888:Š9ÎjÚ>8óS8;³#8;³#8;³8;³8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæE7F$F—7G&–'WF–öä6ÓÓÒSÀ¢.8*¾8;Î88ž8Ž˜XÞXˆn8ž8(¾8+ž8+þ8;Î8þiÈZJsSX¾8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæE7F%W$6&D6ÓÓÒÀ¢.8*¾8;Î88“ié®8Ž˜XÞXˆn8ž8(¾8+ž8+þ8;Î8þiÈZJsX¾8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ7&—F–6Å&FUW&Ö–ÆÆUW%7F"ÓÓÒÀ¢.8+ž8+þ8;ÃX¾8þ8*þ8:®88n8*>8*¾8:¾xès^8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæE7F$F—7G&–'WF–öå&ærÓÓÒ&7&—F–6Â"À¢.8+ž8+þ8;Î˜XÞXˆn8þ8*þ8:®88n8*>8*¾8:¾yJŽK›i[X‰~8).KÛþ8(þ8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æf—†VD7&—F–6Å&FW46öç7VÖU&ærÓÓÒfÇ6RÀ¢.8*þ8:®88n8*>8*¾8:¾xès^8;³^8þK›i[8).khŽ‹+¾8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öå7FGW2ÓÓÒ&–×ÆVÖVçFVB ¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öä7F–öä–BÓÓÒ'&VF—7G&–'WFUö6öÖÖæEö6&G2"À¢.8*¾8;Î88žXhÞ˜XÞ[ˆ>8þZê>Šˆy¨NX[˜	®hŠnZNi8ÞKÙÎ8Ž8~8nZéþŠ8^8^8(Î8n8N8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æFV6Æ&VD&GFÆVf–VÆD7F–öç2¢ÓÓÒ¥4ôâç7G&–æv–g’…²'&VF—7G&–'WFUö6öÖÖæEö6&G2%Ò’À¢.Zê>Šˆy¨NX[˜	®hŠnZNi8ÞKÙÎ8îKˆŠj~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öä&÷VæF'¢ÓÓÒ&ÆÇ•ö–çWEö&Vf÷&Uö6&E÷7V&Ö—76–öâ ¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öå6÷W&6P¢ÓÓÒ&7W'&VçEöÆ—f–æuöÆÇ•ög&öçFÆ–æUöÆÅöæ÷&ÖÅö6&G2 ¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öäG&t6÷VçBÓÓÒP¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öå&W6WG47–6ÆRÓÓÒG'VP¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öäÆÆ÷w5&Wf–÷W4†æD6&G2ÓÓÒG'VRÀ¢.8*¾8;Î88žXhÞ˜XÞ[ˆ>8þ8*¾8;Î88žhùX{®X˜Þ8¾xûîYÊŽX˜ÞŠ¾8îXZŽ˜	®[‹Ž8*¾8;Î88ž8¾8(žikYŽiÉó^ié®8).˜XÞ8(ž8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öä–æ6ÇVFW4æö&ÆU†çF6Ô6&G2ÓÓÒfÇ6P¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öä6&G5&ætÆöv–6ÄG&w2ÓÓÒP¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öå&W6W'fW57F$'V6¶WG2ÓÓÒG'VP¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öå&VÆÆö6FW46öÖÖæE7F'2ÓÓÒG'VRÀ¢.8*¾8;Î88žXhÞ˜XÞ[ˆ>8îZéÞX[~X	žŠ9Î8;¾8*¾8;Î88žK›i[8;¾8+ž8+þ8;ÎŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E&VF—7G&–'WF–öå&V¦V7FVD×WFF–öà¢ÓÓÒ&æöæUö–æ6ÇVF–æuö†—7F÷'•öæEöÆöw2 ¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E7F$F—7G&–'WF–öåW'6—7FVæ6P¢ÓÓÒ&–çWEö&÷VæF'•÷7FFR ¢bbÖæ–fW7Bæ6÷&U'VÆW2æ6öÖÖæD6&E7F$F—7G&–'WF–öäÆVv7”ÖöFP¢ÓÓÒ&ÆVv7•ööåö6öÖÖæEö6öæf—&ÖF–öâ"À¢.8*¾8;Î88žXhÞ˜XÞ[ˆ>8þXéþZÙy¨N8¾h¹.Y
+n8~8XZ^X©¾Z(>yXÎ8+ž8+þ8;Î˜XÞXˆn8Žiz~ikž[Èþ8).XË®XŠ^8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆTÆöu66†VÖfW'6–öâÓÓÒRÀ¢.hŠn™yŽ8:Þ8+[Ú.[Èþ898;Î8+Ž8:~8;>8ó^8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆTÆötw&çVÆ&—G’ÓÓÒ&6ö×ÆWFVEö7F–öåö÷%öÆÇ•ö–çWEö7F–öâ"À¢.hŠn™yŽ8:Þ8+8þZèÎK¨nkˆŽ8óŠÎX¹^8î8þ8þY>ikžXZ^X©¾i8ÞKÙÎXÙŽKØÞ8~Š‰Ž˜Ë.8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆTÆöt–æ6ÇVFW2’ÓÓÒ¥4ôâç7G&–æv–g’…°¢&÷WF6öÖR"À¢&6Æ7VÆF–öâ"À¢&FV6Æ&VEöVffV7G2"À¢&†—G2"À¢'G&–vvW'2"À¢&FW'GW&W2"À¢&'&—fÇ2"À¢'&WF&vWF–ær"À¢&F—&V7EöÆÇ•öW†6†ævR"À¢'&æuöVF—B ¢Ò’À¢.hŠn™yŽ8:Þ8+8î[ø^šŽŠ›>{K8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆTÆöt§6öå6W&–Æ—¦&ÆRÓÓÒG'VRÀ¢.hŠn™yŽ8:Þ8+8ô¥4ôî8ŽKùÞZÙŽXúþˆ;Þ8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2ç&ætVF—D6†ævW56WVVæ6RÓÓÒfÇ6RÀ¢.K›i[yº>iû¾8~h«Þ˜Ž{YiéÎ8(NK›i[KØÞ{Úî8).ZHži»N8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æf—†VD6†æ6TVF—DG&w2ÓÓÒÀ¢.z+®xès^8;³^8îyº>iû¾Š‰Ž˜Ë.8þK›i[8).khŽ‹+¾8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆUGW&å7FvT÷&FW"’ÓÓÒ¥4ôâç7G&–æv–g’…°¢&ÆÇ•ö6öÖÖæB"À¢&ÆÇ•÷GW&åöVæB"À¢&VæV×•÷GW&â"À¢&VæV×•÷GW&åöVæB ¢Ò’À¢#hŠn™yŽ8+þ8;Î8;>8îXznynšn8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ66WFVD6öÖÖæE&WV—&W5GW&äVæBÓÓÒG'VRÀ¢.h‰z¸¾8~8þY>ikž8+>89î8;>88žX‰~8î[èÎ8þY>ikž8+þ8;Î8;>{X.K¨n8).yÈyZ^8~8n8þ8N88î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æVæV×•GW&å6¶—VDgFW$ÆÇ”6†V6·ö–çB’ÓÓÒ¥4ôâç7G&–æv–g’…°¢&&GFÆUöf–æ—6†VB"À¢'vfUöGfæ6VB ¢Ò’À¢.Y>ikž{X.K¨ni˜.XŠNZé®[èÎ8¾i[^8+þ8;Î8;>8).yÈyZ^8ž8(¾iÚK»n8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆUGW&å&æu6÷W&6RÓÓÒ'6–ævÆUö&GFÆU÷&ær"À¢#hŠn™yŽ8+þ8;Î8;>8þXÙŽKˆ8ä&GFÆU&æ~8¾8(žyJŽ˜	NXŠ^K›i[X‰~8).Xù~8Xùn8(ž8®88(Î88®8(®8î8¾8)2 ¢“°¢6öç7BGF6µF&vWE&W7G&–7F–öâÒÖæ–fW7Bæ6÷&U'VÆW2æGF6µG&–vvW$WfVçEF&vWE&W7G&–7F–öã°¢6öç7B6W'fçD÷&–v–åF'2ÒÖæ–fW7Bæ6÷&U'VÆW2ç6W'fçE6WGW÷&–v–åF'3°¢6öç7B6W'fçDf÷U6WGWÒÖæ–fW7Bæ6÷&U'VÆW2ç6W'fçDf÷U6WGW°¢76W'B€¢GF6µF&vWE&W7G&–7F–öâç&÷W'G’ÓÓÒ'F&vWDGF6´WfVçEF&vWG2 ¢bbGF6µF&vWE&W7G&–7F–öâæÆÆ÷vVE6VÆV7F÷"ÓÓÒ&æöå÷6VÆeöÆÂ ¢bbGF6µF&vWE&W7G&–7F–öâç&W6öÇWF–öâÓÓÒ'&W6öÇfUöFV6Æ&VE÷6VÆV7F÷%÷F†Våöf–ÇFW%÷Fõ÷&V6÷&FVEöGF6µ÷F&vWEö–G5ö–åöf÷&ÖF–öåö÷&FW" ¢bbGF6µF&vWE&W7G&–7F–öâæV×G”WfVçEF&vWG2ÓÓÒ&æõ÷F&vWG5÷v—F†÷WEö–æfW&Væ6R ¢bbGF6µF&vWE&W7G&–7F–öâæFÖvT–çWDgFW$&Vf÷&TGF6²ÓÓÒG'VP¢bbGF6µF&vWE&W7G&–7F–öâç6fU66†VÖ6†ævRÓÓÒfÇ6P¢bbGF6µF&vWE&W7G&–7F–öâæFF66†VÖ6†ævRÓÓÒfÇ6P¢bbGF6µF&vWE&W7G&–7F–öâæ&GFÆTÆöu66†VÖ6†ævRÓÓÒfÇ6RÀ¢.iK¾i(>88Ž8:®8*Î8;Î8îZéþZûî‹™™Zé®ŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢6W'fçD÷&–v–åF'2æ÷&–v–å6÷W&6RÓÓÒ&W‡Æ–6—E÷&Vv—7FW&VEöÆ—7G5÷v—F†÷WEöæÖUö÷%÷W&Åö–æfW&Væ6R ¢bb¥4ôâç7G&–æv–g’‡6W'fçD÷&–v–åF'2æöff–6–Å6W'fçDFF–G4–ä6öÆÆV7F–öäçVÖ&W$÷&FW"¢ÓÓÒ¥4ôâç7G&–æv–g’…²&¶÷–ç6¶–ÖöbÖÆ–v‡B"Â'6VâÖæò×&–·—R%Ò¢bb¥4ôâç7G&–æv–g’‡6W'fçD÷&–v–åF'2æ÷&–v–æÅ6W'fçDFF–G4–ä6öÆÆV7F–öäçVÖ&W$÷&FW"¢ÓÓÒ¥4ôâç7G&–æv–g’…²&†öæF×FF¶G7R"Â&FöÖ–æF–öâÖf÷&V–væW""Â&¦—7V¶—F¶†–¶öæRÖæòÖ¶Ö’"Â&fVç&—""Â&ÇV6–fW&"Â&Ö÷F†W"ÖÖ'’"Â'6æF×—V¶–×W&"Â&Æ’ÖwVær%Ò¢bb6W'fçD÷&–v–åF'2çF$'&÷w6T×WFF–öâÓÓÒ&æöæR ¢bb6W'fçD÷&–v–åF'2æ7W'&VçE6VÆV7F–öä÷WG6–FUF'2ÓÓÒG'VRÀ¢.{zŽh‰8îXZÎ[ÈþûÈþ8*®8:®8+Ž88®8:¾XË®Xˆn8„æòîšn8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢6W'fçDf÷U6WGWæ‡f–VÆBÓÓÒ&‡f÷R ¢bb6W'fçDf÷U6WGWæGF6´f–VÆBÓÓÒ&GF6´f÷R ¢bb6W'fçDf÷U6WGWæ–æFWVæFVçEW$&GFÆT–ç7Fæ6RÓÓÒG'VP¢bb6W'fçDf÷U6WGWæÖ–æ–×VÒÓÓÒ ¢bb6W'fçDf÷U6WGWæÖ†–×VÒÓÓÒ3 ¢bb6W'fçDf÷U6WGWæ–çFVvW$öæÇ’ÓÓÒG'VP¢bb6W'fçDf÷U6WGWæFVfVÇBÓÓÒ ¢bb6W'fçDf÷U6WGWæÆVv7•7F÷&VDÖ—76–æufÇVRÓÓÒ ¢bb6W'fçDf÷U6WGWæÆ–6F–öä÷&FW"ÓÓÒ'6VÆV7FVEöÆWfVÅ÷7FG5÷F†Våöf÷U÷F†Våö7&gEöW76Væ6R ¢bb6W'fçDf÷U6WGWçV•&V6Æ7VÆF–öâÓÓÒfÇ6P¢bb6W'fçDf÷U6WGWç&ætG&w2ÓÓÒ ¢bb6W'fçDf÷U6WGWæ&GFÆU7W7VæE66†VÖ6†ævRÓÓÒfÇ6P¢bb6W'fçDf÷U6WGWæFF66†VÖ6†ævRÓÓÒfÇ6RÀ¢.{zŽh‰8ä…ûÈôD¾89^8*ž8*nXZ^X©¾ŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢6öç7B7V6–f–VE6W'fçG2ÒÖæ–fW7Bç7V6–f–VD6öçFVçCòç6W'fçG2óòµÓ°¢6öç7B†öæFFF¶G7RÒ7V6–f–VE6W'fçG2æf–æB‚‡²FF–BÒ’ÓâFF–BÓÓÒ&†öæF×FF¶G7R"“°¢6öç7B¦—7V¶—F¶†–¶öæTæô¶Ö’Ò7V6–f–VE6W'fçG2æf–æB€¢‡²FF–BÒ’ÓâFF–BÓÓÒ&¦—7V¶—F¶†–¶öæRÖæòÖ¶Ö’ ¢“°¢6öç7BfVç&—"Ò7V6–f–VE6W'fçG2æf–æB‚‡²FF–BÒ’ÓâFF–BÓÓÒ&fVç&—""“°¢6öç7B6æF—V¶–×W&Ò7V6–f–VE6W'fçG2æf–æB‚‡²FF–BÒ’ÓâFF–BÓÓÒ'6æF×—V¶–×W&"“°¢6öç7BÆ”wVærÒ7V6–f–VE6W'fçG2æf–æB‚‡²FF–BÒ’ÓâFF–BÓÓÒ&Æ’ÖwVær"“°¢6öç7B6Väæõ&–·—RÒ7V6–f–VE6W'fçG2æf–æB‚‡²FF–BÒ’ÓâFF–BÓÓÒ'6VâÖæò×&–·—R"“°¢6öç7BÖ÷F†W$Ö'’Ò7V6–f–VE6W'fçG2æf–æB‚‡²FF–BÒ’ÓâFF–BÓÓÒ&Ö÷F†W"ÖÖ'’"“°¢76W'B€¢7V6–f–VE6W'fçG2æÆVæwF‚ÓÓÒ€¢bb6Väæõ&–·—Sòæ6öÆÆV7F–öäæòÓÓÒ3c ¢bb6Väæõ&–·—Sòæ–×ÆVÖVçFF–öå7FGW2ÓÓÒ&–×ÆVÖVçFVEöæEö66WFVB ¢bb6Väæõ&–·—Sòæ7F—fU6¶–ÆÄ6÷VçBÓÓÒ0¢bb6Väæõ&–·—Sòæ6Æ756¶–ÆÄ6÷VçBÓÓÒ@¢bb6Väæõ&–·—Sòææö&ÆU†çF6Ô6÷VçBÓÓÒ¢bb6Väæõ&–·—Sòæ&GFÆU7W7VæE66†VÖfW'6–öâÓÓÒ@¢bb6Väæõ&–·—SòæFF66†VÖfW'6–öâÓÓÒ#ã3‚ã"À¢.hÈ~Zé®8+>8;>88n8;>88N8¾XØ>XŠžKÉ8îy›¾˜Ë.x«nhX¾8Î8.8(®8î8¾8)2 ¢“°¢76W'B€¢fVç&—#òæ6öÆÆV7F–öäæòÓÓÒS€¢bbfVç&—#òæ6Æ76–f–6F–öä6FVv÷'’ÓÓÒ¢bbfVç&—#òæ–×ÆVÖVçFF–öå7FGW2ÓÓÒ&–×ÆVÖVçFVEöæEö66WFVB ¢bbfVç&—#òæ7F—fU6¶–ÆÄ6÷VçBÓÓÒ0¢bbfVç&—#òæ6Æ756¶–ÆÄ6÷VçBÓÓÒ@¢bbfVç&—#òææö&ÆU†çF6Ô6÷VçBÓÓÒ¢bbfVç&—#òææö&ÆU†çF6Õ&Wf—6–öâÓÓÒ'Ww&FVEööæÇ’ ¢bbfVç&—#òææö&ÆU†çF6Ô†—D6÷VçBÓÓÒP¢bbfVç&—#òææö&ÆU†çF6Ôf—†VE7V6–ÄGF6³òç&WV—&VEF&vWEG&—BÓÓÒ.ZJž8îX©² ¢bbfVç&—#òææö&ÆU†çF6Ôf—†VE7V6–ÄGF6³òæ×VÇF—Æ–W%W&Ö–ÆÆRÓÓÒS ¢bbfVç&—#òææö&ÆU†çF6Õ÷7D‡&VGV7F–öãòæÖ÷VçBÓÓÒ ¢bbfVç&—#òææö&ÆU†çF6Õ÷7D‡&VGV7F–öãòæ6äFVfVBÓÓÒG'VP¢bbfVç&—#òæ&GFÆU7W7VæE66†VÖfW'6–öâÓÓÒ@¢bbfVç&—#òæFF66†VÖfW'6–öâÓÓÒ#ã3‚ã"À¢.hÈ~Zé®8+>8;>88n8;>88N8¾89^8*~8;>8:®8:¾8îy›¾˜Ë.x«nhX¾8Î8.8(®8î8¾8)2 ¢“°¢76W'B€¢6æF—V¶–×W&òæ6öÆÆV7F–öäæòÓÓÒ“@¢bb6æF—V¶–×W&òæ6Æ76–f–6F–öä6FVv÷'’ÓÓÒ¢bb6æF—V¶–×W&òæ–×ÆVÖVçFF–öå7FGW2ÓÓÒ&–×ÆVÖVçFVEöæEö66WFVB ¢bb6æF—V¶–×W&òæ7F—fU6¶–ÆÄ6÷VçBÓÓÒ0¢bb6æF—V¶–×W&òæ6Æ756¶–ÆÄ6÷VçBÓÓÒ ¢bb6æF—V¶–×W&òææö&ÆU†çF6Ô6÷VçBÓÓÒ¢bb6æF—V¶–×W&òææö&ÆU†çF6Õ&Wf—6–öâÓÓÒ'Ww&FVEööæÇ’ ¢bb6æF—V¶–×W&òææö&ÆU†çF6Ô†—D6÷VçBÓÓÒ@¢bb6æF—V¶–×W&òææö&ÆU†çF6Ô–væ÷&TFVfVç6RÓÓÒ&öæU÷W6U÷&UöGF6µö6öÖÖöåöVffV7B ¢bb6æF—V¶–×W&òæ&GFÆU7W7VæE66†VÖfW'6–öâÓÓÒ@¢bb6æF—V¶–×W&òæFF66†VÖfW'6–öâÓÓÒ#ã3‚ã"À¢.hÈ~Zé®8+>8;>88n8;>88N8¾yÉþyKKú{˜8îy›¾˜Ë.x«nhX¾8Î8.8(®8î8¾8)2 ¢“°¢76W'B€¢Æ”wVæsòæ6öÆÆV7F–öäæòÓÓÒP¢bbÆ”wVæsòæ6Æ76–f–6F–öä6FVv÷'’ÓÓÒ¢bbÆ”wVæsòæ–×ÆVÖVçFF–öå7FGW2ÓÓÒ&–×ÆVÖVçFVEöv—F–æu÷W6W%ö66WFæ6R ¢bbÆ”wVæsòæ7F—fU6¶–ÆÄ6÷VçBÓÓÒ0¢bbÆ”wVæsòæ6Æ756¶–ÆÄ6÷VçBÓÓÒ0¢bbÆ”wVæsòææö&ÆU†çF6Ô6÷VçBÓÓÒ¢bbÆ”wVæsòææö&ÆU†çF6Õ&Wf—6–öâÓÓÒ'Ww&FVEööæÇ’ ¢bbÆ”wVæsòææö&ÆU†çF6Ô†—D6÷VçBÓÓÒ¢bbÆ”wVæsòæVæV×”7&—F–6Ä6†æ6TÖöF–f–W ¢ÓÓÒ&FF—F—fU÷W&Ö–ÆÆUö6Æ×VE÷Fõóóöæ÷&ÖÅöGF6µööæÇ’ ¢bbÆ”wVæsòæ&GFÆU7W7VæE66†VÖfW'6–öâÓÓÒ@¢bbÆ”wVæsòæFF66†VÖfW'6–öâÓÓÒ#ã3‚ã"À¢.hÈ~Zé®8+>8;>88n8;>88N8¾iØî[¨>8îy›¾˜Ë.x«nhX¾8Î8.8(®8î8¾8)2 ¢“°¢76W'B€¢¦—7V¶—F¶†–¶öæTæô¶Ö“òæ6öÆÆV7F–öäæòÓÓÒSp¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òæ6Æ76–f–6F–öä6FVv÷'’ÓÓÒ¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òæ–×ÆVÖVçFF–öå7FGW2ÓÓÒ&–×ÆVÖVçFVEöæEö66WFVB ¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òæ66WFæ6UVÆÅ&WVW7BÓÓÒs0¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òæ7F—fU6¶–ÆÄ6÷VçBÓÓÒ0¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òæ6Æ756¶–ÆÄ6÷VçBÓÓÒ0¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òææö&ÆU†çF6Ô6÷VçBÓÓÒ¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òææö&ÆU†çF6Õ&Wf—6–öâÓÓÒ'Ww&FVEööæÇ’ ¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òææö&ÆU†çF6Õ&–Ö'”†—D6÷VçBÓÓÒ¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òææö&ÆU†çF6ÔFF—F–öæÄ†—D6÷VçBÓÓÒ¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òææö&ÆU†çF6ÔFF—F–öæÄGF6´Çv—47F—fFW2ÓÓÒG'VP¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òæ&GFÆU7W7VæE66†VÖfW'6–öâÓÓÒ@¢bb¦—7V¶—F¶†–¶öæTæô¶Ö“òæFF66†VÖfW'6–öâÓÓÒ#ã3‚ã"À¢.hÈ~Zé®8+>8;>88n8;>88N8¾™‹þ˜^˜˜þš¹Žiz^ZÙjžzYî8îy›¾˜Ë.x«nhX¾8Î8.8(®8î8¾8)2 ¢“°¢76W'B€¢†öæFFF¶G7Sòæ6öÆÆV7F–öäæòÓÓÒp¢bb†öæFFF¶G7Sòæ6Æ76–f–6F–öä6FVv÷'’ÓÓÒ¢bb†öæFFF¶G7Sòæ–×ÆVÖVçFF–öå7FGW2ÓÓÒ&–×ÆVÖVçFVEöæEö66WFVB ¢bb†öæFFF¶G7Sòæ7F—fU6¶–ÆÄ6÷VçBÓÓÒ0¢bb†öæFFF¶G7Sòæ6Æ756¶–ÆÄ6÷VçBÓÓÒ¢bb†öæFFF¶G7Sòææö&ÆU†çF6Ô6÷VçBÓÓÒ¢bb†öæFFF¶G7Sòææö&ÆU†çF6Õ&Wf—6–öâÓÓÒ'Ww&FVEööæÇ’ ¢bb†öæFFF¶G7Sòæ&GFÆU7W7VæE66†VÖfW'6–öâÓÓÒ@¢bb†öæFFF¶G7SòæFF66†VÖfW'6–öâÓÓÒ#ã3‚ã"À¢.hÈ~Zé®8+>8;>88n8;>88N8¾iÊÎZI®[úX¹Þ8îy›¾˜Ë.x«nhX¾8Î8.8(®8î8¾8)2 ¢“°¢76W'B€¢Ö÷F†W$Ö'“òæ6öÆÆV7F–öäæòÓÓÒs ¢bbÖ÷F†W$Ö'“òæ66Vç6–öå7FvRÓÓÒ&f–æÂ ¢bbÖ÷F†W$Ö'“òæ–×ÆVÖVçFF–öå7FGW2ÓÓÒ&–×ÆVÖVçFVEöæEö66WFVB ¢bbÖ÷F†W$Ö'“òæ7F—fU6¶–ÆÄ6÷VçBÓÓÒ0¢bbÖ÷F†W$Ö'“òæ6Æ756¶–ÆÄ6÷VçBÓÓÒP¢bbÖ÷F†W$Ö'“òææö&ÆU†çF6Ô6÷VçBÓÓÒ¢bbÖ÷F†W$Ö'“òæ&GFÆU7W7VæE66†VÖfW'6–öâÓÓÒ@¢bbÖ÷F†W$Ö'“òæFF66†VÖfW'6–öâÓÓÒ#ã3‚ã ¢bbÖæ–fW7Bæ6÷&U'VÆW2ç6W'fçD66Vç6–öåf&–çEöÆ–7“òæÖ÷F†W$Ö'•7FvRÓÓÒ&f–æÅö66Vç6–öâ ¢bbÖæ–fW7Bæ6÷&U'VÆW2ç6W'fçD66Vç6–öåf&–çEöÆ–7“òçW%6W'fçDD†ö56VÆV7F÷"ÓÓÒfÇ6P¢bbÖæ–fW7Bæ6÷&U'VÆW2ç6W'fçD7F—fU6¶–ÆÅ&æ´Ö”&TöÖ—GFVEv†Vå6÷W&6TöÖ—G2ÓÓÒG'VRÀ¢.hÈ~Zé®8+>8;>88n8;>88N8¾ˆnjøÞ89î8:®8*.8îiÈ{X.XhÞˆzŽy›¾˜Ë.x«nhX¾8Î8.8(®8î8¾8)2 ¢“°¢6öç7B7FvVD†VÂÒÖæ–fW7Bæ6÷&U'VÆW2æFV6Æ&VE7FvVD†VÄ‡°¢6öç7B7FvVE&VGV6T‡ÒÖæ–fW7Bæ6÷&U'VÆW2æFV6Æ&VE7FvVE&VGV6T‡°¢6öç7BF&vWDfö7W2ÒÖæ–fW7Bæ6÷&U'VÆW2æVæV×•6–ævÆUF&vWDfö7W3°¢6öç7BÖ÷F†W$Ö'”–6öç2ÒÖæ–fW7Bæ6÷&U'VÆW2æÖ÷F†W$Ö'”–6öä6÷'&V7F–öç3°¢6öç7Bæö&ÆU†çF6ÔFF—F–öæÄGF6²ÒÖæ–fW7Bæ6÷&U'VÆW2ææö&ÆU†çF6ÔFF—F–öæÄGF6³°¢6öç7B6÷VçFVE6÷W&6TGF6´ÖöF–f–W'2ÒÖæ–fW7Bæ6÷&U'VÆW2æ6÷VçFVE6÷W&6TGF6´ÖöF–f–W'3°¢6öç7BFVfVç6—fT6Æ74ff–æ—G”÷fW'&–FRÒÖæ–fW7Bæ6÷&U'VÆW2æFVfVç6—fT6Æ74ff–æ—G”÷fW'&–FS°¢6öç7B¦—7V¶—F¶†–¶öæT–6öç2ÒÖæ–fW7Bæ6÷&U'VÆW2æ¦—7V¶—F¶†–¶öæTæô¶Ö”–6öç3°¢76W'B€¢æö&ÆU†çF6ÔFF—F–öæÄGF6³òæFF6†RÓÓÒ&æW7FVEögFW%÷&–Ö'•öGF6² ¢bbæö&ÆU†çF6ÔFF—F–öæÄGF6³òç6¶WD÷&FW"ÓÓÒ'&–Ö'•÷F†VåöFF—F–öæÂ ¢bbæö&ÆU†çF6ÔFF—F–öæÄGF6³òæ7F—fF–öâÓÓÒ&Çv—5öWfVåö–e÷F&vWEöFVfVFVEö÷%ö×VÇF—Æ–W%÷¦W&ò ¢bbæö&ÆU†çF6ÔFF—F–öæÄGF6³òçF&vWE&WFVçF–öâÓÓÒG'VP¢bbæö&ÆU†çF6ÔFF—F–öæÄGF6³òæ†—EG&–vvW%66÷RÓÓÒ&WfW'•ö†—Eö–åöWfW'•÷6¶WB ¢bbæö&ÆU†çF6ÔFF—F–öæÄGF6³òæ7F–öåG&–vvW%66÷RÓÓÒ&öæ6Uöf÷%ö6ö×ÆWFUöæö&ÆU÷†çF6Õö7F–öâ ¢bbæö&ÆU†çF6ÔFF—F–öæÄGF6³òç6÷W&6T6÷VçFVDÖöF–f–W$6öç7V×F–öâÓÓÒ&öæ6Uöf÷%ö6ö×ÆWFUöæö&ÆU÷†çF6Õö7F–öâ ¢bbæö&ÆU†çF6ÔFF—F–öæÄGF6³òæ&GFÆTÆöu6¶WDf–VÆBÓÓÒ&÷F–öæÅ÷6¶WG2 ¢bbæö&ÆU†çF6ÔFF—F–öæÄGF6³òæ&GFÆTÆöu66†VÖfW'6–öâÓÓÒP¢bbæö&ÆU†çF6ÔFF—F–öæÄGF6³òç6fU66†VÖ6†ævRÓÓÒfÇ6P¢bbæö&ÆU†çF6ÔFF—F–öæÄGF6³òæFF66†VÖ6†ævRÓÓÒfÇ6RÀ¢.ZéÞX[~‹ûÞXªiK¾i(>8îX[˜	®ŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢6÷VçFVE6÷W&6TGF6´ÖöF–f–W'3òæGF6´'Vfd6öç7V×F–öâÓÓÒ&öæ6U÷W%÷7F'FVEöFÖv–æuö7F–öâ ¢bb6÷VçFVE6÷W&6TGF6´ÖöF–f–W'3òæ7&—F–6Ä'Vfd6öç7V×F–öâÓÓÒ&öæ6U÷W%ö7GVÅö7&—F–6Åö7F–öâ ¢bb6÷VçFVE6÷W&6TGF6´ÖöF–f–W'3òæ†—EF&vWDæE6¶WD6÷VçDFôæ÷D×VÇF—Ç”6öç7V×F–öâÓÓÒG'VP¢bb6÷VçFVE6÷W&6TGF6´ÖöF–f–W'3òç¦W&ôFÖvTgFW$GF6µ7F'D6öç7VÖW2ÓÓÒG'VP¢bb6÷VçFVE6÷W&6TGF6´ÖöF–f–W'3òææô†—E7F'FVDFöW4æ÷D6öç7VÖRÓÓÒG'VRÀ¢.Y¹îi[X‹niK¾i(>XX>[Ë~XÉn8îkhŽ‹+¾ŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢FVfVç6—fT6Æ74ff–æ—G”÷fW'&–FSòæVffV7EG—RÓÓÒ&FVfVç6—fUö6Æ75öff–æ—G•ö÷fW'&–FR ¢bbFVfVç6—fT6Æ74ff–æ—G”÷fW'&–FSòç&W6öÇWF–öâÓÓÒ'&WÆ6Uö–æ6öÖ–æuö6Æ75öff–æ—G•÷v—F…öf—†VE÷W&Ö–ÆÆR ¢bbFVfVç6—fT6Æ74ff–æ—G”÷fW'&–FSòæ¦—7V¶—F¶†–¶öæTæô¶Ö•fÇVUW&Ö–ÆÆRÓÓÒS ¢bbFVfVç6—fT6Æ74ff–æ—G”÷fW'&–FSòçV•&V6Æ7VÆF–öâÓÓÒfÇ6P¢bb¦—7V¶—F¶†–¶öæT–6öç3òç&–F–ærÓÓÒ&6Æ72×&–F–ær ¢bb¦—7V¶—F¶†–¶öæT–6öç3òæF—f–æ—G’ÓÓÒ&6Æ72ÖF—f–æ—G’ ¢bb¦—7V¶—F¶†–¶öæT–6öç3òæWfFRÓÓÒ$fö–B ¢bb¦—7V¶—F¶†–¶öæT–6öç3òæ'W7FW%&W6—7Fæ6TF÷vâÓÓÒ$'W7FW'&W6—7FF÷vâ ¢bb¦—7V¶—F¶†–¶öæT–6öç3òæFVfVç6—fT6Æ74ff–æ—G”÷fW'&–FRÓÓÒ$6†ævV6Æ72"À¢.™‹.[êi˜.8*þ8:ž8+žy»Žh
+~Kˆ®i»Ž8Þ8î8þ8þ™‹þ˜^˜˜þš¹Žiz^ZÙjžzYî8î8*.8*N8+>8;>ŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’‡7FvVD†VÃòç7W÷'FVE66Æ–æw2’ÓÓÒ¥4ôâç7G&–æv–g’…²&f—†VB"Â&æö&ÆU÷†çF6ÕöÆWfVÂ"Â&÷fW&6†&vR%Ò¢bb7FvVD†VÃòç&W6öÇWF–öå6÷W&6RÓÓÒ&Væv–æUö7F–öåö6öçFW‡B ¢bb7FvVD†VÃòçV•&V6Æ7VÆF–öâÓÓÒfÇ6P¢bb7FvVD†VÃòç6fU66†VÖ6†ævRÓÓÒfÇ6P¢bb7FvVD†VÃòæFF66†VÖ6†ævRÓÓÒfÇ6RÀ¢.jë^™¨î[Èô…Y¹î[êž8îX[˜	®ŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’‡7FvVE&VGV6T‡òç7W÷'FVE66Æ–æw2’ÓÓÒ¥4ôâç7G&–æv–g’…²&f—†VB"Â&æö&ÆU÷†çF6ÕöÆWfVÂ"Â&÷fW&6†&vR%Ò¢bb7FvVE&VGV6T‡òç&W6öÇWF–öå6÷W&6RÓÓÒ&Væv–æUö7F–öåö6öçFW‡B ¢bb7FvVE&VGV6T‡òæ6äFVfVE&WV—&VD–äFFÓÓÒG'VP¢bb7FvVE&VGV6T‡òæFVfVÇDÆWF†Æ—G’ÓÓÒ&ÆWF†ÅöW†6WEöÆÇ•÷6¶–ÆÅ÷F&vWF–æuöÆÆ–W2 ¢bb7FvVE&VGV6T‡òæf—†VEfÇVTÆöu6†UVæ6†ævVBÓÓÒG'VP¢bb7FvVE&VGV6T‡òçV•&V6Æ7VÆF–öâÓÓÒfÇ6P¢bb7FvVE&VGV6T‡òç6fU66†VÖ6†ævRÓÓÒfÇ6P¢bb7FvVE&VGV6T‡òæFF66†VÖ6†ævRÓÓÒfÇ6RÀ¢.jë^™¨î[Èô…k‰¾[	8îX[˜	®ŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢F&vWDfö7W3òæVffV7EG—RÓÓÒ'F&vWEöfö7W2 ¢bbF&vWDfö7W3òæ6æF–FFU66÷RÓÓÒ&Æ—f–æuöÆÇ•ög&öçFÆ–æR ¢bbF&vWDfö7W3òç÷6—F—fUfÇVW4öæÇ’ÓÓÒG'VP¢bbF&vWDfö7W3òç6–ævÆT6æF–FFU&ætG&w2ÓÓÒ ¢bbF&vWDfö7W3òæ×VÇF—ÆT6æF–FFUöÆ–7’ÓÓÒ&W†—7F–æuö7F–öå÷F&vWE÷öÆ–7’ ¢bbF&vWDfö7W3òæ7W7FöÕ6VÆV7F÷$÷fW'&–FFVâÓÓÒG'VP¢bbF&vWDfö7W3òæÆÅF&vWEVæffV7FVBÓÓÒG'VP¢bbF&vWDfö7W3òç6fU66†VÖ6†ævRÓÓÒfÇ6P¢bbF&vWDfö7W3òæFF66†VÖ6†ævRÓÓÒfÇ6RÀ¢.i[^XÙŽKÙ>iK¾i(>8î8+þ8;Î8+.88>88Ž™¸nKŠÞŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢Ö÷F†W$Ö'”–6öç3òçF&vWDfö7W2ÓÓÒ%FVçGW ¢bbÖ÷F†W$Ö'”–6öç3òæVæV×•7V6–ÅF&vWDfö7W5&W6W'fVBÓÓÒ$VæV×–fö7W2 ¢bbÖ÷F†W$Ö'”–6öç3òæVæV×•7V6–ÅF&vWDfö7W5W6U&WV—&W4W‡Æ–6—EW6W%7V6–f–6F–öâÓÓÒG'VP¢bbÖ÷F†W$Ö'”–6öç3òæ¶æ÷vÆVFvTöd†W&WF–56¶–ÆÂÓÓÒ'6¶–ÆÂÖ‡Ö†VÂ×W"×GW&â"À¢.ˆnjøÞ89î8:®8*.8îhÈ~Zé®8*.8*N8+>8;>ŠhþX˜~8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆUGW&äÆöu66†VÖfW'6–öâÓÓÒ"À¢#hŠn™yŽ8+þ8;Î8;>8:Þ8+[Ú.[Èþ898;Î8+Ž8:~8;>8ó.8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆUGW&äÆöu&V6÷&D÷&FW"’ÓÓÒ¥4ôâç7G&–æv–g’…°¢&ÆÇ•ö7F–öåö&F6‚"À¢&ÆÇ•÷GW&åöVæB"À¢&VæV×•ö7F–öåö&F6‚"À¢&VæV×•÷GW&åöVæB ¢Ò’À¢#hŠn™yŽ8+þ8;Î8;>8:Þ8+8îŠ‰Ž˜Ë.šn8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢¥4ôâç7G&–æv–g’†Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆUGW&äÆöt–æ6ÇVFW2’ÓÓÒ¥4ôâç7G&–æv–g’…°¢'6VVB"À¢'&æu÷÷6—F–öç2"À¢'GW&åöVæEö7F—fF–öç2"À¢'GW&åöVæE÷7F%öFF—F–öç2"À¢&'&V·2"À¢&‡÷6WGFÆVÖVçG2"À¢&VæV×•ö6†&vUö6†ævW2"À¢&GW&F–öç2"À¢&6ööÆF÷vç2"À¢'&WÆ6VÖVçG2"À¢'vfU÷G&ç6—F–öâ"À¢&&GFÆUö÷WF6öÖR ¢Ò’À¢#hŠn™yŽ8+þ8;Î8;>8:Þ8+8î[ø^šŽŠ›>{K8ÎKˆˆ{N8~8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆUGW&äÆöt§6öå6W&–Æ—¦&ÆRÓÓÒG'VRÀ¢#hŠn™yŽ8+þ8;Î8;>8:Þ8+8ô¥4ôî8ŽKùÞZÙŽXúþˆ;Þ8~8®88(Î88®8(®8î8¾8)2 ¢“°¢76W'B€¢Öæ–fW7Bæ6÷&U'VÆW2æ&GFÆU7W7VæE66†VÖfW'6–öâÓÓÒ@¢bbÖæ–fW7Bæ6÷&U'VÆW2æ&GFÆU7W7VæE&W7VÖRÓÓÒ&F—&V7E÷6æ6†÷E÷&W7F÷&R ¢bbÖæ–fW7Bæ6÷&U'VÆW2æ&GFÆU7W7VæDÆVv7”Ö–w&F–öà¢ÓÓÒ'66†VÖó5÷FõóEöF—&V7E÷6æ6†÷E÷&W7F÷&R"À¢.KŠÞijÞKùÞZÙŽ[Ú.[ÈóN8þy»Nhê^XhÞ™h¾8~8[Ú.[Èó>8).XhÞZéþŠÎ8¾8®}{ë}í¢G§²ÚîÆ­yÕUô44UDä4Uó##bÓ‚ÓRæÖB"¢bbFö74–æFW‚æ–æ6ÇVFW2‚'ôÔõD„U%ôÔ%•ô44UDä4Uó##bÓ‚Ó#æÖB"¢bbFö74–æFW‚æ–æ6ÇVFW2‚'ôTddT5EôEU$D”ôåô$õTäD%•ô44UDä4Uó##bÓ‚Ó#æÖB"¢bbFö74–æFW‚æ–æ6ÇVFW2‚'ô„ôäDõDD´E5Uô44UDä4Uó##bÓ‚Ó#æÖB"¢bbFö74–æFW‚æ–æ6ÇVFW2‚'ô¤•5T´•D´„”´ôäUôäõô´Ô•ô44UDä4Uó##bÓ‚Ó#æÖB"¢bbFö74–æFW‚æ–æ6ÇVFW2‚%4U%dåEô4Ä54”d”4D”ôâæÖB"’À¢.ih~i»Ž{J.[É^8¾iÈik8î{[YŽXù~XZ^ZY®8Î8.8(®8î8¾8)2 ¢“°¦6öç7BVffV7DGW&F–öä66WFæ6RÒv—B&VEFW‡B€¢&Fö72÷ôTddT5EôEU$D”ôåô$õTäD%•ô44UDä4Uó##bÓ‚Ó#æÖB ¢“°¦76W'B€¢VffV7DGW&F–öä66WFæ6Ræ–æ6ÇVFW2‚.XŠNZé£¢ˆz®X¹^jIÎiû¾YŽjÂ"¢bbVffV7DGW&F–öä66WFæ6Ræ–æ6ÇVFW2‚.h˜hÈˆ^XN8+þ8;Î8;>{X.K¨n8y»Žh˜¾XN8+þ8;Î8;>{X.K¨n8h˜¾X¹^8ã>zŠâ"¢bbVffV7DGW&F–öä66WFæ6Ræ–æ6ÇVFW2‚.‹ª¾{8(¾ˆnXznZ[2"¢bbVffV7DGW&F–öä66WFæ6Ræ–æ6ÇVFW2‚.i[^8+þ8;Î8;>{X.K¨n8s.x«nhX¾8Ž8(.ZKX«’"¢bbVffV7DGW&F–öä66WFæ6Ræ–æ6ÇVFW2‚.KŠÞijÞKùÞZÙŽ[Ú.[Èó¢N8î8î8â"¢bbVffV7DGW&F–öä66WFæ6Ræ–æ6ÇVFW2‚.88~8;Î8+þx˜ƒ¢ã3‚ã8î8î8â"¢bbVffV7DGW&F–öä66WFæ6Ræ–æ6ÇVFW2‚#SN89^8*8*N8:¾8;³SS>88n8+ž88Žh‰X©ò"¢bbVffV7DGW&F–öä66WFæ6Ræ–æ6ÇVFW2‚$æòã~8ÎiÊÎZI®[úX¹Þ8Þ8îX[~KÙ>88~8;Î8+þ8K¹n8+^8;Î8;N8*8;>88Ž8i[^8jh.[û^zKÎŠ8^8šÙNŠ>zKÎŠ8^8î‹ûÞXª8þŠÎ8>8n8N8î8¾8)2"’À¢.x«nhX¾iÉþ™™Z(>yXÎ8îXù~XZ^Š‰Ž˜Ë.8ÎjÚ>iÊÎ8ŽKˆˆ{N8~8î8¾8)2 ¢“°¦6öç7B6W'fçD6Æ76–f–6F–öâÒv—B&VEFW‡B‚&Fö72õ4U%dåEô4Ä54”d”4D”ôâæÖB"“°¦76W'B€¢6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚.8+^8;Î8;N8*8;>88ŽZéþŠ8^8*¾88n8+N8:®KˆŠjr"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚.iÊ®Š‰Ž˜Ë.8îX	žŠ9Î8).˜îXë¾888:>88>88Ž8(NYÞz{8¾8(žhêŽkŠÎ8~8n8*¾88n8+N8:£8ŽXZ^8(Î8®8B"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚'ÂÂXZ¾y›î[¾8®Kˆ2Â˜	®[‹‚Â"Â"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚'ÂRÂ›¸N[‰ÒÂ˜	®[‹‚ÂBÂ"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚'ÂrÂiÊÎZI®[úX¹ÒÂ˜	®[‹‚ÂÂ"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2ó#sBæ‡FÖÂ"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚'Â#N(	’ÂiJþ˜XÞ8î89^8*ž8;Î8:®88®8;ÂÂkKîyIòÂÂ"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2óscbæ‡FÖÂ"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚'ÂSrÂ™‹þ˜^˜˜þš¹Žiz^ZÙjžzYâÂ˜	®[‹‚ÂÂ"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2óSæ‡FÖÂ"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚'ÂsÂˆnjøÞ89î8:®8*"Â˜	®[‹‚ÂÂ"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2ósƒæ‡FÖÂ"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚'Â#~(	’Â“CžyZ®89®8;Î8+‚ÂkKîyIòÂKùÞyY’Â"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚'ÂÂ8:.8:®8*Î8;>8;¾88Ž8:ž8*N8:n8;Î8;2Â˜	®[‹‚ÂBÂ"¢bb6W'fçD6Æ76–f–6F–öâæ–æ6ÇVFW2‚'ÂCsRÂ{H^™k¾šÙNûÈþ898;Î8+^8;Î8*¾8;ÂÂXZÎ[ÈòÂBÂ"’À¢.8+^8;Î8;N8*8;>88ŽZéþŠ8^8*¾88n8+N8:®KˆŠj~8îz+®Zé®Š‰Ž˜Ë.8ÎKˆˆ{N8~8î8¾8)2 ¢“°¦6öç7BÖ÷F†W$Ö'”66WFæ6RÒv—B&VEFW‡B€¢&Fö72÷ôÔõD„U%ôÔ%•ô44UDä4Uó##bÓ‚Ó#æÖB ¢“°¦76W'B€¢Ö÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚.XŠNZé£¢iÈ{X.YŽjÂ"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚.iÈ{X.ZéþyK¾™Ú.Xù~XZ^izS¢##bÓ‚Ó#"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚.iÈ{X.XhÞˆz‚"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚#SN89^8*8*N8:¾8;³SS88n8+ž88‚"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚$…89^8*ž8*n8;´D¾89^8*ž8*b"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚.Xû>Kˆ®8+ž8*Þ88>89r"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚###CûÈó#CƒsûÈó#s3b"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚&FVçGW"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚&6¶–ÆÂÖ‡Ö†VÂ×W"×GW&æ"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚&7V6–Æ–çf–æ6–&ÆV"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚.iÊ®z+®Š¨Þ8îXù~XZ^š^yºî8þ8®8B"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚%"3c’"¢bbÖ÷F†W$Ö'”66WFæ6Ræ–æ6ÇVFW2‚'cãX‰ÞiÉþZèÎh‰zøNY».ZIn8îX[~KÙ>8+>8;>88n8;>88N‹ûÞXªZûî‹8)#K»n88˜ŽZé®8ž8(²"’À¢.ˆnjøÞ89î8:®8*.8îXù~XZ^ZY®8ÎjÚ>iÊÎ8ŽKˆˆ{N8~8î8¾8)2 ¢“°¦6öç7B†öæFFF¶G7T66WFæ6RÒv—B&VEFW‡B€¢&Fö72÷ô„ôäDõDD´E5Uô44UDä4Uó##bÓ‚Ó#æÖB ¢“°¦76W'B€¢†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚.XŠNZé£¢iÈ{X.YŽjÎûÈŽ8:n8;Î8+n8;ÎZéþyK¾™Ú.Xù~XZ^ZèÎK¨nûÈ’"¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚.{[Y…#¢3s""¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2ó#sBæ‡FÖÂ"¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚$Çcƒ8;³“8þXø.xZ~Š‰Ž˜Ë.88"¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚.iK¾i(>[èÄ…k‰¾[	ûÈóSûÈó#ûÈó#SûÈó3"¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚&6äFVfVC¢G'VV"¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚&–çf–æ6–&ÆW–W&6V"¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚&–væ÷&VFVfVç6V"¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚.iÊÎZI®[úX¹ÕV–6¾(i.YÄ'G>(i.iJþ˜XÞ8î89^8*ž8;Î8:®88®8;Ä'W7FW""¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚.‹8~k©Z)~k‰³8~8(.˜
+>{i®89^8:Î8;Î8:8Ži[T…jÈN8).yÈyZ^8~8®8B"¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚#S^89^8*8*N8:¾8;³Scn88n8+ž88Žh‰X©ò"¢bb†öæFFF¶G7T66WFæ6Ræ–æ6ÇVFW2‚$æòã8Î8+~8+8:8;>88ž8Ò"’À¢.iÊÎZI®[úX¹Þ8„ô>XŠT…k‰¾[	8îXù~XZ^ZY®8ÎjÚ>iÊÎ8ŽKˆˆ{N8~8î8¾8)2 ¢“°¦6öç7B¦—7V¶—F¶†–¶öæT66WFæ6RÒv—B&VEFW‡B€¢&Fö72÷ô¤•5T´•D´„”´ôäUôäõô´Ô•ô44UDä4Uó##bÓ‚Ó#æÖB ¢“°¦76W'B€¢¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚.XŠNZé£¢iÈ{X.YŽjÎûÈŽ8:n8;Î8+n8;ÎZéþyK¾™Ú.Xù~XZ^ZèÎK¨nûÈ’"¢bb¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚.iÈ{X.ZéþyK¾™Ú.Xù~XZ^izS¢##bÓ‚Ó#"¢bb¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚.{[Y…#¢3s2"¢bb¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2óSæ‡FÖÂ"¢bb¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚$ô38îXÞxès8~8(.[ø^8£”†—B"¢bb¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚.Y»®Zé£S^8ŽKˆ®i»Ž8Ò"¢bb¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚&6†ævV6Æ76"¢bb¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚.KŠÞijÞKùÞZÙŽ[Ú.[ÈóN888~8;Î8+óã3‚ã"¢bb¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚#Sn89^8*8*N8:¾8;³Ss88n8+ž88‚"¢bb¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚.iÊ®z+®Š¨Þ8îXù~XZ^š^yºî8þ8®8B"¢bb¦—7V¶—F¶†–¶öæT66WFæ6Ræ–æ6ÇVFW2‚.iÈ{X.YŽjÎ8Ž8ž8(²"’À¢.™‹þ˜^˜˜þš¹Žiz^ZÙjžzYî8ŽZéÞX[~‹ûÞXªiK¾i(>8îXù~XZ^ZY®8ÎjÚ>iÊÎ8ŽKˆˆ{N8~8î8¾8)2 ¢“° ¦6öç7B6Väæõ&–·—T66WFæ6RÒv—B&VEFW‡B€¢&Fö72÷õ4Tåôäõõ$”µ•Uô44UDä4Uó##bÓ‚ÓRæÖB ¢“°¦76W'B€¢6Väæõ&–·—T66WFæ6Ræ–æ6ÇVFW2‚.XŠNZé£¢iÈ{X.YŽjÂ"¢bb6Väæõ&–·—T66WFæ6Ræ–æ6ÇVFW2‚.iÈ{X.ZéþyK¾™Ú.Xù~XZ^izS¢##bÓ‚ÓR"¢bb6Väæõ&–·—T66WFæ6Ræ–æ6ÇVFW2‚.iÊ®z+®Š¨Þ8îXù~XZ^š^yºî8þ8®8B"¢bb6Väæõ&–·—T66WFæ6Ræ–æ6ÇVFW2‚#S>89^8*8*N8:¾8S3Ž88n8+ž88Žh‰X©ò"¢bb6Väæõ&–·—T66WFæ6Ræ–æ6ÇVFW2‚'F&vWDGF6´WfVçEF&vWG2"¢bb6Väæõ&–·—T66WFæ6Ræ–æ6ÇVFW2‚.8ÎXZÎ[Èþ8Þ8+þ89b"¢bb6Väæõ&–·—T66WFæ6Ræ–æ6ÇVFW2‚.8Î8*®8:®8+Ž88®8:¾8Þ8+þ89b"¢bb6Väæõ&–·—T66WFæ6Ræ–æ6ÇVFW2‚$ç6†&vWW"¢bb6Väæõ&–·—T66WFæ6Ræ–æ6ÇVFW2‚$7&—FFÖwW"’À¢.XØ>XŠžKÉ8;¾{zŽh‰XË®Xˆn8+þ89n8îXù~XZ^ZY®8ÎjÚ>iÊÎ8ŽKˆˆ{N8~8î8¾8)2 ¢“° ¦6öç7BGW&äVæE7F$66WFæ6RÒv—B&VEFW‡B€¢&Fö72÷õEU$åôTäEõ5D%ôt”åô44UDä4Uó##bÓ‚ÓæÖB ¢“°¦76W'B€¢GW&äVæE7F$66WFæ6Ræ–æ6ÇVFW2‚.XŠNZé£¢YŽjÂ"¢bbGW&äVæE7F$66WFæ6Ræ–æ6ÇVFW2‚.Yû®k©fÖ–î8+>89þ88>88ƒ¢SV#6#s“ƒVcC–c–C3“csc–fF63FSsscv"¢bbGW&äVæE7F$66WFæ6Ræ–æ6ÇVFW2‚.KŠÞijÞKùÞZÙŽ[Ú.[ÈóN888~8;Î8+óã3‚ã8i[^88~8;Î8+þ[Ú.[Èó8ŠÎX¹^8:Þ8+[Ú.[Èó^88+þ8;Î8;>8:Þ8+[Ú.[Èó""¢bbGW&äVæE7F$66WFæ6Ræ–æ6ÇVFW2‚'cãX‰ÞiÉþZèÎh‰zøNY».8îiÊ®ZéþŠ8^8óK»b"’À¢.8+þ8;Î8;>{X.K¨n8+ž8+þ8;ÎxÛ.[é~8î{[YŽXù~XZ^ZY®8ÎjÚ>iÊÎ8ŽKˆˆ{N8~8î8¾8)2 ¢“° ¦6öç7BVffV7G4æEF–Ö–ærÒv—B&VEFW‡B‚&Fö72÷7V72ôTddT5E5ôäEõD”Ô”äræÖB"“°¦76W'B€¢VffV7G4æEF–Ö–æræ–æ6ÇVFW2‚"222i[^ZéÞX[tÇn8;´ô>8Žjë^™¨îXŠ^Zê>ŠˆX
+B"¢bbVffV7G4æEF–Ö–æræ–æ6ÇVFW2‚'fÇVW5¶æö&ÆU†çF6ÔÆWfVÂÒÒ"¢bbVffV7G4æEF–Ö–æræ–æ6ÇVFW2‚'fÇVW5¶÷fW&6†&vU7FvRÒÒ"’À¢.X«žiéÎK¹^jyŽ8¾i[^ZéÞX[~jë^™¨îih~ˆHŽ8îZê>Šˆ8;¾˜Žh©îŠhþX˜~8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢VffV7G4æEF–Ö–æræ–æ6ÇVFW2‚"2228+þ8;Î8;>{X.K¨n88Ž8:®8*Î8;Î8î8+ž8+þ8;ÎxÛ.[ér"¢bbVffV7G4æEF–Ö–æræ–æ6ÇVFW2‚&FW7F–æF–öã¢æW‡Eö6öÖÖæF888).iÈžX«ž8®y›¾˜Ë""¢bbVffV7G4æEF–Ö–æræ–æ6ÇVFW2‚.ZéþXªzé~˜xó8îh‰z¸¾{YiéÂ"’À¢.X«žiéÎK¹^jyŽ8¾8+þ8;Î8;>{X.K¨n8+ž8+þ8;Î8îy›¾˜Ë.8;¾Kˆ®™™8;¾8:Þ8+ŠhþX˜~8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢VffV7G4æEF–Ö–æræ–æ6ÇVFW2‚&F&vWDGF6´WfVçEF&vWG3¢G'VV"¢bbVffV7G4æEF–Ö–æræ–æ6ÇVFW2‚.YÎ8ŽiK¾i(>8*N89ž8;>88Ž8îZéþZûî‹”N88"¢bbVffV7G4æEF–Ö–æræ–æ6ÇVFW2‚.XØ>XŠžKÉ8Î[›ÞxèN8þ8(¾›¹.8Ò"’À¢.X«žiéÎK¹^jyŽ8¾iK¾i(>8*N89ž8;>88ŽZéþZûî‹8Ž™™Zé®8ž8(¾X[˜	®88Ž8:®8*Î8;ÎŠhþX˜~8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢VffV7G4æEF–Ö–æræ–æ6ÇVFW2‚.YÎ8ŽhŠn™yŽX¾KÙ>8îXÙŽKÙ>˜	®[‹Ž8*¾8;Î88ž˜
+>{i®KŠÒ"¢bbVffV7G4æEF–Ö–æræ–æ6ÇVFW2‚.XZ„†—N8).8*®8;Î898;Î8*Þ8:²"¢bbVffV7G4æEF–Ö–æræ–æ6ÇVFW2‚.iz.ZÙŽ888:8;Î8+Ž8;´å8;¾8+ž8+þ8;ÎK›i[X‰~8).˜	®[‹Ž8ž8®8(®KÛþyJ‚"’À¢.X«žiéÎK¹^jyŽ8¾hŠn™yŽKˆÞˆ;ÞZûî‹8Ž{i®8þXÙŽKÙ>˜	®[‹Ž8*¾8;Î88žX‰~8îŠhþX˜~8Î8.8(®8î8¾8)2 ¢“° ¦6öç7B&GFÆU7—7FVÒÒv—B&VEFW‡B‚&Fö72÷7V72ô$EDÄUõ5•5DTÒæÖB"“°¦76W'B€¢&GFÆU7—7FVÒæ–æ6ÇVFW2‚"2228+þ8;Î8;>{X.K¨n88Ž8:®8*Î8;Î8¾8(Ž8(¾8+ž8+þ8;ÎxÛ.[ér"¢bb&GFÆU7—7FVÒæ–æ6ÇVFW2‚.hŠn™yŽ{X.K¨ni˜.8þ{›8(®Kˆ®8.8¢"’À¢.hŠn™yŽK¹^jyŽ8¾8+þ8;Î8;>{X.K¨n8+ž8+þ8;Î8îšn[¨þ8Ž{›Kˆ®8.Z(>yXÎ8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢&GFÆU7—7FVÒæ–æ6ÇVFW2‚.YÎ8ŽhŠn™yŽX¾KÙ>8îXÙŽKÙ>˜	®[‹Ž8*¾8;Î88ž8Î˜
+>{i®8ž8(¾XË®™i2"¢bb&GFÆU7—7FVÒæ–æ6ÇVFW2‚.h‰z¸¾kˆŽ8ôW‡G&GF6²"¢bb&GFÆU7—7FVÒæ–æ6ÇVFW2‚.Zéô…k‰¾[	8ó"¢bb&GFÆU7—7FVÒæ–æ6ÇVFW2‚.jÊŠÎX¹^ˆ^8îZéþŠÎKˆÞˆ;Ò"’À¢.hŠn™yŽK¹^jyŽ8¾XÙŽKÙ>˜	®[‹Ž8*¾8;Î88ž˜
+>{i®8îZûî‹KùÞhÈZ(>yXÎ8Î8.8(®8î8¾8)2 ¢“° ¦6öç7B6Æ7VÆF–öç4æE&ærÒv—B&VEFW‡B€¢&Fö72÷7V72ô4Ä5TÄD”ôå5ôäEõ$äræÖB ¢“°¦76W'B€¢6Æ7VÆF–öç4æE&æræ–æ6ÇVFW2‚.8+þ8;Î8;>{X.K¨n88Ž8:®8*Î8;Î8¾8(Ž8(¾8+ž8+þ8;ÎxÛ.[é~8(""¢bb6Æ7VÆF–öç4æE&æræ–æ6ÇVFW2‚.K¹n8ã^K›i[X‰~8þZHži»N8~8®8B"’À¢.ŠˆŽzé~8;¾K›i[K¹^jyŽ8¾8+þ8;Î8;>{X.K¨n8+ž8+þ8;Î8îKˆ®™™8ŽK›i[Z(>yXÎ8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢6Æ7VÆF–öç4æE&æræ–æ6ÇVFW2‚.XÙŽKÙ>˜	®[‹Ž8*¾8;Î88ž˜
+>{i®8¾8(Ž8(¢"¢bb6Æ7VÆF–öç4æE&æræ–æ6ÇVFW2‚.XZ„†—N8).8*®8;Î898;Î8*Þ8:²"¢bb6Æ7VÆF–öç4æE&æræ–æ6ÇVFW2‚.XŠNijÞˆz®KÙ>8þK›i[8).khŽ‹+¾8~8®8B"’À¢.ŠˆŽzé~8;¾K›i[K¹^jyŽ8¾XÙŽKÙ>˜	®[‹Ž8*¾8;Î88ž˜
+>{i®8î8*®8;Î898;Î8*Þ8:¾ŠhþX˜~8Î8.8(®8î8¾8)2 ¢“° ¦6öç7BV”æE7F÷&vRÒv—B&VEFW‡B‚&Fö72÷7V72õT•ôäEõ5Dõ$tRæÖB"“°¦6öç7BV•7G–ÆW2Òv—B&VEFW‡B‚'7&2÷7G–ÆW2æ772"“°¦6öç7B6÷W&6RÒv—B&VEFW‡B‚'7&2ôçG7‚"“°¦6öç7BVffV7E&W6VçFF–öâÒv—B&VEFW‡B‚'7&2÷V’öVffV7E&W6VçFF–öâçG2"“°¦6öç7B–6öå&Vv—7G'’Òv—B&VEFW‡B‚'7&2÷V’ö–6öå&Vv—7G'’çG2"“°¦6öç7B–æ—F–Ä&GFÆUV’Òv—B&VEFW‡B‚'7&2÷V’ö–æ—F–Ä&GFÆRçG2"“°¦6öç7B&GFÆUV’Òv—B&VEFW‡B‚'7&2÷V’ö&GFÆUV’çG2"“°¦76W'B€¢V”æE7F÷&vRæ–æ6ÇVFW2‚.i[^ZéÞX[~8îK»¾hHþ8îZéÞX[tÇn8;´ô>ih~ˆH‚"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚%Tž8þjë^™¨î˜Žh©î8˜XÞX‰~Xø.xZ~8ih~ˆHŽŠ9ÎZèÂ"’À¢%Tž8;¾KùÞZÙŽK¹^jyŽ8¾i[^ZéÞX[~jë^™¨îih~ˆHŽ8îKùÞZÙŽ8Ž™ÙîXhÞŠˆŽzé~ŠhþX˜~8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢V”æE7F÷&vRæ–æ6ÇVFW2‚.8+þ8;Î8;>{X.K¨n8+ž8+þ8;ÎxÛ.[é~8þ88+þ8;Î8;>8:Þ8+[Ú.[Èó""¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.KŠÞijÞKùÞZÙŽ[Ú.[ÈóN8;¾88~8;Î8+óã3‚ã8;¾ŠÎX¹^8:Þ8+[Ú.[Èó^8;¾8+þ8;Î8;>8:Þ8+[Ú.[Èó.8).{jÞhÈ"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.{X.K¨ni˜.X«žiéÎ8“žX¾Kˆ®™™8jÊY¹îyJŽ{›Kˆ®8.8).XhÞZéþŠÎ8~8®8B"’À¢%Tž8;¾KùÞZÙŽK¹^jyŽ8¾8+þ8;Î8;>{X.K¨n8+ž8+þ8;Î8îz+®Zé®8:Þ8+8Žx˜Ž{jÞhÈŠhþX˜~8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢V”æE7F÷&vRæ–æ6ÇVFW2‚.Y>ikžX«žiéÎ8þ8*þ8:ž8+ž8+ž8*Þ8:¾ûÈþjh.[û^zKÎŠ8^ûÈþ8Þ8îK¹nûÈþYŽzér"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.i[^X«žiéÎ8þ˜	®[‹ŽûÈþx›žjè®ûÈþYŽzér"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.XÞxè~8Ž8~8ny›¾˜Ë.8^8(Î8(·W&Ö–ÆÆ^X
+N8þŠŽzK®i˜.888~X›.8>8ny›îXˆnxèr"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.i˜.™i>8¾8(Ž8(¾ˆz®X¹^˜8(®8þŠÎ8(þ8®8B"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.i[^8;¾Y>ikž8ä…898;Â"’À¢%Tž8;¾KùÞZÙŽK¹^jyŽ8´BÓƒn8îx«nhX¾ŠŽzK®8;¾YŽzé~8;¾h˜¾X¹T…kÉNX{®8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢V”æE7F÷&vRæ–æ6ÇVFW2‚.8ÎXZÎ[Èþ8Þ8Î8*®8:®8+Ž88®8:¾8Þ8ã.8+þ89b"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.XXž8î8+>8:N8;>8+ž8*¾8:NûÈ„æòã3NûÈž8XØ>XŠžKÉûÈ„æòã3c.ûÈ’"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.XŠ^XË®Xˆn8+þ89n8).™k.Šj~8~8þ888~8þxûîYÊŽ˜Žh©î8).Šz>™šN8~8®8B"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.8+þ89n˜:ŽXˆn8îjŠ®8+ž8*þ8:Þ8;Î8:¾8).y›®yIþ8^8¾8®8B"¢bb6÷W&6Ræ–æ6ÇVFW2‚$ôdd”4”Åõ4U%dåEôDTd”ä•D”ôå2"¢bb6÷W&6Ræ–æ6ÇVFW2‚$õ$”t”äÅõ4U%dåEôDTd”ä•D”ôå2"¢bb6÷W&6Ræ–æ6ÇVFW2‚.˜Žh©îKŠÞûÉ¢"¢bb6÷W&6Ræ–æ6ÇVFW2‚r.XZÎ[Èþ8+^8;Î8;N8*8;>88‚"r¢bb6÷W&6Ræ–æ6ÇVFW2‚r.8*®8:®8+Ž88®8:¾8+^8;Î8;N8*8;>88‚"r¢bbõÂç6W'fçBÖ÷&–v–â×F'5Ç2¥ÇµµÇ5Å5Ò£öw&–B×FV×ÆFRÖ6öÇVÖç3¥Ç2§&WVEÂƒ"ÂÖ–æÖ…ÂƒÂg%Â•Â•µÇ5Å5Ò£ö÷fW&fÆ÷r×ƒ¥Ç2¦†–FFVâòçFW7B‡V•7G–ÆW2’À¢.{zŽh‰Tž8¾XZÎ[ÈþûÈþ8*®8:®8+Ž88®8:¾XË®Xˆn8æòîšn8˜Žh©î{jÞhÈ8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢V”æE7F÷&vRæ–æ6ÇVFW2‚$…89^8*ž8*n8„D¾89^8*ž8*b"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.8Þ8(Î8î8(ÃûÙã38îi[Ni[8X‰ÞiÉþX
+C"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.jÊ‰Þ8~8ô…89^8*ž8*n8;´D¾89^8*ž8*n8).8Þ8(Î8î8(Ã"¢bb6Æ7VÆF–öç4æE&æræ–æ6ÇVFW2‚.˜Žh©äÇn8ä…8;´D¾8Ž8Þ8(Î8î8(ÎXªzé~8~8þ[èÎ8jh.[û^zKÎŠ8R"¢bb–æ—F–Ä&GFÆUV’æ–æ6ÇVFW2‚&W‡÷'B6öç7B4U%dåEôdõUôÔ”âÒ"¢bb–æ—F–Ä&GFÆUV’æ–æ6ÇVFW2‚&W‡÷'B6öç7B4U%dåEôdõUôÔ‚Ò5ó"¢bb–æ—F–Ä&GFÆUV’æ–æ6ÇVFW2‚&Ö„‡F§W7FÖVçC¢6VÆV7F–öâæ‡f÷R"¢bb–æ—F–Ä&GFÆUV’æ–æ6ÇVFW2‚&GF6´F§W7FÖVçC¢6VÆV7F–öâæGF6´f÷R"¢bb6÷W&6Ræ–æ6ÇVFW2‚&æ÷&ÖÆ—¦U7F÷&VE6WGW"¢bb6÷W&6Ræ–æ6ÇVFW2‚&‡f÷S¢6Æ÷Bæ‡f÷Róò4U%dåEôdõUôÔ”â"¢bb6÷W&6Ræ–æ6ÇVFW2‚&GF6´f÷S¢6Æ÷BæGF6´f÷Róò4U%dåEôdõUôÔ”â"’À¢.{zŽh‰Tž8;¾ŠˆŽzé~K¹^jyŽ8;¾ZéþŠ8^8´…ûÈôD¾89^8*ž8*nXZ^X©¾8Žiz~KùÞZÙŽK©.hù¾8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢–6öå&Vv—7G'’æ–æ6ÇVFW2‚r$åxÛ.[é~˜xþ8*.88>89r#¢$ç6†&vWW"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r%V–6¾8*¾8;Î88”åxÛ.[é~˜xþ8*.88>89r#¢$ç6†&vWW"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r%V–6¾8*¾8;Î88ž8äåxÛ.[é~˜xþ8*.88>89r#¢$ç6†&vWW"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.Š*¾888:8;Î8+Ži˜$åxÛ.[é~˜xþ8*.88>89r#¢$åv–åWFÖr"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r%V–6¾8*¾8;Î88ž8îZˆX©¾8*.88>89r#¢%V–6¶FÖvWW"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r%V–6¾8*þ8:®88n8*>8*¾8:¾ZˆX©¾8*.88>89r#¢%V–6¶FÖvWW"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚vVffV7BæVffV7EG—RÓÓÒ4ôÔÔôåôTddT5EõE•U2æ7&—F–6ÄFÖvRr¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚vVffV7BæVffV7EG—RÓÓÒ4ôÔÔôåôTddT5EõE•U2ç7F$fö7W2r’À¢.x«nhX¾8*.8*N8+>8;>8äåxÛ.[é~˜xþ8;¾ˆ›.™™Zé®8*þ8:®88n8*>8*¾8:¾8;¾8+ž8+þ8;Î™¸nKŠÞZûî[ùÎ8ÎKˆˆ{N8~8î8¾8)2 ¢“°¦76W'B€¢–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.[ë>[yÞY¹¾ZJžxè²#¢'6¶–ÆÂ×7F"×vV–v‡B×W"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.ZûîšÙNX©²#¢&6Æ72ÖÖv–2×&W6—7Fæ6R"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.xJi[^‹*¾˜	¢#¢$–çf–æ6–&ÆW–W&6R"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.™‹.[êxJŠib#¢$–væ÷&VFVfVç6R"r’À¢.iÊÎZI®[úX¹Þ8îjÚ>[Èþ8+ž8*Þ8:¾8;¾x«nhX¾8*.8*N8+>8;>Zûî[ùÎ8ÎKˆˆ{N8~8î8¾8)2 ¢“°¦76W'B€¢–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.KˆÞh9Î‹ª¾YÒ#¢'6¶–ÆÂÖwWG2"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.8*Î88>88B#¢$wWG77FGW2"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.Š*¾888:8;Î8+Ž8*¾88>88‚#¢$FVfVç6WW"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.Š*¾888:8;Î8+Ži˜.8äåxÛ.[é~˜xþ8*.88>89r#¢$åv–åWFÖr"r’À¢.yÉþyKKú{˜8îjÚ>[Èþ8+ž8*Þ8:¾8;¾x«nhX¾8*.8*N8+>8;>Zûî[ùÎ8ÎKˆˆ{N8~8î8¾8)2 ¢“°¦76W'B€¢–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.ZIn˜>8îyú^ŠÙŽûÈŽZxž8®8(¾8(.8îûÈ’#¢'6¶–ÆÂÖ‡Ö†VÂ×W"×GW&â"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.8+þ8;Î8+.88>88Ž™¸nKŠÒ#¢%FVçGW"r¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚r.8+þ8;Î8+.88>88Ž™¸nKŠÒ#¢$VæV×–fö7W2"r’À¢.ˆnjøÞ89î8:®8*.8î8+ž8*Þ8:¾8;¾8+þ8;Î8+.88>88Ž™¸nKŠÞ8*.8*N8+>8;>Zûî[ùÎ8ÎKˆˆ{N8~8î8¾8)2 ¢“°¦76W'B€¢V”æE7F÷&vRæ–æ6ÇVFW2‚.ZéþyK¾™Ú.Xù~XZ^8î‹8~k©8;¾x«nhX¾8;¾8*¾8;Î88žŠŽzK®‹ûÞŠ9ÎûÈ„BÓƒ~ûÈ’"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.Zûî‹XŠVF÷FÄFÖvV"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.Y>ik”å898;Â"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.[èÎ{i®iÊ®˜Žh©î8*¾8;Î88ž8¾8(.y»N88¾ŠŽzK¢"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.ZéÞX[~8*¾8;Î88ž8).Kˆ®jë^8˜	®[‹Ž8*¾8;Î88ž8).Kˆ¾jëR"’À¢%Tž8;¾KùÞZÙŽK¹^jyŽ8´BÓƒ~8î888:8;Î8+Ž8;´å8;¾x«nhX¾iÉþ™™8;¾8*¾8;Î88žŠŽzK®8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢V”æE7F÷&vRæ–æ6ÇVFW2‚.ZéþyK¾™Ú.Xù~XZ^8î˜^[»nx«nhX¾8;µv–¶ž[î{y®8;¾ŠªÎiˆîŠŽŠ‰Ž‹ûÞŠ9ÎûÈ„BÓƒŽûÈ’"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚.jh.[û^zKÎŠ8^jÈN8îKˆ¾8Žy›¾˜Ë.kˆŽ8þK‹¾Xø.xZr"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚%v–¶ž8îX«žiéÎšb"¢bbV”æE7F÷&vRæ–æ6ÇVFW2‚$FVÆ–VDFV'Vfb"’À¢%Tž8;¾KùÞZÙŽK¹^jyŽ8´BÓƒŽ8î˜^[»nx«nhX¾8;µv–¶ž[î{y®8;¾ŠªÎiˆîŠŽŠ‰Ž8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢ö'WGFöåÇ2¥ÇµµÇ5Å5Ò£öÖ–âÖ†V–v‡C¥Ç2£5ÂãW&VÒòçFW7B‡V•7G–ÆW2¢bbôÖVF–Â†Ö‚×v–GFƒ¢C5Âã“—&VÕÂ•µÇ5Å5Ò£õÂçVæ—BÖw&–BÅµÇ5Å5Ò£ö÷fW&fÆ÷r×ƒ¥Ç2¦WFòòçFW7B‡V•7G–ÆW2¢bbôÖVF–Â†Ö–â×v–GFƒ¢CG&VÕÂ•µÇ5Å5Ò£õÂç6Æ÷BÖw&–BÅµÇ5Å5Ò£õÂçVæ—BÖw&–EÇ2¥ÇµÇ2¦w&–B×FV×ÆFRÖ6öÇVÖç3¥Ç2§&WVEÂƒ2òçFW7B‡V•7G–ÆW2¢bbôÖVF–Â†Ö–â×v–GFƒ¢CG&VÕÂ•µÇ5Å5Ò£õÂææ÷&ÖÂÖ6öÖÖæBÖ6&BÖw&–EÇ2¥ÇµÇ2¦w&–B×FV×ÆFRÖ6öÇVÖç3¥Ç2§&WVEÂƒRòçFW7B‡V•7G–ÆW2¢bbõÂæÖöFÂÖ&6¶G&÷ÅµÇ5Å5Ò£÷÷6—F–öã¥Ç2¦f—†VBòçFW7B‡V•7G–ÆW2¢bbõÂçÆ–&6²Ö&Æö6¶W%Ç2¥ÇµµÇ5Å5Ò£÷¢Ö–æFWƒ¥Ç2£#òçFW7B‡V•7G–ÆW2¢bbõÂçÆ–&6²Ö†VF–ær×&÷uÇ2¥ÇµµÇ5Å5Ò£öw&–B×FV×ÆFRÖ6öÇVÖç3¥Ç2£g"WFòòçFW7B‡V•7G–ÆW2¢bbV•7G–ÆW2æ–æ6ÇVFW2‚"çÆ–&6²×6¶—Ö'WGFöâ"¢bbõÂææ–ÖFVBÖ‡×G&6²7åÇ2¥ÇµµÇ5Å5Ò£÷G&ç6—F–öã¥Ç2§v–GF‚òçFW7B‡V•7G–ÆW2¢bbõÂææ–ÖFVBÖç×G&6²7åÇ2¥ÇµµÇ5Å5Ò£÷G&ç6—F–öã¥Ç2§v–GF‚òçFW7B‡V•7G–ÆW2¢bbV•7G–ÆW2æ–æ6ÇVFW2‚"æVffV7BÖW‡—'’Ö&FvR"¢bbV•7G–ÆW2æ–æ6ÇVFW2‚"ææö&ÆR×†çF6ÒÖ6&BÖw&–B"’À¢%Tž8å>8;¾8+ž89î8;Î88Ž89^8*ž8;>8;³SgŽ8;¾8:.8;Î888:¾8;¾XhÞyIþ˜îijÔ55>8ÎKˆˆ{N8~8î8¾8)2 ¢“°¦76W'B€¢6÷W&6Ræ–æ6ÇVFW2‚.X˜Þ8‚"¢bb6÷W&6Ræ–æ6ÇVFW2‚.jÊ8ŽûÈŽi8ÞKÙÎ8Žh‹¾8(¾ûÈ’"¢bb6÷W&6Ræ–æ6ÇVFW2‚.z+®Zé®{YiéÎkÉNX{®8).8+ž8*Þ88>89r"¢bb6÷W&6Ræ–æ6ÇVFW2‚&öå6¶—×·6¶—Æ–&6·Ò"¢bb6÷W&6Ræ–æ6ÇVFW2‚&f–æ—6…Æ–&6²…Â.z+®Zé®{YiéÎ8îkÉNX{®8).8+ž8*Þ88>89~8~8î8~8þ8%Â"’"¢bb6÷W&6Ræ–æ6ÇVFW2‚&6öæf—&ÖVD‡G&ç6—F–öç2"¢bb6÷W&6Ræ–æ6ÇVFW2‚&6öæf—&ÖVDçG&ç6—F–öç2"¢bb6÷W&6Ræ–æ6ÇVFW2‚&6öæf—&ÖVDGF6´FÖvTÖ÷VçG2"¢bb6÷W&6Ræ–æ6ÇVFW2‚&æö&ÆR×†çF6ÒÖ6&BÖw&–B"¢bb6÷W&6Ræ–æ6ÇVFW2‚&7F–öâÖFW67&—F–öâÖÆ—7B"¢bb6÷W&6Ræ–æ6ÇVFW2‚.šÙNŠ>zKÎŠ8^8+ž8*Þ8:¾8îi8ÞKÙÎ8þ8ÎX˜ÞŠ¾8Þ8+þ89n8îiÈKˆ¾˜:‚"¢bbVffV7E&W6VçFF–öâæ–æ6ÇVFW2‚'&W6VçD6öÖ&–æVDVffV7G2"¢bbVffV7E&W6VçFF–öâæ–æ6ÇVFW2‚'fÇVRò"¢bb–6öå&Vv—7G'’æ–æ6ÇVFW2‚&–×÷'BæÖWFæVçbä$4UõU$Â"¢bb&GFÆUV’æ–æ6ÇVFW2‚&6öæf—&ÖVD‡G&ç6—F–öç2"¢bb&GFÆUV’æ–æ6ÇVFW2‚&F—7Æ–VD6öÖÖæD6&D7&—F–6Å&FUW&Ö–ÆÆR"¢bb&GFÆUV’æ–æ6ÇVFW2‚'&W6VçDæö&ÆU†çF6ÔFWF–Â"¢bb&GFÆUV’æ–æ6ÇVFW2‚'&Vv—7FW&VE6W'fçEv–¶•W&Â"¢bb6÷W&6Ræ–æ6ÇVFW2‚'6W'fçB×v–¶’ÖÆ–æ²"¢bb6÷W&6Ræ–æ6ÇVFW2‚'v–¶ž8).™h¾8ò"¢bbVffV7E&W6VçFF–öâæ–æ6ÇVFW2‚&VffV7DW‡—'”Æ&VÂ"’À¢%TžZéþŠ8^8´BÓƒnûÙäBÓƒŽ8îyK¾X8þ8;¾x«nhX¾8;¾8*¾8;Î88ž8;µv–¶ž8;¾z+®Zé®‹8~k©kÉNX{®8Î8.8(®8î8¾8)2 ¢“°¦6öç7B&GFÆU&W6VçFF–öâÒv—B&VEFW‡B‚'7&2÷V’ö&GFÆU&W6VçFF–öâçG2"“°¦76W'B€¢&GFÆU&W6VçFF–öâæ–æ6ÇVFW2‚'&W&TVæV×”æö&ÆU†çF6Ô6öçFW‡B"¢bb&GFÆU&W6VçFF–öâæ–æ6ÇVFW2‚'&W6öÇfTFV6Æ&VD7F–öä–çFVvW""¢bb&GFÆU&W6VçFF–öâæ–æ6ÇVFW2‚&çFÖvT×VÇF—Æ–W%W&Ö–ÆÆT'”ÆWfVÂ"’À¢%Tž8þi[^ZéÞX[~8îjë^™¨î˜Žh©î8(NXÞxè~Šz>k®8).XhÞZéþŠ8^8~8n8þ8N88î8¾8)2 ¢“° ¦6öç7B–æ—F–Ä6öçFVçBÒv—B&VEFW‡B‚&Fö72÷7V72ô”ä•D”Åô4ôåDTåBæÖB"“°¦76W'B†–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.8*¾8:Î8*N88ž8+ž8+>8;Î89r"’Â.X‰ÞiÉþ88~8;Î8+þK¹^jyŽ8¾8*¾8:Î8*N88ž8+ž8+>8;Î89~8Î8.8(®8î8¾8)2"“°¦76W'B†–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.›¹.8îˆniÚò"’Â.X‰ÞiÉþ88~8;Î8+þK¹^jyŽ8¾›¹.8îˆniÚþ8Î8.8(®8î8¾8)2"“°¦76W'B†–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.YÎ8Žjh.[û^zKÎŠ8VFF–F8).ŠH~i["’Â.X‰ÞiÉþ88~8;Î8+þK¹^jyŽ8¾jh.[û^zKÎŠ8^8î˜xÞŠH~Š8^X)žŠhþX˜~8Î8.8(®8î8¾8)2"“°¦76W'B†–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚'&F–çBÖ&ÒÖöbÖFvâ×6&W""’Â.X‰ÞiÉþ88~8;Î8+þK¹^jyŽ8¾›¸îiˆî8îx(îˆY^ûÈŽXš>ûÈž8îZèžZé¤”N8Î8.8(®8î8¾8)2"“°¦76W'B†–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.iÚK»nK¹Ž8ÞX«žiéÎ8ÎKÛþ8njÚ>[Èþ8®iz^iÊÎŠ©îx›žh
+vZJž8îX©¶"’Â.X‰ÞiÉþi[^K¹^jyŽ8¾ZJž8îX©¾x›žh
+~8Î8.8(®8î8¾8)2"“°¦76W'B†–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚#3bÃ#b"’Â.X‰ÞiÉþ88~8;Î8+þK¹^jyŽ8¾j[^{I¥vfR>8ä…8Î8.8(®8î8¾8)2"“°¦76W'B†–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.i[^8+þ8;Î8;>{X.K¨ni˜""’Â.X‰ÞiÉþ88~8;Î8+þK¹^jyŽ8¾i[^˜	®[‹Ž888:>8;Î8+Ž8îi˜.iÉþ8Î8.8(®8î8¾8)2"“°¦76W'B€¢–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.Yû®zHîK¹ŽKˆîxèsS^ûÈƒSW&Ö–ÆÆ^ûÈ’"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.[ËKÙ>ˆ	h
+~8Ž[ËKÙ>xJX«’"’À¢.X‰ÞiÉþ88~8;Î8+þK¹^jyŽ8¾8+ž8*Þ8:¾8;¾ZéÞX[~88~8:8:®88>88Ž8îiz.Zé®K¹ŽKˆîxè~8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚"222æòã#N(	’iJþ˜XÞ8î89^8*ž8;Î8:®88®8;Â"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&FV'Vfe÷7V66W75ö&6—5÷ö–çG2"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.[Ë~XÉnX˜ÞZéÞX[~8).˜Žh©îˆ*.8î8þ8þXŠ^Zé®{êž8Ž8~8njè¾8^8®8B"’À¢.X[~KÙ>88~8;Î8+þK¹^jyŽ8¾iJþ˜XÞ8î89^8*ž8;Î8:®88®8;Î8îhêyJŽzøNY».8Ž{+î[ªnŠhþX˜~8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚"222æòã3c"XØ>XŠžKÉ"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚%V–6¾iK¾i(>i˜.8î888:8;Î8+ŽX˜Þ8¾ZéþiK¾i(>Zûî‹88"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.XZÎ[Èó¢æòã3BXXž8î8+>8:N8;>8+ž8*¾8:N8æòã3c"XØ>XŠžKÉ"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.8*®8:®8+Ž88®8:³¢æòãriÊÎZI®[úX¹Þ8æòã#N(	’iJþ˜XÞ8î89^8*ž8;Î8:®88®8;Î8æòãSr™‹þ˜^˜˜þš¹Žiz^ZÙjžzYî8æòãS‚89^8*~8;>8:®8:¾8æòãc"8:¾8+~89^8*~8:ž8æòãsˆnjøÞ89î8:®8*.8æòã“ByÉþyKKú{˜"’À¢.X[~KÙ>88~8;Î8+þK¹^jyŽ8¾XØ>XŠžKÉ8Ž{zŽh‰XË®Xˆn8îhêyJŽzøNY».8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚"222æòãriÊÎZI®[úX¹Ò"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚$Çcƒc~ûÈóƒCr"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚$ô>XŠSûÈóSûÈó#ûÈó#SûÈó3"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.X[˜	¦&VGV6Uö‡8îjë^™¨îX
+B"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&–çf–æ6–&ÆW–W&6V"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&–væ÷&VFVfVç6V"’À¢.X[~KÙ>88~8;Î8+þK¹^jyŽ8¾iÊÎZI®[úX¹Þ8„ô>XŠT…k‰¾[	8îhêyJŽzøNY».8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚"222æòãSr™‹þ˜^˜˜þš¹Žiz^ZÙjžzYâ"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚$Çc“cC“ŽûÈóC“‚"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.ZéÞX[sžûÈ¾‹ûÞXª’"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚$ô>XŠSûÈó#ûÈó3ûÈóCûÈóS^‹ûÞXªiK¾i(2"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.Zûî‹…8„ô38îXÞxès8).YXþ8(þ8®XZƒ”†—B"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚#SW&Ö–ÆÆ^8ŽKˆ®i»Ž8Ò"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&6†ævV6Æ76"’À¢.X[~KÙ>88~8;Î8+þK¹^jyŽ8¾™‹þ˜^˜˜þš¹Žiz^ZÙjžzYî8ŽZéÞX[~‹ûÞXªiK¾i(>8îhêyJŽzøNY».8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚"222æòãS‚89^8*~8;>8:®8:²"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚%^ûÈô.ûÈô#.ûÈôUƒ^ûÈþZéÞX[sT†—B"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.8	NZJž8îX©¾8	^Y»®Zé£S^x›žiK²"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚$…k‰¾[	ûÈ†6äFVfVC¢G'VVûÈ’"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&'W7FW&'6÷'F"’À¢.X[~KÙ>88~8;Î8+þK¹^jyŽ8¾89^8*~8;>8:®8:¾8îhêyJŽzøNY».8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚"222æòã“ByÉþyKKú{˜"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚%NûÈô>ûÈô#.ûÈôUƒNûÈþZéÞX[sN8r"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.™‹.[êxJŠin8þiz.ZÙ†–væ÷&UöFVfVç6Vx«nhX²"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&6¶–ÆÂÖwWG6"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&FVfVç6WW"’À¢.X[~KÙ>88~8;Î8+þK¹^jyŽ8¾yÉþyKKú{˜8îhêyJŽzøNY».8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.XZÞih~8îkŠ8~‹82"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&6æF×—V¶–×W&Ö&öæF"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.{XnzKÎŠ8Sié¢"’À¢.X[~KÙ>88~8;Î8+þK¹^jyŽ8¾yÉþyKKú{˜8î{XnzKÎŠ8^8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚"222æòãsˆnjøÞ89î8:®8*""¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚.iÈ{X.XhÞˆz‚"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚$ô>XŠT…Y¹î[êž8þX[˜	¦†VÅö‡8îjë^™¨îX
+B"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&FVçGW"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&6¶–ÆÂÖ‡Ö†VÂ×W"×GW&æ"¢bb–æ—F–Ä6öçFVçBæ–æ6ÇVFW2‚&7V6–Æ–çf–æ6–&ÆV"’À¢.X[~KÙ>88~8;Î8+þK¹^jyŽ8¾ˆnjøÞ89î8:®8*.8îhêyJŽzøNY».8Î8.8(®8î8¾8)2 ¢“°¦6öç7B6Väæõ&–·—RÒv—B&VEFW‡B‚'7&2öFF÷6W'fçG2÷6Väæõ&–·—RçG2"“°¦76W'B€¢6Väæõ&–·—Ræ–æ6ÇVFW2‚vFF–C¢'6VâÖæò×&–·—R"r¢bb6Väæõ&–·—Ræ–æ6ÇVFW2‚wF&vWDGF6´WfVçEF&vWG3¢G'VRr¢bb6Väæõ&–·—Ræ–æ6ÇVFW2‚wW&Ã¢&‡GG3¢ò÷ræGv–¶’æ§öeövò÷vW2óSs#2æ‡FÖÂ"r’À¢.XØ>XŠžKÉ8îy›¾˜Ë.88~8;Î8+þ8ŽZéþiK¾i(>Zûî‹™™Zé®88Ž8:®8*Î8;Î8Î8.8(®8î8¾8)2 ¢“°¦6öç7BÖ÷F†W$Ö'’Òv—B&VEFW‡B‚'7&2öFF÷6W'fçG2öÖ÷F†W$Ö'’çG2"“°¦76W'B€¢Ö÷F†W$Ö'’æ–æ6ÇVFW2‚vFF–C¢&Ö÷F†W"ÖÖ'’"r¢bbÖ÷F†W$Ö'’æ–æ6ÇVFW2‚v6öÆÆV7F–öäæó¢sr¢bbÖ÷F†W$Ö'’æ–æ6ÇVFW2‚vVffV7EG—S¢4ôÔÔôåôTddT5EõE•U2çF&vWDfö7W2r¢bbÖ÷F†W$Ö'’æ–æ6ÇVFW2‚vÖ÷VçC¢²66Æ–æs¢&÷fW&6†&vR"r¢bbÖ÷F†W$Ö'’æ–æ6ÇVFW2‚wW&Ã¢&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2ósƒæ‡FÖÂ"r’À¢.ˆnjøÞ89î8:®8*.8îy›¾˜Ë.88~8;Î8+þ88+þ8;Î8+.88>88Ž™¸nKŠÞ8jë^™¨î[ÈþY¹î[êž8Î8.8(®8î8¾8)2 ¢“°¦6öç7B†öæFFF¶G7U6÷W&6RÒv—B&VEFW‡B‚'7&2öFF÷6W'fçG2ö†öæFFF¶G7RçG2"“°¦6öç7B¦—7V¶—F¶†–¶öæU6÷W&6RÒv—B&VEFW‡B€¢'7&2öFF÷6W'fçG2ö¦—7V¶—F¶†–¶öæTæô¶Ö’çG2 ¢“°¦6öç7BfVç&—%6÷W&6RÒv—B&VEFW‡B‚'7&2öFF÷6W'fçG2öfVç&—"çG2"“°¦6öç7B6æF—V¶–×W&6÷W&6RÒv—B&VEFW‡B‚'7&2öFF÷6W'fçG2÷6æF—V¶–×W&çG2"“°¦6öç7BVffV7DFV6Æ&F–öç2Òv—B&VEFW‡B‚'7&2öVffV7G2öFV6Æ&F–öç2çG2"“°¦6öç7BVffV7D7F–öäW†V7WF–öâÒv—B&VEFW‡B‚'7&2öVffV7G2ö7F–öäW†V7WF–öâçG2"“°¦76W'B€¢†öæFFF¶G7U6÷W&6Ræ–æ6ÇVFW2‚vFF–C¢&†öæF×FF¶G7R"r¢bb†öæFFF¶G7U6÷W&6Ræ–æ6ÇVFW2‚v6öÆÆV7F–öäæó¢rr¢bb†öæFFF¶G7U6÷W&6Ræ–æ6ÇVFW2‚væÖS¢.‰Ë¾‰¸žXˆr"r¢bb†öæFFF¶G7U6÷W&6Ræ–æ6ÇVFW2‚w66Æ–æs¢&÷fW&6†&vR"r¢bb†öæFFF¶G7U6÷W&6Ræ–æ6ÇVFW2‚v6äFVfVC¢G'VRr¢bb†öæFFF¶G7U6÷W&6Ræ–æ6ÇVFW2‚wW&Ã¢&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2ó#sBæ‡FÖÂ"r¢bbVffV7DFV6Æ&F–öç2æ–æ6ÇVFW2‚v7F–öâæ¶–æBÓÓÒ'&VGV6Uö‡"r¢bbVffV7D7F–öäW†V7WF–öâæ–æ6ÇVFW2‚v–b†VffV7Bæ7F–öâæ¶–æBÓÓÒ'&VGV6Uö‡"’r’À¢.iÊÎZI®[úX¹Þ8îy›¾˜Ë.88~8;Î8+þ8î8þ8ôô>XŠT…k‰¾[	8îX[˜	®ZéþŠ8^8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢¦—7V¶—F¶†–¶öæU6÷W&6Ræ–æ6ÇVFW2‚vFF–C¢&¦—7V¶—F¶†–¶öæRÖæòÖ¶Ö’"r¢bb¦—7V¶—F¶†–¶öæU6÷W&6Ræ–æ6ÇVFW2‚&6öÆÆV7F–öäæó¢Sr"¢bb¦—7V¶—F¶†–¶öæU6÷W&6Ræ–æ6ÇVFW2‚væÖS¢.zYî[ªnXš2"r¢bb¦—7V¶—F¶†–¶öæU6÷W&6Ræ–æ6ÇVFW2‚&FF—F–öæÄGF6³¢"¢bb¦—7V¶—F¶†–¶öæU6÷W&6Ræ–æ6ÇVFW2‚&FÖvT×VÇF—Æ–W%W&Ö–ÆÆT'”÷fW&6†&vS¢³Â%óÂ5óÂEóÂUóÒ"¢bb¦—7V¶—F¶†–¶öæU6÷W&6Ræ–æ6ÇVFW2‚&FVfVç6—fT6Æ74ff–æ—G”÷fW'&–FR"¢bb¦—7V¶—F¶†–¶öæU6÷W&6Ræ–æ6ÇVFW2‚wW&Ã¢&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2óSæ‡FÖÂ"r’À¢.™‹þ˜^˜˜þš¹Žiz^ZÙjžzYî8îy›¾˜Ë.88~8;Î8+þ8ZéÞX[~‹ûÞXªiK¾i(>8™‹.[êy»Žh
+~Kˆ®i»Ž8Þ8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢fVç&—%6÷W&6Ræ–æ6ÇVFW2‚vFF–C¢&fVç&—""r¢bbfVç&—%6÷W&6Ræ–æ6ÇVFW2‚&6öÆÆV7F–öäæó¢S‚"¢bbfVç&—%6÷W&6Ræ–æ6ÇVFW2‚væÖS¢.Y(nY:î‹Ùþ8þ{X.xHž8î›¸Niˆò"r¢bbfVç&—%6÷W&6Ræ–æ6ÇVFW2‚w&WV—&VEF&vWEG&—G3¢².ZJž8îX©²%Òr¢bbfVç&—%6÷W&6Ræ–æ6ÇVFW2‚&×VÇF—Æ–W%W&Ö–ÆÆS¢óS"¢bbfVç&—%6÷W&6Ræ–æ6ÇVFW2‚&†—EvV–v‡G3¢³ÂÂÂÂÒ"¢bbfVç&—%6÷W&6Ræ–æ6ÇVFW2‚&6äFVfVC¢G'VR"¢bbfVç&—%6÷W&6Ræ–æ6ÇVFW2‚wW&Ã¢&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2ó3#’æ‡FÖÂ"r’À¢.89^8*~8;>8:®8:¾8îy›¾˜Ë.88~8;Î8+þ8x›žiK¾8ZéÞX[~[èÄ…k‰¾[	8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢6æF—V¶–×W&6÷W&6Ræ–æ6ÇVFW2‚vFF–C¢'6æF×—V¶–×W&"r¢bb6æF—V¶–×W&6÷W&6Ræ–æ6ÇVFW2‚&6öÆÆV7F–öäæó¢“B"¢bb6æF—V¶–×W&6÷W&6Ræ–æ6ÇVFW2‚væÖS¢.yÉþyKK‹‚"r¢bb6æF—V¶–×W&6÷W&6Ræ–æ6ÇVFW2‚&†—EvV–v‡G3¢³ÂÂÂÒ"¢bb6æF—V¶–×W&6÷W&6Ræ–æ6ÇVFW2‚&VffV7EG—S¢4ôÔÔôåôTddT5EõE•U2æ–væ÷&TFVfVç6R"¢bb6æF—V¶–×W&6÷W&6Ræ–æ6ÇVFW2‚'&VÖ–æ–æuW6W3¢"¢bb6æF—V¶–×W&6÷W&6Ræ–æ6ÇVFW2‚wW&Ã¢&‡GG3¢ò÷ræGv–¶’æ§÷6—&ö•ö‡VÖâ÷vW2óƒ2æ‡FÖÂ"r’À¢.yÉþyKKú{˜8îy›¾˜Ë.88~8;Î8+þ8™‹.[êxJŠin8YØ~zØ”†—N8Î8.8(®8î8¾8)2 ¢“°¦76W'B€¢–æ—F–Ä&GFÆUV’æ–æ6ÇVFW2‚&W‡÷'B6öç7B”ä•D”ÅôED4µôdd”ä•D”U2"¢bb–æ—F–Ä&GFÆUV’æ–æ6ÇVFW2‚&V'Fƒ¢²6·“¢“Â‡VÖã¢óÒ"¢bb†v—B&VEFW‡B‚'7&2öFFöVæVÖ–W2ö–æ—F–ÄVæVÖ–W2çG2"’’æ–æ6ÇVFW2‚uÂ.ZJž8îX©µÂ"r’À¢.X‰ÞiÉþhŠn™yŽ8¾ZJžYËK«®y»Žh
+~ŠŽ8î8þ8þ›¸îiˆî8îx(îˆY^8îZJž8îX©¾x›žh
+~8Î8.8(®8î8¾8)2 ¢“°¦6öç7B–æ—F–Å6W'fçG2Òv—B&VEFW‡B‚'7&2öFF÷6W'fçG2ö–æ—F–Å6W'fçG2çG2"“°¦6öç7B6W'fçE66†VÖÒv—B&VEFW‡B‚'7&2öFF÷6W'fçG2÷66†VÖçG2"“°¦76W'B€¢6W'fçE66†VÖæ–æ6ÇVFW2‚%4U%dåEôDTdTÅEôDTÔU$•EôÄ”4D”ôåõ$DUõU$Ô”ÄÄRÒUó"¢bb–æ—F–Å6W'fçG2æ–æ6ÇVFW2‚&&6U&FUW&Ö–ÆÆS¢4U%dåEôDTdTÅEôDTÔU$•EôÄ”4D”ôåõ$DUõU$Ô”ÄÄR"¢bb–æ—F–Å6W'fçG2æ–æ6ÇVFW2‚&ÇV6–fW&×VVVâÖ'VfbÖ6ÆV"×7FFR"¢bb–æ—F–Å6W'fçG2æ–æ6ÇVFW2‚&–væ÷&U&W6—7Fæ6S¢G'VR"’À¢.X‰ÞiÉþ8+^8;Î8;N8*8;>88Ž8³S^8î˜^[»n88~8:8:®88>88Žy›¾˜Ë.8Î8.8(®8î8¾8)2 ¢“° ¦6öç7B&6†—fU&VFÖRÒv—B&VEFW‡B‚&Fö72ö&6†—fRõ$TDÔRæÖB"“°¦76W'B†&6†—fU&VFÖRæ–æ6ÇVFW2‚$”ÕÄTÔTåDD”ôåõ5DEU5÷cããæÖB"’Â.ZéþŠ8^x«nk88î[^jÛN8*.8;Î8*¾8*N89n8Ž8îjŽXh^8Î8.8(®8î8¾8)2"“°¦76W'B†&6†—fU&VFÖRæ–æ6ÇVFW2‚$DT4•4”ôåôÄôu÷cããæÖB"’Â.k®Zé®Š‰Ž˜Ë.8î[^jÛN8*.8;Î8*¾8*N89n8Ž8îjŽXh^8Î8.8(®8î8¾8)2"“° ¦f÷"†6öç7BF‚öb°¢&Fö72÷&öÆW2õ5•5DTÒæÖB"À¢&Fö72÷&öÆW2õ4U%dåBæÖB"À¢&Fö72÷&öÆW2ô5$eEôU54Tä4RæÖB"À¢&Fö72÷&öÆW2ôÕ•5D”5ô4ôDRæÖB"À¢&Fö72÷&öÆW2ôTäTÕ’æÖB ¥Ò’°¢6öç7BFW‡BÒv—B&VEFW‡B‡F‚“°¢76W'B‡FW‡Bæ–æ6ÇVFW2‚"22ZHži»NXúþˆ;ÞzøNY»""’ÂG·F‡Ò8¾ZHži»NXúþˆ;ÞzøNY».8Î8.8(®8î8¾8)6“°¢76W'B‡FW‡Bæ–æ6ÇVFW2‚"22ZèÎK¨niÚK»b"’ÂG·F‡Ò8¾ZèÎK¨niÚK»n8Î8.8(®8î8¾8)6“°§Ð ¦f÷"†6öç7BF‚öb°¢&Fö72÷FV×ÆFW2õ4U%dåEôDD•D”ôâæÖB"À¢&Fö72÷FV×ÆFW2ô5$eEôU54Tä4UôDD•D”ôâæÖB"À¢&Fö72÷FV×ÆFW2ôÕ•5D”5ô4ôDUôDD•D”ôâæÖB"À¢&Fö72÷FV×ÆFW2ôTäTÕ•ôDD•D”ôâæÖB ¥Ò’°¢6öç7BFW‡BÒv—B&VEFW‡B‡F‚“°¢76W'B‡FW‡Bæ–æ6ÇVFW2‚"22XznynXˆnšâ"’ÂG·F‡Ò8¾XznynXˆnšî8Î8.8(®8î8¾8)6“°¢76W'B‡FW‡Bæ–æ6ÇVFW2‚"22Xø.xZ~‹8~ii’"’ÂG·F‡Ò8¾Xø.xZ~‹8~iiž8Î8.8(®8î8¾8)6“°¢76W'B‡FW‡Bæ–æ6ÇVFW2‚"22z+®Š¨Þš^yºâ"’ÂG·F‡Ò8¾z+®Š¨Þš^yºî8Î8.8(®8î8¾8)6“°§Ð ¦–b†W'&÷'2æÆVæwF‚â’°¢6öç6öÆRæW'&÷"‚.Yû®yºNjIÎiû¾8¾ZKiY~8~8î8~8þ8""“°¢f÷"†6öç7BW'&÷"öbW'&÷'2’6öç6öÆRæW'&÷"†ÒG¶W'&÷'Ö“°¢&ö6W72æW†—Bƒ“°§Ð ¦6öç6öÆRæÆör†Yû®yºNjIÎiû¾8¾h‰X©þ8~8î8~8þ8.K¹^jyŽi»Ž898;Î8+Ž8:~8;3¢G¶Öæ–fW7Bç7V5fW'6–öçÖ“° 

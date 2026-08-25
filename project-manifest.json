@@ -1168,6 +1168,16 @@
         "eligibleServantDataIds": ["sanada-yukimura"],
         "source": "https://w.atwiki.jp/siroi_human/pages/813.html",
         "implementationStatus": "implemented"
+      },
+      {
+        "name": "桃李の下の蹊",
+        "dataId": "li-guang-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["li-guang"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/915.html",
+        "implementationStatus": "implemented"
       }
     ],
     "enemies": [
