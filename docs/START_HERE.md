@@ -5,13 +5,13 @@
 ## 現在地点
 
 - フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加
-- 状態: 絆礼装8枚とNo.094「真田信繁」はユーザー実画面受入済みで`main`へ統合した。No.105「李広」は、敵通常攻撃クリティカル発生率ダウンの共通状態とともに登録し、自動検査を完了した。ユーザー環境の実画面受入とPR統合を待つ。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布、6乱数列は変更していない。
+- 状態: 絆礼装8枚とNo.094「真田信繁」はユーザー実画面受入済みで`main`へ統合した。No.105「李広」は、敵通常攻撃クリティカル発生率ダウンの共通状態とともに登録し、自動検査を完了した。李広の絆礼装はWikiに名称が未記載のため、名称のユーザー指定待ちであり、確定後に同じPRへ追加して実画面受入とPR統合を待つ。BattleSession、中断保存形式4・データ1.38.0、直接再開、固定シードリプレイ、カード再配布、6乱数列は変更していない。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. 李広のユーザー環境の実画面確認を行い、3スキル、敵全体の攻撃力・クリティカル発生率ダウン、必中、宝具前後のOC別宝具威力アップ、アイコンを確認する。合格ならPRを`main`へ統合する。
+1. 李広の絆礼装名を確定し、同じPRへ追加する。その後、李広のユーザー環境の実画面確認を行い、3スキル、敵全体の攻撃力・クリティカル発生率ダウン、必中、宝具前後のOC別宝具威力アップ、アイコン、絆礼装を確認する。合格ならPRを`main`へ統合する。
 2. 統合後、`SERVANT_CLASSIFICATION.md`のカテゴリ1・No.順へ戻り、次の未実装対象No.059「那須与一」の具体データ確認・実装可能性確認へ進む。
 
 阿遅鉏高日子根神は[`qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md`](qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md)、本多忠勝は[`qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md`](qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md)、期限境界の修正は[`qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md`](qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md)、聖母マリアは[`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)、千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)を参照します。具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`](SERVANT_CLASSIFICATION.md)の確定済みカテゴリを確認します。
