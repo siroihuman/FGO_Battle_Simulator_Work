@@ -14,6 +14,7 @@ import { initializeBattlePassives } from "../src/effects/actionExecution";
 import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
 import { createEffectRuntimeCounters } from "../src/effects/runtime";
 import { resolveAllySkillUse } from "../src/effects/skillExecution";
+import { presentNoblePhantasmDetail } from "../src/ui/battleUi";
 import { registeredSkillIconPath, registeredStatusIconPath } from "../src/ui/iconRegistry";
 import { initialAllySelectionForServant } from "../src/ui/initialBattle";
 import { unit } from "./helpers/battle";
@@ -58,6 +59,11 @@ describe("No.107 サルバドール・ダリ", () => {
       damageMultiplierPermilleByLevel: [4_500, 6_000, 6_750, 7_125, 7_500],
       specialAttack: { multiplierPermille: 1_500, requiresRemovableTargetDebuff: true },
     });
+    expect(presentNoblePhantasmDetail(dali().unit)?.descriptions).toContain(
+      "＆〔弱体状態(解除不能な状態は除く)〕特攻：150%",
+    );
+    expect(registeredStatusIconPath({ name: "Arts攻撃耐性ダウン" } as Parameters<typeof registeredStatusIconPath>[0]))
+      .toContain("Artsresistdown.webp");
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
       .toEqual([7, 24, 57, 58, 62, 70, 94, 105, 107]);
     expect(initialAllySelectionForServant(SALVADOR_DALI.dataId)).toMatchObject({ level: 90, noblePhantasmLevel: 1 });

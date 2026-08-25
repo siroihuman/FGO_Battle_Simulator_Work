@@ -79,6 +79,7 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "対粛清防御": "Specialinvincible",
   "回避": "Avoid",
   "Buster攻撃耐性ダウン": "Busterresistdown",
+  "Arts攻撃耐性ダウン": "Artsresistdown",
   "クリティカル発生率ダウン": "Critchndown",
   "防御時クラス相性不利": "Changeclass",
   "Busterカードのスター集中度アップ": "Busterabsorpt",
