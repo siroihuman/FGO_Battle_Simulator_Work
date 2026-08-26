@@ -817,7 +817,7 @@ interface SkillDescriptor {
   currentCooldown: number;
   cooldownAtMax: number;
   descriptions: string[];
-  targetMode: "none" | "ally" | "order_change";
+  targetMode: "none" | "ally" | "enemy" | "order_change";
   disabledReason: string | null;
 }
 
@@ -986,8 +986,14 @@ function servantSkillRank(dataId: string, stableId: string): string | null {
     ?.activeSkills.find((skill) => skill.stableId === stableId)?.rank ?? null;
 }
 
-function actionUsesSingleTarget(action: BattleActionEffectSequence): boolean {
-  return action.effects.some(({ target }) => target.relation !== "self" && target.selection === "single");
+export function actionSelectedTargetMode(
+  action: BattleActionEffectSequence,
+): "none" | "ally" | "enemy" {
+  const target = action.effects.find(
+    ({ target }) => target.relation !== "self" && target.selection === "single",
+  )?.target;
+  if (!target) return "none";
+  return target.relation === "enemies" ? "enemy" : "ally";
 }
 
 function firstLivingEnemyId(session: BattleSession): string {
@@ -1108,17 +1114,24 @@ function SkillTargetModal({
 }) {
   const livingFrontline = session.loop.state.formation.ally.frontline.flatMap((unit, index) => unit?.alive ? [{ unit, index }] : []);
   const livingReserve = session.loop.state.formation.ally.reserve.flatMap((unit, index) => unit.alive ? [{ unit, index }] : []);
-  const [targetId, setTargetId] = useState(livingFrontline[0]?.unit.instanceId ?? "");
+  const livingEnemies = session.loop.state.formation.enemy.frontline.flatMap((unit, index) => unit?.alive ? [{ unit, index }] : []);
+  const [targetId, setTargetId] = useState(
+    pending.skill.targetMode === "enemy"
+      ? livingEnemies[0]?.unit.instanceId ?? ""
+      : livingFrontline[0]?.unit.instanceId ?? "",
+  );
   const [frontlineId, setFrontlineId] = useState(livingFrontline[0]?.unit.instanceId ?? "");
   const [reserveId, setReserveId] = useState(livingReserve[0]?.unit.instanceId ?? "");
   return (
     <Modal title={`${pending.skill.name}：対象選択`} onClose={onClose}>
       {pending.skill.targetMode === "ally" ? (
         <fieldset className="target-options"><legend>味方単体</legend>{livingFrontline.map(({ unit, index }) => <label className="radio-control" key={unit.instanceId}><input type="radio" name="skill-target" checked={targetId === unit.instanceId} onChange={() => setTargetId(unit.instanceId)} />前衛{index + 1}：{unit.name}</label>)}</fieldset>
+      ) : pending.skill.targetMode === "enemy" ? (
+        <fieldset className="target-options"><legend>敵単体</legend>{livingEnemies.map(({ unit, index }) => <label className="radio-control" key={unit.instanceId}><input type="radio" name="skill-target" checked={targetId === unit.instanceId} onChange={() => setTargetId(unit.instanceId)} />敵前衛{index + 1}：{unit.name}</label>)}</fieldset>
       ) : (
         <div className="order-change-fields"><label>交換する前衛<select value={frontlineId} onChange={(event) => setFrontlineId(event.target.value)}>{livingFrontline.map(({ unit, index }) => <option key={unit.instanceId} value={unit.instanceId}>前衛{index + 1}：{unit.name}</option>)}</select></label><label>交換する控え<select value={reserveId} onChange={(event) => setReserveId(event.target.value)}>{livingReserve.map(({ unit, index }) => <option key={unit.instanceId} value={unit.instanceId}>控え{index + 1}：{unit.name}</option>)}</select></label></div>
       )}
-      <div className="modal-actions"><button type="button" onClick={onClose}>キャンセル</button><button className="primary-button" type="button" disabled={pending.skill.targetMode === "ally" ? !targetId : !frontlineId || !reserveId} onClick={() => pending.skill.targetMode === "ally" ? onConfirm(targetId) : onConfirm(undefined, { frontlineInstanceId: frontlineId, reserveInstanceId: reserveId })}>決定</button></div>
+      <div className="modal-actions"><button type="button" onClick={onClose}>キャンセル</button><button className="primary-button" type="button" disabled={pending.skill.targetMode === "ally" || pending.skill.targetMode === "enemy" ? !targetId : !frontlineId || !reserveId} onClick={() => pending.skill.targetMode === "ally" || pending.skill.targetMode === "enemy" ? onConfirm(targetId) : onConfirm(undefined, { frontlineInstanceId: frontlineId, reserveInstanceId: reserveId })}>決定</button></div>
     </Modal>
   );
 }
@@ -1330,13 +1343,15 @@ export function BattleScreen({
     return skills.map((skill) => {
       const slot = skill.skillSlot ?? 1;
       const cooldown = unit.skillCooldowns[slot - 1] ?? 0;
-      const targetMode = actionUsesSingleTarget(skill) ? "ally" as const : "none" as const;
-      const livingTargets = state.formation.ally.frontline.some((target) => target?.alive);
+      const targetMode = actionSelectedTargetMode(skill);
+      const livingTargets = targetMode === "enemy"
+        ? state.formation.enemy.frontline.some((target) => target?.alive)
+        : state.formation.ally.frontline.some((target) => target?.alive);
       const disabledReason = interactionLock
         ?? (!unit.alive ? "使用済み・退場中" : null)
         ?? (isActionDisabled(unit) ? "行動不能" : null)
         ?? (cooldown > 0 ? `CT中（残り${cooldown}）` : null)
-        ?? (targetMode === "ally" && !livingTargets ? "対象不在" : null);
+        ?? (targetMode !== "none" && !livingTargets ? "対象不在" : null);
       return {
         kind: "ally" as const,
         sourceInstanceId: unit.instanceId,

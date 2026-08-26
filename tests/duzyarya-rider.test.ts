@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { actionSelectedTargetMode } from "../src/App";
 import {
   createBattleAttackDataRegistry,
 } from "../src/core/battle/actionData";
@@ -23,6 +24,7 @@ import { initializeBattlePassives } from "../src/effects/actionExecution";
 import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
 import { createEffectRuntimeCounters } from "../src/effects/runtime";
 import { resolveAllySkillUse } from "../src/effects/skillExecution";
+import { resolveSideTurnEnd } from "../src/effects/turnEnd";
 import { registeredSkillIconPath, registeredStatusIconPath } from "../src/ui/iconRegistry";
 import { combatantData } from "./helpers/attackData";
 import { unit } from "./helpers/battle";
@@ -116,6 +118,8 @@ describe("No.025 ドゥズヤールヤー〔騎〕", () => {
     )).toBe(true);
     expect(DUZYARYA_RIDER.activeSkills[0].effects[0]?.action)
       .toMatchObject({ kind: "change_enemy_charge", amount: -1, successRatePermille: 800 });
+    const skill1Action = sourceAction(DUZYARYA_RIDER, "duzyarya-rider-sorcery-demonic");
+    expect(actionSelectedTargetMode(skill1Action)).toBe("enemy");
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
       .toEqual([7, 24, 25, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(registeredSkillIconPath("呪術（魔）"))
@@ -129,6 +133,23 @@ describe("No.025 ドゥズヤールヤー〔騎〕", () => {
   it("uses the three skills and Rider passive effects through common actions", () => {
     const { source, state } = stateWithDuzyarya();
     const registry = createBattleActionEffectDataRegistry([source.actionEffectData]);
+    const skill1 = resolveAllySkillUse({
+      state,
+      registry,
+      sourceInstanceId: "duzyarya",
+      selectedTargetInstanceId: "enemy-a",
+      skillStableId: "duzyarya-rider-sorcery-demonic",
+      counters: createEffectRuntimeCounters(),
+      rng: new BattleRng("duzyarya-skill-one").stream("effects"),
+    });
+    expect(skill1).toMatchObject({ accepted: true });
+    if (!skill1.accepted) return;
+    expect(findUnitLocation(skill1.state.formation, "duzyarya")?.unit.effects)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.cardPerformance, value: 200 }),
+        expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.npGain, value: 300 }),
+      ]));
+
     const skill2 = resolveAllySkillUse({
       state,
       registry,
@@ -142,7 +163,7 @@ describe("No.025 ドゥズヤールヤー〔騎〕", () => {
     const cursedEnemy = findUnitLocation(skill2.state.formation, "enemy-a")?.unit;
     expect(cursedEnemy?.effects).toEqual(expect.arrayContaining([
       expect.objectContaining({ effectType: "curse", value: 4_000 }),
-      expect.objectContaining({ effectType: "evil_curse", value: 100 }),
+      expect.objectContaining({ effectType: "evil_curse", value: 1_000 }),
     ]));
     expect(registeredStatusIconPath(cursedEnemy?.effects.find(
       ({ effectType }) => effectType === "curse",
@@ -150,6 +171,14 @@ describe("No.025 ドゥズヤールヤー〔騎〕", () => {
     expect(registeredStatusIconPath(cursedEnemy?.effects.find(
       ({ effectType }) => effectType === "evil_curse",
     )!)).toContain("CurseDmgUp.webp");
+    const curseTurnEnd = resolveSideTurnEnd(
+      skill2.state.formation,
+      "enemy",
+      skill2.counters,
+      new BattleRng("duzyarya-curse-end").stream("effects"),
+    );
+    expect(findUnitLocation(curseTurnEnd.formation, "enemy-a")?.unit.hp)
+      .toBe(9_992_000);
 
     const skill3 = resolveAllySkillUse({
       state,
@@ -304,3 +333,21 @@ describe("No.025 ドゥズヤールヤー〔騎〕", () => {
     expect(modifiers(sourceAfterLoadout, framedTarget)).toBe(0);
   });
 });
+
+function sourceAction(
+  definition: typeof DUZYARYA_RIDER,
+  stableId: string,
+) {
+  const skill = definition.activeSkills.find((candidate) => candidate.stableId === stableId);
+  if (!skill) throw new Error(`missing skill ${stableId}`);
+  return {
+    instanceId: "duzyarya",
+    stableId: skill.stableId,
+    name: skill.name,
+    kind: "skill" as const,
+    attackOrder: null,
+    skillSlot: skill.slot,
+    cooldownAtMax: skill.cooldownAtMax,
+    effects: skill.effects.filter((effect) => effect.kind === "effect"),
+  };
+}

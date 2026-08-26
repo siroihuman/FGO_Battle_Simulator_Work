@@ -102,9 +102,9 @@ export const DUZYARYA_RIDER: ServantDefinition = {
         },
         {
           kind: "effect", stableId: "duzyarya-rider-high-speed-incantation-curse-evil-curse", order: 3,
-          description: "＆呪厄状態を付与[Lv](5T)：10%",
+          description: "＆呪厄状態を付与[Lv](5T)：100%",
           target: { relation: "enemies", selection: "all" },
-          action: { kind: "apply_effects", effects: [{ template: { stableId: "duzyarya-rider-high-speed-incantation-curse-evil-curse-state", name: "呪厄", effectType: "evil_curse", category: "debuff", value: 100, remainingTurns: 5, durationTick: "owner_turn_end", slipDamageAmplifierKind: "evil_curse" }, baseRatePermille: 5_000 }] },
+          action: { kind: "apply_effects", effects: [{ template: { stableId: "duzyarya-rider-high-speed-incantation-curse-evil-curse-state", name: "呪厄", effectType: "evil_curse", category: "debuff", value: 1_000, remainingTurns: 5, durationTick: "owner_turn_end", slipDamageAmplifierKind: "evil_curse" }, baseRatePermille: 5_000 }] },
         },
       ],
     },
