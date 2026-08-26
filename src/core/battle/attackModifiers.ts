@@ -80,6 +80,14 @@ function booleanFlag(
   return value;
 }
 
+function hasRemovableDebuff(target: BattleUnitState): boolean {
+  return target.effects.some(
+    (effect) =>
+      effect.category === "debuff"
+      && effect.removalPolicy !== "unremovable",
+  );
+}
+
 function matchesAttack(
   effect: AppliedEffect,
   context: AttackModifierContext,
@@ -100,6 +108,12 @@ function matchesAttack(
     return false;
   }
   if (booleanFlag(effect, "criticalOnly") && !context.isCritical) {
+    return false;
+  }
+  if (
+    booleanFlag(effect, "requiresRemovableTargetDebuff")
+    && !hasRemovableDebuff(context.target)
+  ) {
     return false;
   }
   const requiredTargetTrait = stringFlag(

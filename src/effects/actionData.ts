@@ -131,7 +131,6 @@ function assertCombatant(data: CombatantActionEffectData): void {
     } else if (
       action.skillSlot !== undefined
       || action.cooldownAtMax !== undefined
-      || action.attackOrder === null
     ) {
       throw new RangeError(
         `${action.stableId} noble phantasm metadata is invalid`,
@@ -202,13 +201,16 @@ export interface NoblePhantasmEffectPhases {
 export function noblePhantasmEffectPhases(
   sequence: BattleActionEffectSequence,
 ): NoblePhantasmEffectPhases {
-  if (
-    sequence.kind !== "noble_phantasm"
-    || sequence.attackOrder === null
-  ) {
+  if (sequence.kind !== "noble_phantasm") {
     throw new RangeError(
       `${sequence.stableId} is not a noble phantasm effect sequence`,
     );
+  }
+  if (sequence.attackOrder === null) {
+    return {
+      beforeAttack: [],
+      afterAttack: [],
+    };
   }
   return {
     beforeAttack: sequence.effects.filter(

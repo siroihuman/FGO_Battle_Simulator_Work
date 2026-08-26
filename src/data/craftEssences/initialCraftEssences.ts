@@ -455,6 +455,35 @@ export const AGRIPPA_BOND: CraftEssenceDefinition = {
   sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/300.html", checkedAt: "2026-08-25", note: "絆礼装「船嘴の黄金冠」の名称と、装備者が前衛にいる間のArts性能10%・〔初代ローマ皇帝〕防御力15%をユーザー指定で照合。星4Lv80・ATK100・HP100は既存の絆礼装共通仕様を使用。" }],
 };
 
+export const DUZYARYA_RIDER_BOND: CraftEssenceDefinition = {
+  schemaVersion: CRAFT_ESSENCE_DATA_SCHEMA_VERSION,
+  dataId: "duzyarya-rider-bond",
+  name: "雨なき年の星",
+  ...BOND_CRAFT_ESSENCE,
+  eligibleServantDataIds: ["duzyarya-rider"],
+  startEffects: [
+    {
+      kind: "effect",
+      stableId: "duzyarya-rider-bond-self-removable-debuff-power",
+      order: 1,
+      description: "＋自身に〔弱体状態(解除不能な状態は除く)〕特攻状態を付与：15%",
+      target: { relation: "self", selection: "single" },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "duzyarya-rider-bond-self-removable-debuff-power-state", name: "〔弱体状態(解除不能な状態は除く)〕特攻", effectType: COMMON_EFFECT_TYPES.power, category: "buff", value: 150, removalPolicy: "unremovable", flags: { requiresRemovableTargetDebuff: true } } }] },
+    },
+  ],
+  fieldEffects: [
+    {
+      kind: "effect",
+      stableId: "duzyarya-rider-bond-party-removable-debuff-power",
+      order: 1,
+      description: "自身がフィールドにいる間、味方全体に〔弱体状態(解除不能な状態は除く)〕特攻状態を付与：15%",
+      target: { relation: "allies", selection: "all", includeReserve: true },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "duzyarya-rider-bond-party-removable-debuff-power-state", name: "〔弱体状態(解除不能な状態は除く)〕特攻", effectType: COMMON_EFFECT_TYPES.power, category: "buff", value: 150, removalPolicy: "unremovable", flags: { requiresRemovableTargetDebuff: true } } }] },
+    },
+  ],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/33.html", checkedAt: "2026-08-26", note: "絆礼装「雨なき年の星」の名称と、前衛中の味方全体15%・装備者自身15%の〔弱体状態(解除不能な状態は除く)〕特攻をユーザー指定で照合。星4Lv80・ATK100・HP100は既存の絆礼装共通仕様を使用。" }],
+};
+
 export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   KALEIDOSCOPE,
   BLACK_GRAIL,
@@ -470,6 +499,7 @@ export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   LI_GUANG_BOND,
   SALVADOR_DALI_BOND,
   AGRIPPA_BOND,
+  DUZYARYA_RIDER_BOND,
 ] as const;
 
 export const INITIAL_CRAFT_ESSENCE_REGISTRY = createCraftEssenceDataRegistry(

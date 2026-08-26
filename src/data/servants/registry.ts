@@ -89,23 +89,18 @@ function selectedStat(
 
 function noblePhantasmAttack(
   definition: ServantDefinition,
-): ServantNoblePhantasmAttackEffect {
+): ServantNoblePhantasmAttackEffect | null {
   const attack = definition.noblePhantasm.effects.find(
     (effect): effect is ServantNoblePhantasmAttackEffect =>
       effect.kind === "attack",
   );
-  if (!attack) {
-    throw new RangeError(
-      `${definition.dataId} noble phantasm has no attack effect`,
-    );
-  }
-  return attack;
+  return attack ?? null;
 }
 
 function actionEffectData(
   definition: ServantDefinition,
   instanceId: string,
-  attack: ServantNoblePhantasmAttackEffect,
+  attack: ServantNoblePhantasmAttackEffect | null,
 ): CombatantActionEffectData {
   return {
     instanceId,
@@ -129,7 +124,7 @@ function actionEffectData(
         stableId: definition.noblePhantasm.stableId,
         name: definition.noblePhantasm.name,
         kind: "noble_phantasm" as const,
-        attackOrder: attack.order,
+        attackOrder: attack?.order ?? null,
         effects: definition.noblePhantasm.effects.filter(
           (effect): effect is ServantEffectDefinition => effect.kind === "effect",
         ),
@@ -177,7 +172,7 @@ export function createServantBattleInstance(
     throw new RangeError("adjusted servant stats exceed safe integer range");
   }
   const npAttack = noblePhantasmAttack(definition);
-  const specialAttack = npAttack.specialAttack;
+  const specialAttack = npAttack?.specialAttack;
   const combatantEffects = actionEffectData(
     definition,
     input.instanceId,
@@ -227,12 +222,15 @@ export function createServantBattleInstance(
       targetNpRatePermille:
         definition.battleRates.targetNpRatePermille,
       starRatePermille: definition.battleRates.starRatePermille,
+      ...(definition.battleRates.starRateBasisPoints === undefined
+        ? {}
+        : { starRateBasisPoints: definition.battleRates.starRateBasisPoints }),
       starWeight: definition.battleRates.starWeight,
       targetStarRatePermille:
         definition.battleRates.targetStarRatePermille,
       commandCardHitWeights: definition.commandCardHitWeights,
       extraAttackHitWeights: definition.extraAttackHitWeights,
-      noblePhantasms: [
+      noblePhantasms: npAttack ? [
         {
           stableId: definition.noblePhantasm.stableId,
           targetScope: npAttack.targetScope,
@@ -273,7 +271,7 @@ export function createServantBattleInstance(
               }
             : {}),
         },
-      ],
+      ] : [],
       enemyAttacks: [],
     },
     actionEffectData: combatantEffects,

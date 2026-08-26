@@ -90,6 +90,8 @@ export type CommonAction =
       /** Signed enemy charge change, clamped from zero through chargeMax. */
       kind: "change_enemy_charge";
       amount: number;
+      /** Optional direct success rate for effects such as charge reduction. */
+      successRatePermille?: number;
     }
   | {
       kind: "apply_effects";
@@ -341,6 +343,26 @@ export function executeCommonAction(
 
   if (action.kind === "change_enemy_charge") {
     assertSafeInteger(action.amount, "enemy charge change amount");
+    if (action.successRatePermille !== undefined) {
+      assertSafeInteger(
+        action.successRatePermille,
+        "enemy charge success rate",
+      );
+      if (
+        action.successRatePermille < 0
+        || action.successRatePermille > 1_000
+      ) {
+        throw new RangeError(
+          "enemy charge success rate must be from 0 to 1000",
+        );
+      }
+      if (
+        action.successRatePermille < 1_000
+        && !rng.chance(action.successRatePermille)
+      ) {
+        return { action, outcome: "unchanged", target, counters };
+      }
+    }
     const enemyAction = target.enemyAction;
     if (target.side !== "enemy" || !enemyAction) {
       return { action, outcome: "unchanged", target, counters };

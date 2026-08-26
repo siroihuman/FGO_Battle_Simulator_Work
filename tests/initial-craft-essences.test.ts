@@ -98,7 +98,7 @@ function battleUnit(
 
 describe("initial Craft Essence data and execution", () => {
   it("registers the generic maximum-limit-broken level-100 definitions with exact stats and sources", () => {
-    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(14);
+    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(15);
     expect(Object.keys(INITIAL_CRAFT_ESSENCE_REGISTRY.byDataId)).toEqual(expect.arrayContaining([
       "kaleidoscope",
       "black-grail",

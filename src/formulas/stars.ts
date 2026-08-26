@@ -14,6 +14,8 @@ export interface StarHitResult {
 
 export interface StarRateInput {
   servantStarRatePermille: number;
+  /** Exact source SR in 0.01%-point units, when provided. */
+  servantStarRateBasisPoints?: number;
   cardStarValuePermille: number;
   cardPerformanceModPermille?: number;
   cardResistancePermille?: number;
@@ -82,7 +84,10 @@ export function calculateStarRate(input: StarRateInput): number {
     [input.cardStarValuePermille, cardFactor],
     1000,
   );
-  const baseRate = input.servantStarRatePermille
+  const baseServantRate = input.servantStarRateBasisPoints === undefined
+    ? input.servantStarRatePermille
+    : floorDiv(input.servantStarRateBasisPoints, 10);
+  const baseRate = baseServantRate
     + cardContribution
     + (input.firstCardBonusPermille ?? 0)
     + (input.enemyStarRatePermille ?? 0)

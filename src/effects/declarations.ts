@@ -416,6 +416,20 @@ function assertAction(action: DeclaredEffectAction, name: string): void {
     assertNonNegative(action.ratePermille, `${name}.ratePermille`);
   } else if (action.kind === "change_enemy_charge") {
     assertSafeInteger(action.amount, `${name}.amount`);
+    if (action.successRatePermille !== undefined) {
+      assertSafeInteger(
+        action.successRatePermille,
+        `${name}.successRatePermille`,
+      );
+      if (
+        action.successRatePermille < 0
+        || action.successRatePermille > 1_000
+      ) {
+        throw new RangeError(
+          `${name}.successRatePermille must be from 0 to 1000`,
+        );
+      }
+    }
   } else if (action.kind === "absorb_hp") {
     assertNonNegative(action.amount, `${name}.amount`);
     if (action.recoveryRatePermille !== undefined) {
