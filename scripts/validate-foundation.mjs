@@ -379,7 +379,7 @@ if (manifest) {
       && JSON.stringify(servantOriginTabs.officialServantDataIdsInCollectionNumberOrder)
         === JSON.stringify(["koyanskaya-of-light", "sen-no-rikyu"])
       && JSON.stringify(servantOriginTabs.originalServantDataIdsInCollectionNumberOrder)
-        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "agrippa", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary", "sanada-yukimura", "li-guang", "salvador-dali"])
+        === JSON.stringify(["honda-tadakatsu", "domination-foreigner", "duzyarya-rider", "agrippa", "ajisukitakahikone-no-kami", "fenrir", "lucifera", "mother-mary", "sanada-yukimura", "li-guang", "salvador-dali"])
       && servantOriginTabs.tabBrowseMutation === "none"
       && servantOriginTabs.currentSelectionOutsideTabs === true,
     "編成の公式／オリジナル区分とNo.順が一致しません"
@@ -409,12 +409,13 @@ if (manifest) {
   const fenrir = specifiedServants.find(({ dataId }) => dataId === "fenrir");
   const sanadaYukimura = specifiedServants.find(({ dataId }) => dataId === "sanada-yukimura");
   const liGuang = specifiedServants.find(({ dataId }) => dataId === "li-guang");
+  const duzyaryaRider = specifiedServants.find(({ dataId }) => dataId === "duzyarya-rider");
   const agrippa = specifiedServants.find(({ dataId }) => dataId === "agrippa");
   const salvadorDali = specifiedServants.find(({ dataId }) => dataId === "salvador-dali");
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
   const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 10
+    specifiedServants.length === 11
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -485,9 +486,25 @@ if (manifest) {
     "指定コンテンツにサルバドール・ダリの登録状態がありません"
   );
   assert(
+    duzyaryaRider?.collectionNo === 25
+      && duzyaryaRider?.classificationCategory === 1
+      && duzyaryaRider?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && duzyaryaRider?.activeSkillCount === 3
+      && duzyaryaRider?.classSkillCount === 2
+      && duzyaryaRider?.noblePhantasmCount === 1
+      && duzyaryaRider?.noblePhantasmRevision === "upgraded_only"
+      && duzyaryaRider?.noblePhantasmType === "support"
+      && duzyaryaRider?.noblePhantasmHitCount === 0
+      && duzyaryaRider?.starRateBasisPoints === 918
+      && duzyaryaRider?.bondConditionalPower === "removable_debuff_only_party_150_self_150"
+      && duzyaryaRider?.battleSuspendSchemaVersion === 4
+      && duzyaryaRider?.dataSchemaVersion === "1.38.0",
+    "指定コンテンツにドゥズヤールヤー〔騎〕の登録状態がありません"
+  );
+  assert(
     agrippa?.collectionNo === 56
       && agrippa?.classificationCategory === 1
-      && agrippa?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && agrippa?.implementationStatus === "implemented_and_accepted"
       && agrippa?.activeSkillCount === 3
       && agrippa?.classSkillCount === 2
       && agrippa?.noblePhantasmCount === 1
@@ -896,7 +913,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "battle-restart-controls-implemented-awaiting-user-acceptance"
+    manifest.status === "duzyarya-rider-implemented-awaiting-user-acceptance"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1288,9 +1305,10 @@ if (manifest) {
     ["桃李の下の蹊", "li-guang-bond", "li-guang", "https://w.atwiki.jp/siroi_human/pages/915.html"],
     ["死してなお", "salvador-dali-bond", "salvador-dali", "https://w.atwiki.jp/siroi_human/pages/922.html"],
     ["船嘴の黄金冠", "agrippa-bond", "agrippa", "https://w.atwiki.jp/siroi_human/pages/300.html"],
+    ["雨なき年の星", "duzyarya-rider-bond", "duzyarya-rider", "https://w.atwiki.jp/siroi_human/pages/33.html"],
   ];
   assert(
-    initialCraftEssences.length === 14
+    initialCraftEssences.length === 15
       && initialCraftEssences[0]?.name === "カレイドスコープ"
       && initialCraftEssences[0]?.dataId === "kaleidoscope"
       && initialCraftEssences[0]?.rarity === 5
@@ -1312,7 +1330,7 @@ if (manifest) {
           && craftEssence.source === source
           && craftEssence.implementationStatus === "implemented";
       }),
-    "概念礼装2枚と絆礼装12枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
+    "概念礼装2枚と絆礼装13枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
   );
 
   const initialEnemies = manifest.initialContent?.enemies ?? [];
@@ -1483,6 +1501,7 @@ const mandatoryFiles = [
   "src/data/servants/dominationForeigner.ts",
   "src/data/servants/senNoRikyu.ts",
   "src/data/servants/hondaTadakatsu.ts",
+  "src/data/servants/duzyaryaRider.ts",
   "src/data/servants/ajisukitakahikoneNoKami.ts",
   "src/data/servants/fenrir.ts",
   "src/data/servants/sanadaYukimura.ts",
@@ -1504,12 +1523,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.056「アグリッパ」")
+    && startHere.includes("No.025「ドゥズヤールヤー〔騎〕」")
     && startHere.includes("具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`]")
-    && startHere.includes("実画面受入とPR統合を待つ")
+    && startHere.includes("実画面受入を待つ")
     && startHere.includes("中断保存形式4・データ1.38.0")
     && startHere.includes("No.059「那須与一」"),
-  "作業開始ページにアグリッパの実装状態と次作業がありません"
+  "作業開始ページにドゥズヤールヤー〔騎〕の実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1590,6 +1609,7 @@ assert(
     && implementationStatus.includes("`canDefeat: true`")
     && implementationStatus.includes("No.056「アグリッパ」")
     && implementationStatus.includes("`requiredAttackerTrait`")
+    && implementationStatus.includes("No.025「ドゥズヤールヤー〔騎〕」")
     && implementationStatus.includes("No.094「真田信繁」")
     && implementationStatus.includes("防御無視は攻撃前に登録し同一宝具攻撃で消費する")
     && implementationStatus.includes("`skill-guts`")
@@ -1609,6 +1629,12 @@ assert(
 );
 
 const decisionLog = await readText("docs/DECISION_LOG.md");
+assert(
+  decisionLog.includes("## D-118 No.025「ドゥズヤールヤー〔騎〕」と補助宝具を実装する")
+    && decisionLog.includes("`requiresRemovableTargetDebuff`")
+    && decisionLog.includes("starRateBasisPoints: 918"),
+  "決定記録にドゥズヤールヤー〔騎〕の補助宝具仕様がありません"
+);
 assert(
   decisionLog.includes("## D-069 敵宝具の段階文脈を戦闘個体・行動ごとに明示する")
     && decisionLog.includes("## D-070 次の実装対象を敵宝具段階文脈の共通処理とする")
@@ -2108,7 +2134,7 @@ assert(
   initialContent.includes("### No.362 千利休")
     && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
     && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
-    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.056 アグリッパ、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア、No.094 真田信繁、No.105 李広、No.107 サルバドール・ダリ"),
+    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.025 ドゥズヤールヤー〔騎〕、No.056 アグリッパ、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア、No.094 真田信繁、No.105 李広、No.107 サルバドール・ダリ"),
   "具体データ仕様に千利休と編成区分の採用範囲がありません"
 );
 assert(
@@ -2150,8 +2176,18 @@ assert(
   initialContent.includes("死してなお")
     && initialContent.includes("`salvador-dali-bond`")
     && initialContent.includes("解除可能な弱体状態がある対象だけへの固定150%特攻")
-    && initialContent.includes("絆礼装12枚"),
+    && initialContent.includes("絆礼装13枚"),
   "具体データ仕様にサルバドール・ダリの絆礼装と解除可能弱体特攻がありません"
+);
+assert(
+  initialContent.includes("### No.025 ドゥズヤールヤー〔騎〕")
+    && initialContent.includes("`duzyarya-rider`")
+    && initialContent.includes("starRateBasisPoints: 918")
+    && initialContent.includes("攻撃を伴わない")
+    && initialContent.includes("`requiresRemovableTargetDebuff`")
+    && initialContent.includes("`duzyarya-rider-bond`")
+    && initialContent.includes("雨なき年の星"),
+  "具体データ仕様にドゥズヤールヤー〔騎〕の補助宝具と絆礼装がありません"
 );
 assert(
   initialContent.includes("### No.056 アグリッパ")

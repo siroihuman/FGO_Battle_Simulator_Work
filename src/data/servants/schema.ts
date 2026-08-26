@@ -157,6 +157,8 @@ export interface ServantBattleRates {
   receivedNpUnits: number;
   attackNpRatePermille: number;
   targetNpRatePermille: number;
+  /** Exact source SR in 0.01%-point units when 0.1% permille is insufficient. */
+  starRateBasisPoints?: number;
   starRatePermille: number;
   starWeight: number;
   targetStarRatePermille: number;

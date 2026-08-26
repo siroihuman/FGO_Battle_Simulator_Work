@@ -272,6 +272,12 @@ export function prepareBattleAttackInput(
             stars: {
               servantStarRatePermille:
                 sourceData.starRatePermille,
+              ...(sourceData.starRateBasisPoints === undefined
+                ? {}
+                : {
+                    servantStarRateBasisPoints:
+                      sourceData.starRateBasisPoints,
+                  }),
               cardStarValuePermille:
                 action.cardStarValuePermille,
               cardPerformanceModPermille:

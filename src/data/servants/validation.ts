@@ -211,8 +211,8 @@ function assertNoblePhantasmEffects(
       assertEffect(effect, name, stableIds);
     }
   });
-  if (attacks !== 1) {
-    throw new RangeError("noblePhantasm must contain exactly one attack effect");
+  if (attacks > 1) {
+    throw new RangeError("noblePhantasm must contain at most one attack effect");
   }
 }
 
@@ -341,6 +341,13 @@ export function assertValidServantDefinition(
     } else {
       assertNonNegativeInteger(value, name);
     }
+  }
+  if (
+    definition.battleRates.starRateBasisPoints !== undefined
+    && (!Number.isSafeInteger(definition.battleRates.starRateBasisPoints)
+      || definition.battleRates.starRateBasisPoints < 0)
+  ) {
+    throw new RangeError("starRateBasisPoints must be a non-negative safe integer");
   }
   assertUniqueStrings(definition.traits, "traits");
 

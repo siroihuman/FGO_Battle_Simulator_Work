@@ -124,7 +124,8 @@ export interface AllyCommandAttacksResult {
   battleLog: BattleLogBatch;
 }
 
-interface ResolvedAllyActionData {
+interface ResolvedAllyAttackActionData {
+  kind: "attack";
   targetScope: AttackTargetScope;
   calculation: AttackCalculationData;
   additionalAttacks: Array<{
@@ -133,6 +134,55 @@ interface ResolvedAllyActionData {
   }>;
   overchargeStage: NoblePhantasmOverchargeStage | null;
   critical: CommandCardCriticalResult | null;
+}
+
+interface ResolvedAllySupportNoblePhantasmData {
+  kind: "support_noble_phantasm";
+  targetScope: "single";
+  overchargeStage: NoblePhantasmOverchargeStage;
+}
+
+type ResolvedAllyActionData =
+  | ResolvedAllyAttackActionData
+  | ResolvedAllySupportNoblePhantasmData;
+
+function supportNoblePhantasmCalculation(
+  cardType: AttackCalculationData["cardType"],
+): AttackCalculationData {
+  return {
+    cardType,
+    isNoblePhantasm: true,
+    isCritical: false,
+    cardDamageValuePermille: 0,
+    cardNpValuePermille: 0,
+    cardStarValuePermille: 0,
+    firstCardDamageBonusPermille: 0,
+    firstCardNpBonusPermille: 0,
+    firstCardStarBonusPermille: 0,
+    busterChainModPermille: 0,
+    extraCardModifierPermille: 1_000,
+    hitWeights: [],
+  };
+}
+
+function supportNoblePhantasmResolution(
+  state: BattleState,
+  counters: EffectRuntimeCounters,
+): BattleAttackSequenceResolution {
+  return {
+    state,
+    counters,
+    stoppedBeforeHits: false,
+    beforeAttack: null,
+    attack: null,
+    additionalAttacks: [],
+    consumedSourceModifierEffectInstanceIds: [],
+    hitTriggers: [],
+    onAttack: null,
+    damageTaken: [],
+    afterAttack: null,
+    deaths: [],
+  };
 }
 
 function noblePhantasmEffectSequence(
@@ -197,6 +247,7 @@ function resolveAllyActionData(
   additionalOverchargeStagesByCardId: Readonly<
     Record<string, number>
   >,
+  isSupportNoblePhantasm: boolean,
 ):
   | {
       accepted: true;
@@ -230,6 +281,7 @@ function resolveAllyActionData(
     return {
       accepted: true,
       data: {
+        kind: "attack",
         targetScope: "single",
         additionalAttacks: [],
         overchargeStage: null,
@@ -279,6 +331,7 @@ function resolveAllyActionData(
     return {
       accepted: true,
       data: {
+        kind: "attack",
         targetScope: "single",
         additionalAttacks: [],
         overchargeStage: null,
@@ -309,16 +362,6 @@ function resolveAllyActionData(
     };
   }
 
-  const noblePhantasm = noblePhantasmAttackData(
-    combatant,
-    card.noblePhantasmStableId,
-  );
-  if (!noblePhantasm) {
-    return {
-      accepted: false,
-      reason: "noble_phantasm_attack_data_missing",
-    };
-  }
   const npBeforeUse =
     "npBeforeUse" in input.preflight
       ? input.preflight.npBeforeUse
@@ -336,9 +379,30 @@ function resolveAllyActionData(
         ? input.preflight.additionalOverchargeStages
         : 0),
   );
+  if (isSupportNoblePhantasm) {
+    return {
+      accepted: true,
+      data: {
+        kind: "support_noble_phantasm",
+        targetScope: "single",
+        overchargeStage,
+      },
+    };
+  }
+  const noblePhantasm = noblePhantasmAttackData(
+    combatant,
+    card.noblePhantasmStableId,
+  );
+  if (!noblePhantasm) {
+    return {
+      accepted: false,
+      reason: "noble_phantasm_attack_data_missing",
+    };
+  }
   return {
     accepted: true,
     data: {
+      kind: "attack",
       targetScope: noblePhantasm.targetScope,
       additionalAttacks: noblePhantasm.additionalAttack
         ? [{
@@ -625,27 +689,6 @@ export function resolveAllyCommandAttacks(
           stars: input.rng.stars,
         },
         () => {
-          const actionData = resolveAllyActionData(
-            resolverInput,
-            input.registry,
-            starDistribution,
-            input.rng.critical,
-            additionalOverchargeStagesByCardId,
-          );
-          if (!actionData.accepted) {
-            return {
-              state: resolverInput.state,
-              detail: {
-                outcome: "skipped",
-                reason: actionData.reason,
-              } satisfies AllyCommandAttackDetail,
-            };
-          }
-          const targetInstanceIds = actionTargets(
-            resolverInput.state,
-            actionData.data.targetScope,
-            resolverInput.target.instanceId,
-          );
           const selectedCard =
             resolverInput.action.kind === "selected_card"
               ? resolverInput.action.calculation.card
@@ -659,6 +702,24 @@ export function resolveAllyCommandAttacks(
                   selectedCard.noblePhantasmStableId,
                 )
               : null;
+          const actionData = resolveAllyActionData(
+            resolverInput,
+            input.registry,
+            starDistribution,
+            input.rng.critical,
+            additionalOverchargeStagesByCardId,
+            effectSequence?.kind === "noble_phantasm"
+              && effectSequence.attackOrder === null,
+          );
+          if (!actionData.accepted) {
+            return {
+              state: resolverInput.state,
+              detail: {
+                outcome: "skipped",
+                reason: actionData.reason,
+              } satisfies AllyCommandAttackDetail,
+            };
+          }
           const effectPhases = effectSequence
             ? noblePhantasmEffectPhases(effectSequence)
             : null;
@@ -679,6 +740,48 @@ export function resolveAllyCommandAttacks(
             };
           }
           const declaredEffects: DeclaredActionEffectGroupResult[] = [];
+          if (actionData.data.kind === "support_noble_phantasm") {
+            if (!effectSequence || !effectContext) {
+              throw new RangeError(
+                "support noble phantasm is missing declared effect data",
+              );
+            }
+            const result = executeDeclaredActionEffects(
+              resolverInput.state,
+              resolverInput.action.ownerInstanceId,
+              effectSequence.effects,
+              effectContext,
+              counters,
+              input.rng.effects,
+            );
+            declaredEffects.push({ phase: "non_damaging", result });
+            counters = result.counters;
+            return {
+              state: result.state,
+              targetScope: actionData.data.targetScope,
+              detail: {
+                outcome: "resolved",
+                targetScope: actionData.data.targetScope,
+                targetInstanceIds: [],
+                calculation: supportNoblePhantasmCalculation(
+                  selectedCard?.type ?? "buster",
+                ),
+                overchargeStage: actionData.data.overchargeStage,
+                critical: null,
+                declaredEffects,
+                resolution: supportNoblePhantasmResolution(
+                  result.state,
+                  result.counters,
+                ),
+              } satisfies AllyCommandAttackDetail,
+            };
+          }
+          const targetInstanceIds = actionTargets(
+            resolverInput.state,
+            actionData.data.targetScope,
+            resolverInput.target.instanceId,
+          );
+          const damagingActionData = actionData.data;
           const resolution = resolveBattleAttackSequence(
             resolverInput.state,
             {
@@ -694,7 +797,7 @@ export function resolveAllyCommandAttacks(
                     : resolverInput.action.kind === "extra_attack"
                       ? "extra_attack"
                       : "normal_command",
-                cardType: actionData.data.calculation.cardType,
+                cardType: damagingActionData.calculation.cardType,
               },
               rng: input.rng,
               ...(effectPhases
@@ -761,13 +864,13 @@ export function resolveAllyCommandAttacks(
                 input.registry,
                 resolverInput.action.ownerInstanceId,
                 activeTargetInstanceIds,
-                actionData.data.calculation,
+                damagingActionData.calculation,
                 resolverInput.defeatedTargetContinuation,
               ).input,
-              ...(actionData.data.additionalAttacks.length > 0
+              ...(damagingActionData.additionalAttacks.length > 0
                 ? {
                     additionalAttacks:
-                      actionData.data.additionalAttacks.map(
+                      damagingActionData.additionalAttacks.map(
                         (additional) => ({
                           stableId: additional.stableId,
                           allowDefeatedTargets: true as const,
@@ -792,15 +895,15 @@ export function resolveAllyCommandAttacks(
           counters = resolution.counters;
           return {
             state: resolution.state,
-            targetScope: actionData.data.targetScope,
+            targetScope: damagingActionData.targetScope,
             detail: {
               outcome: "resolved",
-              targetScope: actionData.data.targetScope,
+              targetScope: damagingActionData.targetScope,
               targetInstanceIds,
-              calculation: actionData.data.calculation,
+              calculation: damagingActionData.calculation,
               overchargeStage:
-                actionData.data.overchargeStage,
-              critical: actionData.data.critical,
+                damagingActionData.overchargeStage,
+              critical: damagingActionData.critical,
               declaredEffects,
               resolution,
             } satisfies AllyCommandAttackDetail,

@@ -158,7 +158,7 @@ describe("No.057 阿遅鉏高日子根神", () => {
         },
       });
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 56, 57, 58, 62, 70, 94, 105, 107]);
+      .toEqual([7, 24, 25, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(initialAllySelectionForServant(AJISUKITAKAHIKONE_NO_KAMI.dataId))
       .toMatchObject({ level: 90, noblePhantasmLevel: 1 });
     expect(registeredServantWikiUrl(AJISUKITAKAHIKONE_NO_KAMI.dataId))

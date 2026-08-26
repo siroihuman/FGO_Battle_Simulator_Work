@@ -102,6 +102,8 @@ export interface CombatantAttackData {
   targetNpRatePermille: number;
   /** Source SR used for command-star generation. */
   starRatePermille: number;
+  /** Optional exact SR source value in 0.01%-point units. */
+  starRateBasisPoints?: number;
   /** Base command-card star concentration (SW/CriticalWeight). */
   starWeight: number;
   /** Target DSR added to command-star generation. */
@@ -220,6 +222,15 @@ function validateCombatant(data: CombatantAttackData): void {
   if (!Number.isSafeInteger(data.targetStarRatePermille)) {
     throw new RangeError(
       `${data.instanceId}.targetStarRatePermille must be a safe integer`,
+    );
+  }
+  if (
+    data.starRateBasisPoints !== undefined
+    && (!Number.isSafeInteger(data.starRateBasisPoints)
+      || data.starRateBasisPoints < 0)
+  ) {
+    throw new RangeError(
+      `${data.instanceId}.starRateBasisPoints must be a non-negative safe integer`,
     );
   }
 

@@ -12,3 +12,4 @@ export * from "./sanadaYukimura";
 export * from "./liGuang";
 export * from "./salvadorDali";
 export * from "./agrippa";
+export * from "./duzyaryaRider";
