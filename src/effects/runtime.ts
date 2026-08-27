@@ -65,6 +65,7 @@ const NON_STACKING_EFFECT_TYPES = new Set<string>([
   "solemn_defense",
   "invincibility",
   "evade",
+  "guts",
 ]);
 
 function isExplicitlyStackable(

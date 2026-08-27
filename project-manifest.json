@@ -238,7 +238,8 @@
         "target_focus",
         "solemn_defense",
         "invincibility",
-        "evade"
+        "evade",
+        "guts"
       ],
       "targetFocusSeparatesBuffAndDebuff": true,
       "explicitStackableFlagAllowsDuplicates": true,

@@ -125,6 +125,23 @@ describe("effect registration and classification", () => {
       ]);
 
     expect(register({
+      stableId: "first-guts",
+      name: "ガッツ",
+      effectType: "guts",
+      category: "buff",
+      remainingUses: 1,
+    }, "first-guts")?.outcome).toBe("applied");
+    expect(register({
+      stableId: "refreshed-guts",
+      name: "ガッツ",
+      effectType: "guts",
+      category: "buff",
+      remainingUses: 2,
+    }, "rejected-guts")?.outcome).toBe("already_active");
+    expect(target.effects.find(({ stableId }) => stableId === "first-guts"))
+      .toEqual(expect.objectContaining({ remainingUses: 1 }));
+
+    expect(register({
       stableId: "stackable-guts-one",
       name: "重複可能ガッツ",
       effectType: "guts",
@@ -141,13 +158,16 @@ describe("effect registration and classification", () => {
       remainingUses: 1,
     }, "stackable-guts-two")?.outcome).toBe("applied");
     expect(target.effects.filter(({ effectType }) => effectType === "guts"))
-      .toHaveLength(2);
+      .toHaveLength(3);
     expect(effectStackabilityLabel(target.effects.find(
       ({ stableId }) => stableId === "first-invincibility",
     )!)).toBe("重複不可");
     expect(effectStackabilityLabel(target.effects.find(
       ({ stableId }) => stableId === "buff-taunt",
     )!)).toBe("重複不可（弱体扱いとは重複可能）");
+    expect(effectStackabilityLabel(target.effects.find(
+      ({ stableId }) => stableId === "first-guts",
+    )!)).toBe("重複不可");
     expect(effectStackabilityLabel(target.effects.find(
       ({ stableId }) => stableId === "stackable-guts-one",
     )!)).toBe("重複可能");
