@@ -170,6 +170,7 @@ function statusIconId(effect: AppliedEffect): string | null {
   ) {
     return effect.value < 0 ? "Statusdown" : "Statusup";
   }
+  if (effect.effectType === COMMON_EFFECT_TYPES.buffSuccess) return "Statusup";
   if (effect.effectType === TRAIT_GRANT_EFFECT_TYPE) return "Dragontrait";
   if (effect.effectType === "recurring_hp_reduction") return "Debuffregen";
   if (effect.effectType === COMMON_EFFECT_TYPES.invincibility) {

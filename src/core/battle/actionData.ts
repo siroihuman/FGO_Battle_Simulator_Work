@@ -94,6 +94,7 @@ export interface CombatantAttackData {
   classAttackCoefficientPermille: number;
   /** Servant N/A in internal 0.01%-gauge units. */
   attackNpUnits: number;
+  noblePhantasmNpUnits?: number;
   /** Servant N/D in internal 0.01%-gauge units. */
   receivedNpUnits: number;
   /** Source ATDR used when an enemy attack grants received NP. */

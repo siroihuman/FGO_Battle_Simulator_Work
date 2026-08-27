@@ -228,7 +228,9 @@ export function prepareBattleAttackInput(
         && sourceData.attackNpUnits > 0
         ? {
             attackNp: {
-              baseNpUnits: sourceData.attackNpUnits,
+              baseNpUnits: source.noblePhantasm
+                ? (sourceData.noblePhantasmNpUnits ?? sourceData.attackNpUnits)
+                : sourceData.attackNpUnits,
               cardNpValuePermille:
                 action.cardNpValuePermille,
               cardPerformanceModPermille:

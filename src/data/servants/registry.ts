@@ -216,6 +216,7 @@ export function createServantBattleInstance(
       classAttackCoefficientPermille:
         definition.classAttackCoefficientPermille,
       attackNpUnits: definition.battleRates.attackNpUnits,
+      ...(definition.battleRates.noblePhantasmNpUnits === undefined ? {} : { noblePhantasmNpUnits: definition.battleRates.noblePhantasmNpUnits }),
       receivedNpUnits: definition.battleRates.receivedNpUnits,
       attackNpRatePermille:
         definition.battleRates.attackNpRatePermille,
