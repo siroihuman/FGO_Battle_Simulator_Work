@@ -83,7 +83,7 @@ describe("No.056 アグリッパ", () => {
       { kind: "effect", order: 3 },
     ]);
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 25, 56, 57, 58, 62, 70, 94, 105, 107]);
+      .toEqual([7, 24, 25, 54, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(initialAllySelectionForServant(AGRIPPA.dataId)).toMatchObject({ level: 70, noblePhantasmLevel: 1 });
     expect(agrippa().unresolvedEffectStableIds).toEqual([]);
   });

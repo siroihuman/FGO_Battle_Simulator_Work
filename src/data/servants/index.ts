@@ -13,3 +13,4 @@ export * from "./liGuang";
 export * from "./salvadorDali";
 export * from "./agrippa";
 export * from "./duzyaryaRider";
+export * from "./octavianus";
