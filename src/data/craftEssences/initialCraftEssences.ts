@@ -519,14 +519,20 @@ export const AUGUSTUS_BOND: CraftEssenceDefinition = {
   eligibleServantDataIds: ["augustus"],
   startEffects: [],
   fieldEffects: [{
-    kind: "effect", stableId: "augustus-bond-party-effects", order: 1,
-    description: "自身がフィールドにいる間、味方全体のNP獲得量・Artsカード性能・防御力をアップ",
+    kind: "effect", stableId: "augustus-bond-party-np-gain", order: 1,
+    description: "自身がフィールドにいる間、味方全体のNP獲得量をアップ：10%",
     target: { relation: "allies", selection: "all", includeReserve: true },
-    action: { kind: "apply_effects", effects: [
-      { template: { stableId: "augustus-bond-party-np-gain-state", name: "NP獲得量アップ", effectType: COMMON_EFFECT_TYPES.npGain, category: "buff", value: 100, removalPolicy: "unremovable" } },
-      { template: { stableId: "augustus-bond-party-arts-state", name: "Artsカード性能アップ", effectType: COMMON_EFFECT_TYPES.cardPerformance, category: "buff", value: 80, removalPolicy: "unremovable", flags: { cardType: "arts" } } },
-      { template: { stableId: "augustus-bond-party-defense-state", name: "防御力アップ", effectType: COMMON_EFFECT_TYPES.defense, category: "buff", classifications: ["defense"], value: 80, removalPolicy: "unremovable" } },
-    ] },
+    action: { kind: "apply_effects", effects: [{ template: { stableId: "augustus-bond-party-np-gain-state", name: "NP獲得量アップ", effectType: COMMON_EFFECT_TYPES.npGain, category: "buff", value: 100, removalPolicy: "unremovable" } }] },
+  }, {
+    kind: "effect", stableId: "augustus-bond-party-arts", order: 2,
+    description: "＆Artsカード性能をアップ：8%",
+    target: { relation: "allies", selection: "all", includeReserve: true },
+    action: { kind: "apply_effects", effects: [{ template: { stableId: "augustus-bond-party-arts-state", name: "Artsカード性能アップ", effectType: COMMON_EFFECT_TYPES.cardPerformance, category: "buff", value: 80, removalPolicy: "unremovable", flags: { cardType: "arts" } } }] },
+  }, {
+    kind: "effect", stableId: "augustus-bond-party-defense", order: 3,
+    description: "＆防御力をアップ：8%",
+    target: { relation: "allies", selection: "all", includeReserve: true },
+    action: { kind: "apply_effects", effects: [{ template: { stableId: "augustus-bond-party-defense-state", name: "防御力アップ", effectType: COMMON_EFFECT_TYPES.defense, category: "buff", classifications: ["defense"], value: 80, removalPolicy: "unremovable" } }] },
   }],
   sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/26.html", checkedAt: "2026-08-27", note: "絆礼装「二本の青銅柱」の名称、前衛中の味方全体NP獲得量10%・Arts性能8%・防御力8%を照合。星4Lv80・ATK100・HP100は共通仕様を使用。" }],
 };
