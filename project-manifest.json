@@ -233,6 +233,18 @@
     "specialDefenseRequiredAttackerTrait": "effective_attack_source_trait_only",
     "servantDefaultDemeritRateAppliesWhenSourceRateMissing": true,
     "servantDemeritUsesDebuffResistanceAndImmunity": true,
+    "stateStacking": {
+      "nonStackingEffectTypes": [
+        "target_focus",
+        "solemn_defense",
+        "invincibility",
+        "evade",
+        "guts"
+      ],
+      "targetFocusSeparatesBuffAndDebuff": true,
+      "explicitStackableFlagAllowsDuplicates": true,
+      "nonStackingReapplication": "fails_without_state_or_counter_change"
+    },
     "initialAttributeAffinitiesPermille": {
       "earth": { "sky": 900, "human": 1100 },
       "sky": { "earth": 1100, "human": 900 },

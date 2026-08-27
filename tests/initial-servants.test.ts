@@ -16,6 +16,7 @@ import {
   LUCIFERA,
   SANADA_YUKIMURA,
   SEN_NO_RIKYU,
+  OCTAVIANUS,
   assertValidServantDefinition,
   createServantBattleInstance,
   createServantDataRegistry,
@@ -67,6 +68,7 @@ describe("initial servant definitions", () => {
       "honda-tadakatsu",
       "domination-foreigner",
       "duzyarya-rider",
+      "octavianus",
       "agrippa",
       "ajisukitakahikone-no-kami",
       "fenrir",
@@ -115,6 +117,17 @@ describe("initial servant definitions", () => {
       level: 120,
       hp: 15_486,
       attack: 16_013,
+    });
+    expect(OCTAVIANUS).toMatchObject({
+      collectionNo: 54,
+      name: "オクタウィアヌス",
+      classDisplayName: "セイバー",
+      rarity: 4,
+    });
+    expect(OCTAVIANUS.levelStats.at(-1)).toEqual({
+      level: 120,
+      hp: 18_323,
+      attack: 11_847,
     });
   });
 

@@ -26,6 +26,7 @@ import type { BattleUnitState } from "./core/battle/types";
 import type { BattleState } from "./core/battle/state";
 import type { BattleActionEffectSequence } from "./effects/actionData";
 import { isActionDisabled } from "./effects/classification";
+import { effectStackabilityLabel } from "./effects/runtime";
 import { EMBER_GATHERING_SABER_EXTREME } from "./data/enemies";
 import { INITIAL_CRAFT_ESSENCE_DEFINITIONS } from "./data/craftEssences";
 import {
@@ -752,6 +753,7 @@ function DetailModal({ detail, onClose }: { detail: DetailContent; onClose: () =
         <div><dt>効果量</dt><dd>{effectValueLabel(effect.applied, effect.applied.value)}（同一発生元の同種合計 {effectValueLabel(effect.applied, effect.totalValue)}）</dd></div>
         <div><dt>残り</dt><dd>{effect.applied.remainingTurns === null ? "ターン制限なし" : `${effect.applied.remainingTurns}T`} / {effect.applied.remainingUses === null ? "回数制限なし" : `${effect.applied.remainingUses}回`}</dd></div>
         <div><dt>解除可否</dt><dd>{effect.applied.removalPolicy === "removable" ? "解除可能" : effect.applied.removalPolicy === "unremovable" ? "解除不可" : "ID指定時のみ"}</dd></div>
+        <div><dt>重複可否</dt><dd>{effectStackabilityLabel(effect.applied)}</dd></div>
       </dl>
     </Modal>
   );
@@ -1645,7 +1647,7 @@ export function BattleScreen({
       <section className="battle-header panel" aria-labelledby="status-heading">
         <div><p className="eyebrow">{EMBER_GATHERING_SABER_EXTREME.name}</p><h1 id="status-heading">戦闘状況</h1></div>
         <dl className="battle-meta"><div><dt>Wave</dt><dd>{battleStatus.wave}</dd></div><div><dt>戦闘ターン</dt><dd>{battleStatus.battleTurn}</dd></div><div><dt>Waveターン</dt><dd>{battleStatus.waveTurn}</dd></div><div><dt>結果</dt><dd>{battleStatus.outcome}</dd></div><div className="seed-meta"><dt>今回のシード</dt><dd>{battleStatus.seed}</dd></div></dl>
-        <div className="button-row seed-actions"><button type="button" disabled={Boolean(playback)} onClick={() => restartBattle(true)}>同じシードで戦闘をやり直す</button><button type="button" disabled={Boolean(playback)} onClick={() => restartBattle(false)}>違うシードで戦闘をやり直す</button><button type="button" disabled={Boolean(playback)} onClick={() => copySeed(battleStatus.seed, setOperationMessage)}>今回のシードをコピー</button><button type="button" disabled={threeSelected || Boolean(playback)} onClick={() => onFixedSeedToSetup(battleStatus.seed)}>固定シードとして設定へ戻す</button></div>
+        <div className="button-row seed-actions"><button type="button" disabled={Boolean(playback)} onClick={() => restartBattle(true)}>同じシードで再戦</button><button type="button" disabled={Boolean(playback)} onClick={() => restartBattle(false)}>別シードで再戦</button><button type="button" disabled={Boolean(playback)} onClick={() => copySeed(battleStatus.seed, setOperationMessage)}>シードをコピー</button><button type="button" disabled={threeSelected || Boolean(playback)} onClick={() => onFixedSeedToSetup(battleStatus.seed)}>固定シードで設定へ</button><button type="button" disabled={threeSelected || Boolean(playback)} onClick={onReturnToSetup}>設定へ戻る</button></div>
       </section>
 
       <section className="panel" aria-labelledby="enemy-heading">
@@ -1669,8 +1671,6 @@ export function BattleScreen({
 
       <BattleLogs session={session} />
       <SuspendControls session={session} lockedReason={interactionLock} onRestore={(restored) => { onSessionChange(restored); setSelectedCardIds([]); setTargetInstanceId(firstLivingEnemyId(restored)); setOperationMessage("中断保存から直接再開しました。"); }} />
-      <button className="text-button" type="button" disabled={threeSelected || Boolean(playback)} onClick={onReturnToSetup}>現在の戦闘を閉じて設定画面へ戻る</button>
-
       {detail && <DetailModal detail={detail} onClose={() => setDetail(null)} />}
       {pendingSkill && <SkillTargetModal pending={pendingSkill} session={session} onConfirm={(targetId, orderChange) => resolveSkill(pendingSkill.skill, targetId, orderChange)} onClose={() => setPendingSkill(null)} />}
       {playbackFrame && playback && <PlaybackOverlay key={playback.index} notice={playbackFrame.notice} summaries={playbackFrame.summaries} hpTransitions={playbackFrame.hpTransitions} npTransitions={playbackFrame.npTransitions} damageAmounts={playbackFrame.damageAmounts} index={playback.index} total={playback.frames.length} onPrevious={showPreviousPlaybackFrame} onNext={showNextPlaybackFrame} onSkip={skipPlayback} />}

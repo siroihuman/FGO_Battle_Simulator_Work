@@ -6,6 +6,7 @@ import {
 } from "../src/core/battle/formation";
 import { createBattleState } from "../src/core/battle/state";
 import { BattleRng } from "../src/core/rng";
+import { resolveEffectApplication } from "../src/effects/application";
 import {
   categoryForGrantedTrait,
   createTraitGrantEffect,
@@ -16,6 +17,7 @@ import {
   advanceOwnerTurnEnd,
   applyEffect,
   createEffectRuntimeCounters,
+  effectStackabilityLabel,
 } from "../src/effects/runtime";
 import {
   attemptTriggerActivation,
@@ -54,6 +56,121 @@ describe("effect registration and classification", () => {
     expect(second.unit.effects.map(({ registrationOrder }) => registrationOrder)).toEqual([
       1, 2,
     ]);
+  });
+
+  it("fails non-stackable state applications while preserving the debuff-taunt exception and explicit stackable states", () => {
+    let counters = createEffectRuntimeCounters();
+    let target = unit("ally-a", "ally");
+    const register = (template: EffectTemplate, seed: string) => {
+      const result = resolveEffectApplication(
+        null,
+        target,
+        [{ template }],
+        counters,
+        new BattleRng(seed).stream("effects"),
+      );
+      if (!result.unit) throw new Error("状態付与先がありません");
+      target = result.unit;
+      counters = result.counters;
+      return result.results[0];
+    };
+
+    expect(register({
+      stableId: "first-invincibility",
+      name: "無敵",
+      effectType: "invincibility",
+      category: "buff",
+      remainingTurns: 1,
+    }, "first-invincibility")?.outcome).toBe("applied");
+    expect(register({
+      stableId: "refreshed-invincibility",
+      name: "無敵",
+      effectType: "invincibility",
+      category: "buff",
+      remainingUses: 2,
+    }, "rejected-invincibility")?.outcome).toBe("already_active");
+    expect(target.effects).toEqual([
+      expect.objectContaining({
+        instanceId: "effect-1",
+        stableId: "first-invincibility",
+        remainingTurns: 1,
+      }),
+    ]);
+
+    expect(register({
+      stableId: "buff-taunt",
+      name: "ターゲット集中",
+      effectType: "target_focus",
+      category: "buff",
+      value: 3_000,
+    }, "buff-taunt")?.outcome).toBe("applied");
+    expect(register({
+      stableId: "debuff-taunt",
+      name: "ターゲット集中",
+      effectType: "target_focus",
+      category: "debuff",
+      value: -3_000,
+    }, "debuff-taunt")?.outcome).toBe("applied");
+    expect(register({
+      stableId: "refreshed-buff-taunt",
+      name: "ターゲット集中",
+      effectType: "target_focus",
+      category: "buff",
+      value: 1_000,
+    }, "rejected-buff-taunt")?.outcome).toBe("already_active");
+    expect(target.effects.filter(({ effectType }) => effectType === "target_focus"))
+      .toEqual([
+        expect.objectContaining({ stableId: "buff-taunt", category: "buff" }),
+        expect.objectContaining({ stableId: "debuff-taunt", category: "debuff" }),
+      ]);
+
+    expect(register({
+      stableId: "first-guts",
+      name: "ガッツ",
+      effectType: "guts",
+      category: "buff",
+      remainingUses: 1,
+    }, "first-guts")?.outcome).toBe("applied");
+    expect(register({
+      stableId: "refreshed-guts",
+      name: "ガッツ",
+      effectType: "guts",
+      category: "buff",
+      remainingUses: 2,
+    }, "rejected-guts")?.outcome).toBe("already_active");
+    expect(target.effects.find(({ stableId }) => stableId === "first-guts"))
+      .toEqual(expect.objectContaining({ remainingUses: 1 }));
+
+    expect(register({
+      stableId: "stackable-guts-one",
+      name: "重複可能ガッツ",
+      effectType: "guts",
+      category: "buff",
+      flags: { stackable: true },
+      remainingUses: 1,
+    }, "stackable-guts-one")?.outcome).toBe("applied");
+    expect(register({
+      stableId: "stackable-guts-two",
+      name: "重複可能ガッツ",
+      effectType: "guts",
+      category: "buff",
+      flags: { stackable: true },
+      remainingUses: 1,
+    }, "stackable-guts-two")?.outcome).toBe("applied");
+    expect(target.effects.filter(({ effectType }) => effectType === "guts"))
+      .toHaveLength(3);
+    expect(effectStackabilityLabel(target.effects.find(
+      ({ stableId }) => stableId === "first-invincibility",
+    )!)).toBe("重複不可");
+    expect(effectStackabilityLabel(target.effects.find(
+      ({ stableId }) => stableId === "buff-taunt",
+    )!)).toBe("重複不可（弱体扱いとは重複可能）");
+    expect(effectStackabilityLabel(target.effects.find(
+      ({ stableId }) => stableId === "first-guts",
+    )!)).toBe("重複不可");
+    expect(effectStackabilityLabel(target.effects.find(
+      ({ stableId }) => stableId === "stackable-guts-one",
+    )!)).toBe("重複可能");
   });
 
   it("validates typed slip declarations and debuff-only amplifiers", () => {

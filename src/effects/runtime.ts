@@ -54,6 +54,53 @@ const ATTACK_TRIGGER_TIMINGS = [
   "after_attack",
 ] as const;
 
+/**
+ * These protection/attention states have only one effective slot per unit.
+ * A later application fails instead of creating a second state.
+ * Target focus is the sole category-sensitive exception: a debuff taunt and a
+ * buff taunt are different game states and therefore coexist.
+ */
+const NON_STACKING_EFFECT_TYPES = new Set<string>([
+  "target_focus",
+  "solemn_defense",
+  "invincibility",
+  "evade",
+  "guts",
+]);
+
+function isExplicitlyStackable(
+  effect: Pick<EffectTemplate, "flags">,
+): boolean {
+  return effect.flags?.stackable === true;
+}
+
+export function hasNonStackingEffect(
+  effects: readonly AppliedEffect[],
+  template: EffectTemplate,
+): boolean {
+  if (isExplicitlyStackable(template)) return false;
+  if (!NON_STACKING_EFFECT_TYPES.has(template.effectType)) return false;
+  return effects.some((existing) =>
+    existing.effectType === template.effectType
+    && (
+      template.effectType !== "target_focus"
+      || existing.category === template.category
+    )
+  );
+}
+
+/** Shared presentation label for the same stack rule used during application. */
+export function effectStackabilityLabel(
+  effect: Pick<AppliedEffect, "effectType" | "category" | "flags">,
+): string {
+  if (isExplicitlyStackable(effect)) return "重複可能";
+  if (!NON_STACKING_EFFECT_TYPES.has(effect.effectType)) return "重複可能";
+  if (effect.effectType !== "target_focus") return "重複不可";
+  return effect.category === "debuff"
+    ? "重複不可（強化扱いとは重複可能）"
+    : "重複不可（弱体扱いとは重複可能）";
+}
+
 function assertUniqueListedValues(
   values: readonly string[] | undefined,
   valid: readonly string[],

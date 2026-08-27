@@ -214,7 +214,7 @@ export interface BattleLogCommonActionResult {
   applications: Array<{
     specIndex: number;
     stableId: string;
-    outcome: "applied" | "resisted" | "immune" | "no_target";
+    outcome: "applied" | "resisted" | "immune" | "already_active" | "no_target";
     rate: {
       baseRatePermille: number;
       sourceModifierPermille: number;

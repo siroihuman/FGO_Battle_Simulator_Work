@@ -484,6 +484,33 @@ export const DUZYARYA_RIDER_BOND: CraftEssenceDefinition = {
   sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/33.html", checkedAt: "2026-08-26", note: "絆礼装「雨なき年の星」の名称と、前衛中の味方全体15%・装備者自身15%の〔弱体状態(解除不能な状態は除く)〕特攻をユーザー指定で照合。星4Lv80・ATK100・HP100は既存の絆礼装共通仕様を使用。" }],
 };
 
+export const OCTAVIANUS_BOND: CraftEssenceDefinition = {
+  schemaVersion: CRAFT_ESSENCE_DATA_SCHEMA_VERSION,
+  dataId: "octavianus-bond",
+  name: "父から継いだ名",
+  ...BOND_CRAFT_ESSENCE,
+  eligibleServantDataIds: ["octavianus"],
+  startEffects: [
+    {
+      kind: "effect",
+      stableId: "octavianus-bond-received-np",
+      order: 1,
+      description: "自身の被ダメージ時のNP獲得量をアップ：30%",
+      target: { relation: "self", selection: "single" },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "octavianus-bond-received-np-state", name: "被ダメージ時のNP獲得量アップ", effectType: COMMON_EFFECT_TYPES.receivedNpGain, category: "buff", value: 300, removalPolicy: "unremovable" } }] },
+    },
+    {
+      kind: "effect",
+      stableId: "octavianus-bond-defense",
+      order: 2,
+      description: "＆防御力をアップ：10%",
+      target: { relation: "self", selection: "single" },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "octavianus-bond-defense-state", name: "防御力アップ", effectType: COMMON_EFFECT_TYPES.defense, category: "buff", classifications: ["defense"], value: 100, removalPolicy: "unremovable" } }] },
+    },
+  ],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/25.html", checkedAt: "2026-08-27", note: "絆礼装「父から継いだ名」の名称、星4Lv80・ATK100・HP100、被ダメージ時NP獲得量30%・防御力10%を照合。" }],
+};
+
 export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   KALEIDOSCOPE,
   BLACK_GRAIL,
@@ -500,6 +527,7 @@ export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   SALVADOR_DALI_BOND,
   AGRIPPA_BOND,
   DUZYARYA_RIDER_BOND,
+  OCTAVIANUS_BOND,
 ] as const;
 
 export const INITIAL_CRAFT_ESSENCE_REGISTRY = createCraftEssenceDataRegistry(

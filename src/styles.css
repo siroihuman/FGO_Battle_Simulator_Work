@@ -862,7 +862,16 @@ summary {
 
 .seed-actions {
   grid-column: 1 / -1;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.seed-actions button {
+  min-width: 0;
+  min-height: 3.5rem;
+  padding-inline: 0.45rem;
+  font-size: 0.8rem;
+  line-height: 1.25;
 }
 
 .ally-tabs {
@@ -1326,6 +1335,10 @@ summary {
 
   .badge {
     white-space: normal;
+  }
+
+  .seed-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
