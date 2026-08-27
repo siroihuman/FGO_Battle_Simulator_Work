@@ -153,6 +153,8 @@ export interface ServantNoblePhantasmDefinition {
 export interface ServantBattleRates {
   /** N/A in internal 0.01%-gauge units. */
   attackNpUnits: number;
+  /** Optional NP-card N/A when it differs from normal command cards. */
+  noblePhantasmNpUnits?: number;
   /** N/D in internal 0.01%-gauge units. */
   receivedNpUnits: number;
   attackNpRatePermille: number;

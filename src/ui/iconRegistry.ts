@@ -43,6 +43,9 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "高速神言（呪）": "skill-np-charge",
   "凶年の寵愛": "skill-attack-up",
   "華麗の皇帝": "skill-unique-looks-of-loveliness",
+  "羅馬特権": "skill-hp-heal",
+  "不朽不滅の都": "skill-defense-up",
+  "尊厳ある者": "skill-np-charge",
   "神人となる者": "skill-defense-up",
   "荘厳なるや我が王剣": "skill-attack-up",
   "狂化": "class-mad-enhancement",
@@ -167,6 +170,7 @@ function statusIconId(effect: AppliedEffect): string | null {
   ) {
     return effect.value < 0 ? "Statusdown" : "Statusup";
   }
+  if (effect.effectType === COMMON_EFFECT_TYPES.buffSuccess) return "Statusup";
   if (effect.effectType === TRAIT_GRANT_EFFECT_TYPE) return "Dragontrait";
   if (effect.effectType === "recurring_hp_reduction") return "Debuffregen";
   if (effect.effectType === COMMON_EFFECT_TYPES.invincibility) {

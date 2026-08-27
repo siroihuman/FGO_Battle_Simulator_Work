@@ -511,6 +511,32 @@ export const OCTAVIANUS_BOND: CraftEssenceDefinition = {
   sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/25.html", checkedAt: "2026-08-27", note: "絆礼装「父から継いだ名」の名称、星4Lv80・ATK100・HP100、被ダメージ時NP獲得量30%・防御力10%を照合。" }],
 };
 
+export const AUGUSTUS_BOND: CraftEssenceDefinition = {
+  schemaVersion: CRAFT_ESSENCE_DATA_SCHEMA_VERSION,
+  dataId: "augustus-bond",
+  name: "二本の青銅柱",
+  ...BOND_CRAFT_ESSENCE,
+  eligibleServantDataIds: ["augustus"],
+  startEffects: [],
+  fieldEffects: [{
+    kind: "effect", stableId: "augustus-bond-party-np-gain", order: 1,
+    description: "自身がフィールドにいる間、味方全体のNP獲得量をアップ：10%",
+    target: { relation: "allies", selection: "all", includeReserve: true },
+    action: { kind: "apply_effects", effects: [{ template: { stableId: "augustus-bond-party-np-gain-state", name: "NP獲得量アップ", effectType: COMMON_EFFECT_TYPES.npGain, category: "buff", value: 100, removalPolicy: "unremovable" } }] },
+  }, {
+    kind: "effect", stableId: "augustus-bond-party-arts", order: 2,
+    description: "＆Artsカード性能をアップ：8%",
+    target: { relation: "allies", selection: "all", includeReserve: true },
+    action: { kind: "apply_effects", effects: [{ template: { stableId: "augustus-bond-party-arts-state", name: "Artsカード性能アップ", effectType: COMMON_EFFECT_TYPES.cardPerformance, category: "buff", value: 80, removalPolicy: "unremovable", flags: { cardType: "arts" } } }] },
+  }, {
+    kind: "effect", stableId: "augustus-bond-party-defense", order: 3,
+    description: "＆防御力をアップ：8%",
+    target: { relation: "allies", selection: "all", includeReserve: true },
+    action: { kind: "apply_effects", effects: [{ template: { stableId: "augustus-bond-party-defense-state", name: "防御力アップ", effectType: COMMON_EFFECT_TYPES.defense, category: "buff", classifications: ["defense"], value: 80, removalPolicy: "unremovable" } }] },
+  }],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/26.html", checkedAt: "2026-08-27", note: "絆礼装「二本の青銅柱」の名称、前衛中の味方全体NP獲得量10%・Arts性能8%・防御力8%を照合。星4Lv80・ATK100・HP100は共通仕様を使用。" }],
+};
+
 export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   KALEIDOSCOPE,
   BLACK_GRAIL,
@@ -528,6 +554,7 @@ export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   AGRIPPA_BOND,
   DUZYARYA_RIDER_BOND,
   OCTAVIANUS_BOND,
+  AUGUSTUS_BOND,
 ] as const;
 
 export const INITIAL_CRAFT_ESSENCE_REGISTRY = createCraftEssenceDataRegistry(

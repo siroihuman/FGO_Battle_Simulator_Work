@@ -65,7 +65,7 @@ describe("No.107 サルバドール・ダリ", () => {
     expect(registeredStatusIconPath({ name: "Arts攻撃耐性ダウン" } as Parameters<typeof registeredStatusIconPath>[0]))
       .toContain("Artsresistdown.webp");
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 25, 54, 56, 57, 58, 62, 70, 94, 105, 107]);
+      .toEqual([7, 24, 25, 54, 55, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(initialAllySelectionForServant(SALVADOR_DALI.dataId)).toMatchObject({ level: 90, noblePhantasmLevel: 1 });
     expect(dali().unresolvedEffectStableIds).toEqual([]);
   });
