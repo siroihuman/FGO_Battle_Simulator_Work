@@ -498,7 +498,7 @@ describe("minimum initial battle UI adapter", () => {
     expect(sanadaMarkup).toContain(SANADA_YUKIMURA_BOND.name);
   });
 
-  it("renders same-seed and different-seed restart controls in the battle screen", () => {
+  it("keeps the compact settings-return controls adjacent in the battle screen", () => {
     const markup = renderToStaticMarkup(createElement(BattleScreen, {
       session: createInitialBattleSession(completeSetup("restart-controls")),
       onSessionChange: () => undefined,
@@ -506,7 +506,13 @@ describe("minimum initial battle UI adapter", () => {
       onFixedSeedToSetup: () => undefined,
     }));
 
-    expect(markup).toContain("同じシードで戦闘をやり直す");
-    expect(markup).toContain("違うシードで戦闘をやり直す");
+    expect(markup).toContain("同じシードで再戦");
+    expect(markup).toContain("別シードで再戦");
+    expect(markup).toContain("シードをコピー");
+    expect(markup).toContain("固定シードで設定へ");
+    expect(markup).toContain("設定へ戻る");
+    expect(markup.indexOf("固定シードで設定へ"))
+      .toBeLessThan(markup.indexOf("設定へ戻る"));
+    expect(markup).not.toContain("現在の戦闘を閉じて設定画面へ戻る");
   });
 });

@@ -17,6 +17,7 @@ import {
   advanceOwnerTurnEnd,
   applyEffect,
   createEffectRuntimeCounters,
+  effectStackabilityLabel,
 } from "../src/effects/runtime";
 import {
   attemptTriggerActivation,
@@ -141,6 +142,15 @@ describe("effect registration and classification", () => {
     }, "stackable-guts-two")?.outcome).toBe("applied");
     expect(target.effects.filter(({ effectType }) => effectType === "guts"))
       .toHaveLength(2);
+    expect(effectStackabilityLabel(target.effects.find(
+      ({ stableId }) => stableId === "first-invincibility",
+    )!)).toBe("重複不可");
+    expect(effectStackabilityLabel(target.effects.find(
+      ({ stableId }) => stableId === "buff-taunt",
+    )!)).toBe("重複不可（弱体扱いとは重複可能）");
+    expect(effectStackabilityLabel(target.effects.find(
+      ({ stableId }) => stableId === "stackable-guts-one",
+    )!)).toBe("重複可能");
   });
 
   it("validates typed slip declarations and debuff-only amplifiers", () => {

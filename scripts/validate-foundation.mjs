@@ -1963,8 +1963,8 @@ const iconRegistry = await readText("src/ui/iconRegistry.ts");
 const initialBattleUi = await readText("src/ui/initialBattle.ts");
 const battleUi = await readText("src/ui/battleUi.ts");
 assert(
-  uiAndStorage.includes("同じシードで戦闘をやり直す")
-    && uiAndStorage.includes("違うシードで戦闘をやり直す")
+  uiAndStorage.includes("同じシードで再戦")
+    && uiAndStorage.includes("別シードで再戦")
     && calculationsAndRng.includes("`BattleSession.initial`")
     && appSource.includes("restartBattleSessionWithSeed")
     && appSource.includes("generateReplayableSeed")

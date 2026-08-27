@@ -67,11 +67,17 @@ const NON_STACKING_EFFECT_TYPES = new Set<string>([
   "evade",
 ]);
 
+function isExplicitlyStackable(
+  effect: Pick<EffectTemplate, "flags">,
+): boolean {
+  return effect.flags?.stackable === true;
+}
+
 export function hasNonStackingEffect(
   effects: readonly AppliedEffect[],
   template: EffectTemplate,
 ): boolean {
-  if (template.flags?.stackable === true) return false;
+  if (isExplicitlyStackable(template)) return false;
   if (!NON_STACKING_EFFECT_TYPES.has(template.effectType)) return false;
   return effects.some((existing) =>
     existing.effectType === template.effectType
@@ -80,6 +86,18 @@ export function hasNonStackingEffect(
       || existing.category === template.category
     )
   );
+}
+
+/** Shared presentation label for the same stack rule used during application. */
+export function effectStackabilityLabel(
+  effect: Pick<AppliedEffect, "effectType" | "category" | "flags">,
+): string {
+  if (isExplicitlyStackable(effect)) return "重複可能";
+  if (!NON_STACKING_EFFECT_TYPES.has(effect.effectType)) return "重複可能";
+  if (effect.effectType !== "target_focus") return "重複不可";
+  return effect.category === "debuff"
+    ? "重複不可（強化扱いとは重複可能）"
+    : "重複不可（弱体扱いとは重複可能）";
 }
 
 function assertUniqueListedValues(
