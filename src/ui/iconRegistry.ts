@@ -42,7 +42,7 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "呪術（魔）": "skill-np-gauge-down",
   "高速神言（呪）": "skill-np-charge",
   "凶年の寵愛": "skill-attack-up",
-  "華麗の皇帝": "skill-general-001",
+  "華麗の皇帝": "skill-unique-looks-of-loveliness",
   "神人となる者": "skill-defense-up",
   "荘厳なるや我が王剣": "skill-attack-up",
   "狂化": "class-mad-enhancement",
@@ -180,7 +180,10 @@ function statusIconId(effect: AppliedEffect): string | null {
     ) {
       return effect.category === "debuff" ? "Debuffatk" : "Buffatk";
     }
-    if (effect.trigger?.timing === "turn_end") {
+    if (
+      effect.trigger?.timing === "turn_end"
+      || effect.trigger?.timing === "on_damage_taken"
+    ) {
       return effect.category === "debuff" ? "DelayedDebuff" : "DelayedBuff";
     }
   }

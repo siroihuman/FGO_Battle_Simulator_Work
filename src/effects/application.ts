@@ -9,6 +9,7 @@ import {
 import {
   applyEffect,
   consumeUnitEffectUse,
+  hasNonStackingEffect,
 } from "./runtime";
 import type {
   AppliedEffect,
@@ -34,6 +35,7 @@ export type EffectApplicationOutcome =
   | "applied"
   | "resisted"
   | "immune"
+  | "already_active"
   | "no_target";
 
 export interface EffectApplicationResult {
@@ -236,6 +238,16 @@ export function resolveEffectApplication(
         });
         return;
       }
+    }
+
+    if (hasNonStackingEffect(currentUnit.effects, spec.template)) {
+      results.push({
+        specIndex,
+        stableId: spec.template.stableId,
+        outcome: "already_active",
+        rate,
+      });
+      return;
     }
 
     const applied = applyEffect(

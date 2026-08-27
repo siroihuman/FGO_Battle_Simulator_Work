@@ -10,10 +10,16 @@ import {
 import { OCTAVIANUS_BOND } from "../src/data/craftEssences";
 import { createBattleActionEffectDataRegistry } from "../src/effects/actionData";
 import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
-import { createEffectRuntimeCounters } from "../src/effects/runtime";
+import {
+  applyEffect,
+  createEffectRuntimeCounters,
+} from "../src/effects/runtime";
 import { resolveAllySkillUse } from "../src/effects/skillExecution";
 import { resolveSideTurnEnd } from "../src/effects/turnEnd";
-import { registeredSkillIconPath } from "../src/ui/iconRegistry";
+import {
+  registeredSkillIconPath,
+  registeredStatusIconPath,
+} from "../src/ui/iconRegistry";
 import { unit } from "./helpers/battle";
 
 function setup() {
@@ -56,9 +62,32 @@ describe("No.054 オクタウィアヌス", () => {
       name: "父から継いだ名",
       eligibleServantDataIds: ["octavianus"],
     });
-    expect(registeredSkillIconPath("華麗の皇帝")).toContain("skill-general-001.png");
+    expect(registeredSkillIconPath("華麗の皇帝"))
+      .toContain("skill-unique-looks-of-loveliness.png");
     expect(registeredSkillIconPath("神人となる者")).toContain("skill-defense-up.png");
     expect(registeredSkillIconPath("荘厳なるや我が王剣")).toContain("skill-attack-up.png");
+  });
+
+  it("uses DelayedBuff for the on-damage trigger state", () => {
+    const trigger = OCTAVIANUS.activeSkills[1]?.effects[5];
+    if (trigger?.kind !== "effect" || trigger.action.kind !== "apply_effects") {
+      throw new Error("被ダメージ時スター獲得状態がありません");
+    }
+    const applied = trigger.action.effects[0]?.template;
+    if (!applied) throw new Error("被ダメージ時スター獲得テンプレートがありません");
+    const state = applyEffect(
+      unit("target", "ally"),
+      {
+        stableId: applied.stableId,
+        name: applied.name,
+        effectType: applied.effectType,
+        category: applied.category,
+        trigger: applied.trigger,
+      },
+      "octavianus",
+      createEffectRuntimeCounters(),
+    ).effect;
+    expect(registeredStatusIconPath(state)).toContain("DelayedBuff.webp");
   });
 
   it("applies the party defense and selected-target effects without making the support NP an attack", () => {

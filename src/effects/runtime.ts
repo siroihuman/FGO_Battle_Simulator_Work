@@ -54,6 +54,34 @@ const ATTACK_TRIGGER_TIMINGS = [
   "after_attack",
 ] as const;
 
+/**
+ * These protection/attention states have only one effective slot per unit.
+ * A later application fails instead of creating a second state.
+ * Target focus is the sole category-sensitive exception: a debuff taunt and a
+ * buff taunt are different game states and therefore coexist.
+ */
+const NON_STACKING_EFFECT_TYPES = new Set<string>([
+  "target_focus",
+  "solemn_defense",
+  "invincibility",
+  "evade",
+]);
+
+export function hasNonStackingEffect(
+  effects: readonly AppliedEffect[],
+  template: EffectTemplate,
+): boolean {
+  if (template.flags?.stackable === true) return false;
+  if (!NON_STACKING_EFFECT_TYPES.has(template.effectType)) return false;
+  return effects.some((existing) =>
+    existing.effectType === template.effectType
+    && (
+      template.effectType !== "target_focus"
+      || existing.category === template.category
+    )
+  );
+}
+
 function assertUniqueListedValues(
   values: readonly string[] | undefined,
   valid: readonly string[],
