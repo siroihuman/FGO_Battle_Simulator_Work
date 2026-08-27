@@ -57,7 +57,7 @@ describe("No.054 オクタウィアヌス", () => {
     expect(OCTAVIANUS.levelStats.at(-1)).toEqual({ level: 120, hp: 18_323, attack: 11_847 });
     expect(OCTAVIANUS.noblePhantasm.effects.every(({ kind }) => kind === "effect")).toBe(true);
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 25, 54, 56, 57, 58, 62, 70, 94, 105, 107]);
+      .toEqual([7, 24, 25, 54, 55, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(OCTAVIANUS_BOND).toMatchObject({
       name: "父から継いだ名",
       eligibleServantDataIds: ["octavianus"],

@@ -118,7 +118,7 @@ describe("No.094 真田信繁", () => {
       damageMultiplierPermilleByLevel: [3_000, 4_000, 4_500, 4_750, 5_000],
     });
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 25, 54, 56, 57, 58, 62, 70, 94, 105, 107]);
+      .toEqual([7, 24, 25, 54, 55, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(initialAllySelectionForServant(SANADA_YUKIMURA.dataId))
       .toMatchObject({ level: 90, noblePhantasmLevel: 1 });
     expect(registeredServantWikiUrl(SANADA_YUKIMURA.dataId))
