@@ -68,6 +68,7 @@ describe("initial servant definitions", () => {
       "honda-tadakatsu",
       "domination-foreigner",
       "duzyarya-rider",
+      "julia-farnese",
       "octavianus",
       "augustus",
       "agrippa",

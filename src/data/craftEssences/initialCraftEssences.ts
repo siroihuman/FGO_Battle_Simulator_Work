@@ -537,6 +537,34 @@ export const AUGUSTUS_BOND: CraftEssenceDefinition = {
   sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/26.html", checkedAt: "2026-08-27", note: "絆礼装「二本の青銅柱」の名称、前衛中の味方全体NP獲得量10%・Arts性能8%・防御力8%を照合。星4Lv80・ATK100・HP100は共通仕様を使用。" }],
 };
 
+export const JULIA_FARNESE_BOND: CraftEssenceDefinition = {
+  schemaVersion: CRAFT_ESSENCE_DATA_SCHEMA_VERSION,
+  dataId: "julia-farnese-bond",
+  name: "六輪の青百合",
+  ...BOND_CRAFT_ESSENCE,
+  eligibleServantDataIds: ["julia-farnese"],
+  startEffects: [],
+  fieldEffects: [
+    {
+      kind: "effect",
+      stableId: "julia-farnese-bond-female-quick",
+      order: 1,
+      description: "自身がフィールドにいる間、味方全体の〔女性〕のQuickカード性能をアップ：10%",
+      target: { relation: "allies", selection: "all", includeReserve: true, requiredTraits: ["女性"] },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "julia-farnese-bond-female-quick-state", name: "Quickカード性能アップ", effectType: COMMON_EFFECT_TYPES.cardPerformance, category: "buff", value: 100, removalPolicy: "unremovable", flags: { cardType: "quick" } } }] },
+    },
+    {
+      kind: "effect",
+      stableId: "julia-farnese-bond-female-critical",
+      order: 2,
+      description: "＆クリティカル威力をアップ：20%",
+      target: { relation: "allies", selection: "all", includeReserve: true, requiredTraits: ["女性"] },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "julia-farnese-bond-female-critical-state", name: "クリティカル威力アップ", effectType: COMMON_EFFECT_TYPES.criticalDamage, category: "buff", value: 200, removalPolicy: "unremovable" } }] },
+    },
+  ],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/31.html", checkedAt: "2026-08-28", note: "絆礼装「六輪の青百合」の名称、星4Lv80・ATK100・HP100、前衛中の〔女性〕味方全体Quick性能10%・クリティカル威力20%を照合。" }],
+};
+
 export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   KALEIDOSCOPE,
   BLACK_GRAIL,
@@ -555,6 +583,7 @@ export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   DUZYARYA_RIDER_BOND,
   OCTAVIANUS_BOND,
   AUGUSTUS_BOND,
+  JULIA_FARNESE_BOND,
 ] as const;
 
 export const INITIAL_CRAFT_ESSENCE_REGISTRY = createCraftEssenceDataRegistry(

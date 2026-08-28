@@ -913,7 +913,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "duzyarya-rider-implemented-awaiting-user-acceptance"
+    manifest.status === "julia-farnese-implemented-awaiting-user-acceptance"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -2134,7 +2134,7 @@ assert(
   initialContent.includes("### No.362 千利休")
     && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
     && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
-    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.025 ドゥズヤールヤー〔騎〕、No.056 アグリッパ、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア、No.094 真田信繁、No.105 李広、No.107 サルバドール・ダリ"),
+    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.025 ドゥズヤールヤー〔騎〕、No.029 ジュリア・ファルネーゼ、No.054 オクタウィアヌス、No.055 アウグストゥス、No.056 アグリッパ、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア、No.094 真田信繁、No.105 李広、No.107 サルバドール・ダリ"),
   "具体データ仕様に千利休と編成区分の採用範囲がありません"
 );
 assert(

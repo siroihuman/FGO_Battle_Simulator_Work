@@ -15,3 +15,4 @@ export * from "./agrippa";
 export * from "./duzyaryaRider";
 export * from "./octavianus";
 export * from "./augustus";
+export * from "./juliaFarnese";

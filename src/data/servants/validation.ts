@@ -122,6 +122,9 @@ function assertNpAttack(
 ): void {
   registerStableId(effect.stableId, `${name}.stableId`, stableIds);
   assertPositiveInteger(effect.order, `${name}.order`);
+  if (effect.description !== undefined && effect.description.trim().length === 0) {
+    throw new RangeError(`${name}.description must not be empty`);
+  }
   if (effect.targetScope !== "single" && effect.targetScope !== "all") {
     throw new RangeError(`${name}.targetScope is invalid`);
   }

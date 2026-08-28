@@ -21,6 +21,7 @@ import {
   LUCIFERA_BOND,
   MOTHER_MARY_BOND,
   OCTAVIANUS_BOND,
+  JULIA_FARNESE_BOND,
   SANADA_YUKIMURA_BOND,
   SEN_NO_RIKYU_BOND,
 } from "../src/data/craftEssences";
@@ -156,7 +157,7 @@ function battleUnit(
 
 describe("bond Craft Essences", () => {
   it("registers all requested bond essences with exact wearer restrictions and fixed Lv80 stats", () => {
-    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(17);
+    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(18);
     for (const definition of INITIAL_CRAFT_ESSENCE_DEFINITIONS.filter(
       ({ eligibleServantDataIds }) => eligibleServantDataIds !== undefined,
     )) {
@@ -187,6 +188,10 @@ describe("bond Craft Essences", () => {
     expect(OCTAVIANUS_BOND).toMatchObject({
       name: "父から継いだ名",
       eligibleServantDataIds: ["octavianus"],
+    });
+    expect(JULIA_FARNESE_BOND).toMatchObject({
+      name: "六輪の青百合",
+      eligibleServantDataIds: ["julia-farnese"],
     });
     expect(LIGHT_KOYANSKAYA_BOND.eligibleServantDataIds).toEqual([
       "koyanskaya-of-light",

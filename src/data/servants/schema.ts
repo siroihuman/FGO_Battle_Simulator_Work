@@ -106,6 +106,8 @@ export interface ServantNoblePhantasmAttackEffect {
   kind: "attack";
   stableId: string;
   order: number;
+  /** Exact source wording for this attack row when the UI must not synthesize it. */
+  description?: string;
   targetScope: AttackTargetScope;
   hitWeights: readonly number[];
   damageMultiplierPermilleByLevel: readonly [

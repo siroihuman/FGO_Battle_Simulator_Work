@@ -386,9 +386,10 @@ export function presentNoblePhantasmDetail(
     .flatMap((effect) => {
       if (effect.kind === "effect") return effect.description.split("\n");
       const target = effect.targetScope === "all" ? "敵全体" : "敵単体";
-      const attack = effect.specialAttack
+      const generatedAttack = effect.specialAttack
         ? `＆強力な攻撃[Lv]：${rateSeries(effect.damageMultiplierPermilleByLevel)}`
         : `＋${target}に強力な攻撃[Lv]：${rateSeries(effect.damageMultiplierPermilleByLevel)}`;
+      const attack = effect.description ?? generatedAttack;
       const additionalAttack = effect.additionalAttack
         ? `＆オーバーチャージで追加で強力な攻撃<OC:威力UP>：${rateSeries(effect.additionalAttack.damageMultiplierPermilleByOvercharge)}`
         : null;
