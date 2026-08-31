@@ -410,12 +410,15 @@ if (manifest) {
   const sanadaYukimura = specifiedServants.find(({ dataId }) => dataId === "sanada-yukimura");
   const liGuang = specifiedServants.find(({ dataId }) => dataId === "li-guang");
   const duzyaryaRider = specifiedServants.find(({ dataId }) => dataId === "duzyarya-rider");
+  const juliaFarneseRider = specifiedServants.find(({ dataId }) => dataId === "julia-farnese-rider");
+  const octavianus = specifiedServants.find(({ dataId }) => dataId === "octavianus");
+  const augustus = specifiedServants.find(({ dataId }) => dataId === "augustus");
   const agrippa = specifiedServants.find(({ dataId }) => dataId === "agrippa");
   const salvadorDali = specifiedServants.find(({ dataId }) => dataId === "salvador-dali");
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
   const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 11
+    specifiedServants.length === 14
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -424,6 +427,28 @@ if (manifest) {
       && senNoRikyu?.battleSuspendSchemaVersion === 4
       && senNoRikyu?.dataSchemaVersion === "1.38.0",
     "指定コンテンツに千利休の登録状態がありません"
+  );
+  assert(
+    juliaFarneseRider?.collectionNo === 29
+      && juliaFarneseRider?.classificationCategory === 1
+      && juliaFarneseRider?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && juliaFarneseRider?.activeSkillCount === 3
+      && juliaFarneseRider?.classSkillCount === 2
+      && juliaFarneseRider?.noblePhantasmCount === 1
+      && juliaFarneseRider?.noblePhantasmRevision === "upgraded_only"
+      && juliaFarneseRider?.noblePhantasmHitCount === 5
+      && juliaFarneseRider?.noblePhantasmFixedSpecialAttack?.requiredTargetTrait === "悪"
+      && juliaFarneseRider?.noblePhantasmFixedSpecialAttack?.multiplierPermille === 1500
+      && juliaFarneseRider?.battleSuspendSchemaVersion === 4
+      && juliaFarneseRider?.dataSchemaVersion === "1.38.0",
+    "指定コンテンツにジュリア・ファルネーゼ〔騎〕の登録状態がありません"
+  );
+  assert(
+    octavianus?.collectionNo === 54
+      && octavianus?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && augustus?.collectionNo === 55
+      && augustus?.implementationStatus === "implemented_awaiting_user_acceptance",
+    "指定コンテンツにオクタウィアヌス／アウグストゥスの登録状態がありません"
   );
   assert(
     fenrir?.collectionNo === 58
@@ -913,7 +938,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "duzyarya-rider-implemented-awaiting-user-acceptance"
+    manifest.status === "julia-farnese-rider-implemented-awaiting-user-acceptance"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1306,9 +1331,12 @@ if (manifest) {
     ["死してなお", "salvador-dali-bond", "salvador-dali", "https://w.atwiki.jp/siroi_human/pages/922.html"],
     ["船嘴の黄金冠", "agrippa-bond", "agrippa", "https://w.atwiki.jp/siroi_human/pages/300.html"],
     ["雨なき年の星", "duzyarya-rider-bond", "duzyarya-rider", "https://w.atwiki.jp/siroi_human/pages/33.html"],
+    ["父から継いだ名", "octavianus-bond", "octavianus", "https://w.atwiki.jp/siroi_human/pages/25.html"],
+    ["二本の青銅柱", "augustus-bond", "augustus", "https://w.atwiki.jp/siroi_human/pages/26.html"],
+    ["六輪の青百合", "julia-farnese-rider-bond", "julia-farnese-rider", "https://w.atwiki.jp/siroi_human/pages/31.html"],
   ];
   assert(
-    initialCraftEssences.length === 15
+    initialCraftEssences.length === 18
       && initialCraftEssences[0]?.name === "カレイドスコープ"
       && initialCraftEssences[0]?.dataId === "kaleidoscope"
       && initialCraftEssences[0]?.rarity === 5
@@ -1330,7 +1358,7 @@ if (manifest) {
           && craftEssence.source === source
           && craftEssence.implementationStatus === "implemented";
       }),
-    "概念礼装2枚と絆礼装13枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
+    "概念礼装2枚と絆礼装16枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
   );
 
   const initialEnemies = manifest.initialContent?.enemies ?? [];
@@ -1502,6 +1530,7 @@ const mandatoryFiles = [
   "src/data/servants/senNoRikyu.ts",
   "src/data/servants/hondaTadakatsu.ts",
   "src/data/servants/duzyaryaRider.ts",
+  "src/data/servants/juliaFarneseRider.ts",
   "src/data/servants/ajisukitakahikoneNoKami.ts",
   "src/data/servants/fenrir.ts",
   "src/data/servants/sanadaYukimura.ts",
@@ -1523,12 +1552,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.025「ドゥズヤールヤー〔騎〕」")
+    && startHere.includes("No.029「ジュリア・ファルネーゼ〔騎〕」")
     && startHere.includes("具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`]")
     && startHere.includes("実画面受入を待つ")
     && startHere.includes("中断保存形式4・データ1.38.0")
     && startHere.includes("No.059「那須与一」"),
-  "作業開始ページにドゥズヤールヤー〔騎〕の実装状態と次作業がありません"
+    "作業開始ページにジュリア・ファルネーゼ〔騎〕の実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"
@@ -1609,13 +1638,13 @@ assert(
     && implementationStatus.includes("`canDefeat: true`")
     && implementationStatus.includes("No.056「アグリッパ」")
     && implementationStatus.includes("`requiredAttackerTrait`")
-    && implementationStatus.includes("No.025「ドゥズヤールヤー〔騎〕」")
+    && implementationStatus.includes("No.029「ジュリア・ファルネーゼ〔騎〕」")
     && implementationStatus.includes("No.094「真田信繁」")
     && implementationStatus.includes("防御無視は攻撃前に登録し同一宝具攻撃で消費する")
     && implementationStatus.includes("`skill-guts`")
     && implementationStatus.includes("No.059「那須与一」")
     && implementationStatus.includes("再臨段階で変わるサーヴァントの共通段階選択は未実装"),
-  "実装状況にフェンリル、既存受入記録、次作業がありません"
+    "実装状況にジュリア・ファルネーゼ〔騎〕、既存受入記録、次作業がありません"
 );
 const dominationForeignerAcceptance = await readText(
   "docs/qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md"
@@ -2134,7 +2163,7 @@ assert(
   initialContent.includes("### No.362 千利休")
     && initialContent.includes("Quick攻撃時のダメージ前に実攻撃対象だけ")
     && initialContent.includes("公式: No.314 光のコヤンスカヤ、No.362 千利休")
-    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.025 ドゥズヤールヤー〔騎〕、No.056 アグリッパ、No.057 阿遅鉏高日子根神、No.058 フェンリル、No.062 ルシフェラ、No.070 聖母マリア、No.094 真田信繁、No.105 李広、No.107 サルバドール・ダリ"),
+    && initialContent.includes("オリジナル: No.007 本多忠勝、No.024’ 支配のフォーリナー、No.025 ドゥズヤールヤー〔騎〕、No.029 ジュリア・ファルネーゼ、No.054 オクタウィアヌス、No.055 アウグストゥス、No.056 アグリッパ"),
   "具体データ仕様に千利休と編成区分の採用範囲がありません"
 );
 assert(
@@ -2176,7 +2205,7 @@ assert(
   initialContent.includes("死してなお")
     && initialContent.includes("`salvador-dali-bond`")
     && initialContent.includes("解除可能な弱体状態がある対象だけへの固定150%特攻")
-    && initialContent.includes("絆礼装13枚"),
+    && initialContent.includes("絆礼装16枚"),
   "具体データ仕様にサルバドール・ダリの絆礼装と解除可能弱体特攻がありません"
 );
 assert(
@@ -2188,6 +2217,15 @@ assert(
     && initialContent.includes("`duzyarya-rider-bond`")
     && initialContent.includes("雨なき年の星"),
   "具体データ仕様にドゥズヤールヤー〔騎〕の補助宝具と絆礼装がありません"
+);
+assert(
+  initialContent.includes("### No.029 ジュリア・ファルネーゼ〔騎〕")
+    && initialContent.includes("`julia-farnese-rider`")
+    && initialContent.includes("Q3／A2／B1／EX5／宝具5")
+    && initialContent.includes("〔悪〕固定150%特攻")
+    && initialContent.includes("`julia-farnese-rider-bond`")
+    && initialContent.includes("六輪の青百合"),
+  "具体データ仕様にジュリア・ファルネーゼ〔騎〕と絆礼装がありません"
 );
 assert(
   initialContent.includes("### No.056 アグリッパ")
