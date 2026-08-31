@@ -17,6 +17,7 @@ import {
   SANADA_YUKIMURA,
   SEN_NO_RIKYU,
   OCTAVIANUS,
+  JULIA_FARNESE_RIDER,
   assertValidServantDefinition,
   createServantBattleInstance,
   createServantDataRegistry,
@@ -68,6 +69,7 @@ describe("initial servant definitions", () => {
       "honda-tadakatsu",
       "domination-foreigner",
       "duzyarya-rider",
+      "julia-farnese-rider",
       "octavianus",
       "augustus",
       "agrippa",
@@ -129,6 +131,18 @@ describe("initial servant definitions", () => {
       level: 120,
       hp: 18_323,
       attack: 11_847,
+    });
+    expect(JULIA_FARNESE_RIDER).toMatchObject({
+      collectionNo: 29,
+      name: "ジュリア・ファルネーゼ",
+      classDisplayName: "ライダー",
+      rarity: 4,
+      commandCards: ["quick", "quick", "arts", "arts", "buster"],
+    });
+    expect(JULIA_FARNESE_RIDER.levelStats.at(-1)).toEqual({
+      level: 120,
+      hp: 18_246,
+      attack: 11_057,
     });
   });
 
