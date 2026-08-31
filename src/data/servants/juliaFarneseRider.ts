@@ -99,7 +99,7 @@ export const JULIA_FARNESE_RIDER: ServantDefinition = {
           kind: "effect", stableId: "julia-farnese-innocent-unicorn-recurring-stars", order: 1,
           description: "自身に毎ターンスター獲得状態を付与[Lv](3T)：15",
           target: { relation: "self", selection: "single" },
-          action: { kind: "apply_effects", effects: [{ template: { stableId: "julia-farnese-innocent-unicorn-recurring-stars-state", name: "毎ターンスター獲得", effectType: COMMON_EFFECT_TYPES.recurringStarGain, category: "buff", value: 15, remainingTurns: 3, durationTick: "opponent_turn_end", trigger: { timing: "turn_end", actions: [{ target: { relation: "self", selection: "single" }, action: { kind: "gain_stars", amount: 15, destination: "next_command" } }] } }] },
+          action: { kind: "apply_effects", effects: [{ template: { stableId: "julia-farnese-innocent-unicorn-recurring-stars-state", name: "毎ターンスター獲得", effectType: COMMON_EFFECT_TYPES.recurringStarGain, category: "buff", value: 15, remainingTurns: 3, durationTick: "opponent_turn_end", trigger: { timing: "turn_end", actions: [{ target: { relation: "self", selection: "single" }, action: { kind: "gain_stars", amount: 15, destination: "next_command" } }] } } }] },
         },
         {
           kind: "effect", stableId: "julia-farnese-innocent-unicorn-self-np", order: 2,
