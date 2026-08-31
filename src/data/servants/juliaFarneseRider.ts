@@ -150,7 +150,7 @@ export const JULIA_FARNESE_RIDER: ServantDefinition = {
           kind: "effect", stableId: "julia-farnese-white-lily-beast-recurring-np", order: 4,
           description: "＆毎ターンNP獲得状態を付与[Lv](5T)：10%",
           target: { relation: "allies", selection: "all" },
-          action: { kind: "apply_effects", effects: [{ template: { stableId: "julia-farnese-white-lily-beast-recurring-np-state", name: "毎ターンNP獲得", effectType: COMMON_EFFECT_TYPES.recurringNpGain, category: "buff", value: 1_000, remainingTurns: 5, durationTick: "opponent_turn_end", trigger: { timing: "turn_end", actions: [{ target: { relation: "self", selection: "single" }, action: { kind: "change_np", amount: 1_000 } }] } }] },
+          action: { kind: "apply_effects", effects: [{ template: { stableId: "julia-farnese-white-lily-beast-recurring-np-state", name: "毎ターンNP獲得", effectType: COMMON_EFFECT_TYPES.recurringNpGain, category: "buff", value: 1_000, remainingTurns: 5, durationTick: "opponent_turn_end", trigger: { timing: "turn_end", actions: [{ target: { relation: "self", selection: "single" }, action: { kind: "change_np", amount: 1_000 } }] } } }] },
         },
       ],
     },
