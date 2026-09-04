@@ -116,7 +116,7 @@ describe("No.070 聖母マリア", () => {
       cardType: "arts",
     });
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 25, 54, 55, 56, 57, 58, 62, 70, 94, 105, 107]);
+      .toEqual([7, 24, 25, 29, 54, 55, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(initialAllySelectionForServant(MOTHER_MARY.dataId))
       .toMatchObject({ level: 90, noblePhantasmLevel: 1 });
     expect(registeredServantWikiUrl(MOTHER_MARY.dataId))

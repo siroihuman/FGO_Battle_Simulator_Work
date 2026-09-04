@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "duzyarya-rider-implemented-awaiting-user-acceptance",
+  "status": "julia-farnese-rider-implemented-awaiting-user-acceptance",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -913,6 +913,65 @@
         "dataSchemaVersion": "1.38.0"
       },
       {
+        "name": "ジュリア・ファルネーゼ",
+        "collectionNo": 29,
+        "dataId": "julia-farnese-rider",
+        "classificationCategory": 1,
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "source": "https://w.atwiki.jp/siroi_human/pages/31.html",
+        "sourceCheckedAt": "2026-08-31",
+        "activeSkillCount": 3,
+        "classSkillCount": 2,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "upgraded_only",
+        "noblePhantasmHitCount": 5,
+        "noblePhantasmFixedSpecialAttack": {
+          "requiredTargetTrait": "悪",
+          "multiplierPermille": 1500
+        },
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
+        "name": "オクタウィアヌス",
+        "collectionNo": 54,
+        "dataId": "octavianus",
+        "classificationCategory": 1,
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "source": "https://w.atwiki.jp/siroi_human/pages/25.html",
+        "sourceCheckedAt": "2026-08-27",
+        "activeSkillCount": 3,
+        "classSkillCount": 3,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "upgraded_only",
+        "noblePhantasmType": "support",
+        "noblePhantasmHitCount": 0,
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
+        "name": "アウグストゥス",
+        "collectionNo": 55,
+        "dataId": "augustus",
+        "classificationCategory": 2,
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "source": "https://w.atwiki.jp/siroi_human/pages/26.html",
+        "sourceCheckedAt": "2026-08-27",
+        "activeSkillCount": 3,
+        "classSkillCount": 2,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "upgraded_only",
+        "noblePhantasmHitCount": 6,
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
         "name": "アグリッパ",
         "collectionNo": 56,
         "dataId": "agrippa",
@@ -1289,6 +1348,36 @@
         "level": 80,
         "eligibleServantDataIds": ["duzyarya-rider"],
         "source": "https://w.atwiki.jp/siroi_human/pages/33.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "父から継いだ名",
+        "dataId": "octavianus-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["octavianus"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/25.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "二本の青銅柱",
+        "dataId": "augustus-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["augustus"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/26.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "六輪の青百合",
+        "dataId": "julia-farnese-rider-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["julia-farnese-rider"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/31.html",
         "implementationStatus": "implemented"
       }
     ],

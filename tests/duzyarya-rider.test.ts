@@ -121,7 +121,7 @@ describe("No.025 ドゥズヤールヤー〔騎〕", () => {
     const skill1Action = sourceAction(DUZYARYA_RIDER, "duzyarya-rider-sorcery-demonic");
     expect(actionSelectedTargetMode(skill1Action)).toBe("enemy");
     expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo))
-      .toEqual([7, 24, 25, 54, 55, 56, 57, 58, 62, 70, 94, 105, 107]);
+      .toEqual([7, 24, 25, 29, 54, 55, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(registeredSkillIconPath("呪術（魔）"))
       .toContain("skill-np-gauge-down.png");
     expect(registeredSkillIconPath("高速神言（呪）"))
