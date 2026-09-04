@@ -11,7 +11,7 @@
 
 ## 次の作業
 
-1. ジュリア・ファルネーゼ〔騎〕の男性限定弱体、女性限定NP・クリティカル、毎ターン回復／NP／スター、〔悪〕特攻Quick全体宝具、絆礼装の前衛限定フィールド効果を実画面で確認する。合格ならPRを`main`へ統合する。
+1. ジュリア・ファルネーゼ〔騎〕の男性限定の魅了と敵全体の弱体耐性・防御力ダウン、指定3アイコン、女性限定NP・クリティカル、毎ターン回復／NP／スター、〔悪〕特攻Quick全体宝具、絆礼装の前衛限定フィールド効果を実画面で確認する。合格ならPRを`main`へ統合する。
 2. 統合後、`SERVANT_CLASSIFICATION.md`のカテゴリ1・No.順へ戻り、次の未実装対象No.059「那須与一」の具体データ確認・実装可能性確認へ進む。
 
 阿遅鉏高日子根神は[`qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md`](qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md)、本多忠勝は[`qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md`](qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md)、期限境界の修正は[`qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md`](qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md)、聖母マリアは[`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)、千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)を参照します。具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`](SERVANT_CLASSIFICATION.md)の確定済みカテゴリを確認します。

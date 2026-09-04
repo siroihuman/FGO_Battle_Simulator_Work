@@ -78,13 +78,13 @@ export const JULIA_FARNESE_RIDER: ServantDefinition = {
         {
           kind: "effect", stableId: "julia-farnese-beautiful-julia-debuff-resistance", order: 2,
           description: "＆弱体耐性をダウン(3T)：30%",
-          target: { relation: "enemies", selection: "all", requiredTraits: ["男性"] },
+          target: { relation: "enemies", selection: "all" },
           action: { kind: "apply_effects", effects: [{ template: { stableId: "julia-farnese-beautiful-julia-debuff-resistance-state", name: "弱体耐性ダウン", effectType: COMMON_EFFECT_TYPES.debuffResistance, category: "debuff", value: -300, remainingTurns: 3, durationTick: "owner_turn_end" } }] },
         },
         {
           kind: "effect", stableId: "julia-farnese-beautiful-julia-defense", order: 3,
           description: "＆防御力をダウン[Lv](3T)：20%",
-          target: { relation: "enemies", selection: "all", requiredTraits: ["男性"] },
+          target: { relation: "enemies", selection: "all" },
           action: { kind: "apply_effects", effects: [{ template: { stableId: "julia-farnese-beautiful-julia-defense-state", name: "防御力ダウン", effectType: COMMON_EFFECT_TYPES.defense, category: "debuff", classifications: ["defense"], value: -200, remainingTurns: 3, durationTick: "owner_turn_end" } }] } },
       ],
     },

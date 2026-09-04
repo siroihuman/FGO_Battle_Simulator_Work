@@ -1,13 +1,79 @@
 import { describe, expect, it } from "vitest";
+import { findUnitLocation } from "../src/core/battle/formation";
+import { createBattleState } from "../src/core/battle/state";
+import { BattleRng } from "../src/core/rng";
 import {
   JULIA_FARNESE_RIDER,
+  createServantBattleInstance,
 } from "../src/data/servants";
 import {
   JULIA_FARNESE_RIDER_BOND,
 } from "../src/data/craftEssences";
 import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
+import { createBattleActionEffectDataRegistry } from "../src/effects/actionData";
+import { createEffectRuntimeCounters } from "../src/effects/runtime";
+import { resolveAllySkillUse } from "../src/effects/skillExecution";
+import { registeredSkillIconPath } from "../src/ui/iconRegistry";
+import { unit } from "./helpers/battle";
 
 describe("Julia Farnese (Rider)", () => {
+  it.each([true, false])("restricts only charm to males, with a male enemy present: %s", (hasMale) => {
+    const source = createServantBattleInstance(JULIA_FARNESE_RIDER, {
+      instanceId: "julia", level: 80, noblePhantasmLevel: 1,
+    });
+    const state = createBattleState({
+      ally: {
+        frontline: [source.unit, unit("ally-b", "ally"), unit("ally-c", "ally")],
+        reserve: [],
+      },
+      waves: [{ enemy: {
+        frontline: [
+          unit("enemy-a", "enemy", { traits: hasMale ? ["男性"] : ["女性"] }),
+          unit("enemy-b", "enemy", { traits: ["女性"] }),
+          unit("enemy-c", "enemy", { traits: [] }),
+        ],
+        reserve: [unit("enemy-reserve", "enemy", { traits: ["男性"] })],
+      } }],
+      enemyFrontlineLimit: 3,
+    });
+    const result = resolveAllySkillUse({
+      state,
+      registry: createBattleActionEffectDataRegistry([source.actionEffectData]),
+      sourceInstanceId: "julia",
+      skillStableId: "julia-farnese-beautiful-julia",
+      counters: createEffectRuntimeCounters(),
+      rng: new BattleRng("julia-skill-one-targets").stream("effects"),
+    });
+    expect(result.accepted).toBe(true);
+    if (!result.accepted) throw new Error("Julia's first skill was rejected");
+    for (const id of ["enemy-a", "enemy-b", "enemy-c"]) {
+      const effects = findUnitLocation(result.state.formation, id)?.unit.effects;
+      expect(effects).toEqual(expect.arrayContaining([
+        expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.debuffResistance, value: -300, remainingTurns: 3 }),
+        expect.objectContaining({ effectType: COMMON_EFFECT_TYPES.defense, value: -200, remainingTurns: 3 }),
+      ]));
+      const shouldCharm = hasMale && id === "enemy-a";
+      expect(effects).toHaveLength(shouldCharm ? 3 : 2);
+      expect(effects?.filter(({ effectType }) => effectType === "charm"))
+        .toHaveLength(shouldCharm ? 1 : 0);
+      if (shouldCharm) {
+        expect(effects).toContainEqual(expect.objectContaining({ effectType: "charm", remainingTurns: 1 }));
+      }
+    }
+    for (const id of ["julia", "ally-b", "ally-c", "enemy-reserve"]) {
+      expect(findUnitLocation(result.state.formation, id)?.unit.effects).toEqual([]);
+    }
+    expect(findUnitLocation(result.state.formation, "julia")?.unit.skillCooldowns).toEqual([7, 0, 0]);
+  });
+
+  it.each([
+    ["麗しのジュリア", "skill-stun-charm"],
+    ["無垢なる一角馬", "skill-star-per-turn"],
+    ["白百合の獣", "skill-hp-heal"],
+  ])("uses the specified icon for %s", (name, icon) => {
+    expect(registeredSkillIconPath(name)).toContain(`/assets/skill-icons/${icon}.png`);
+  });
+
   it("keeps the upgraded skill and Noble Phantasm effect order from the source", () => {
     expect(JULIA_FARNESE_RIDER.activeSkills.map(({ name, cooldownAtMax }) => [name, cooldownAtMax]))
       .toEqual([
