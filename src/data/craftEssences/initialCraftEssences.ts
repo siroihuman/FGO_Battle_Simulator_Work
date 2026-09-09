@@ -596,6 +596,20 @@ export const SIGMUND_BOND: CraftEssenceDefinition = {
   sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/258.html", checkedAt: "2026-09-08", note: "絆礼装「二つに折れた選定」の名称、星4Lv80・ATK100・HP100、装備者自身へのBuster性能20%・クリティカル威力10%を照合。" }],
 };
 
+export const HERVOR_BOND: CraftEssenceDefinition = {
+  schemaVersion: CRAFT_ESSENCE_DATA_SCHEMA_VERSION,
+  dataId: "hervor-bond",
+  name: "炎を越えた先に",
+  ...BOND_CRAFT_ESSENCE,
+  eligibleServantDataIds: ["hervor"],
+  startEffects: [
+    { kind: "effect", stableId: "hervor-bond-np-damage", order: 1, description: "自身の宝具威力をアップ", target: { relation: "self", selection: "single" }, action: { kind: "apply_effects", effects: [{ template: { stableId: "hervor-bond-np-damage-state", name: "宝具威力アップ", effectType: COMMON_EFFECT_TYPES.noblePhantasmDamage, category: "buff", value: 100, removalPolicy: "unremovable" } }] } },
+    { kind: "effect", stableId: "hervor-bond-curse-critical", order: 2, description: "＆〔呪い〕状態の対象に対するクリティカル威力をアップ", target: { relation: "self", selection: "single" }, action: { kind: "apply_effects", effects: [{ template: { stableId: "hervor-bond-curse-critical-state", name: "〔呪い〕対象クリティカル威力アップ", effectType: COMMON_EFFECT_TYPES.criticalDamage, category: "buff", value: 200, removalPolicy: "unremovable", flags: { requiredTargetEffectClassification: "curse" } } }] } },
+    { kind: "effect", stableId: "hervor-bond-evil-curse-critical", order: 3, description: "＆〔呪厄〕状態の対象に対するクリティカル威力をアップ", target: { relation: "self", selection: "single" }, action: { kind: "apply_effects", effects: [{ template: { stableId: "hervor-bond-evil-curse-critical-state", name: "〔呪厄〕対象クリティカル威力アップ", effectType: COMMON_EFFECT_TYPES.criticalDamage, category: "buff", value: 200, removalPolicy: "unremovable", flags: { requiredTargetEffectClassification: "evil_curse" } } }] } },
+  ],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/32.html", checkedAt: "2026-09-09", note: "ユーザー提示の絆礼装表から名称、星4Lv80・ATK100・HP100、装備者自身への宝具威力10%、呪い・呪厄対象へのクリティカル威力各20%を照合。" }],
+};
+
 export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   KALEIDOSCOPE,
   BLACK_GRAIL,
@@ -616,6 +630,7 @@ export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   AUGUSTUS_BOND,
   JULIA_FARNESE_RIDER_BOND,
   SIGMUND_BOND,
+  HERVOR_BOND,
 ] as const;
 
 export const INITIAL_CRAFT_ESSENCE_REGISTRY = createCraftEssenceDataRegistry(

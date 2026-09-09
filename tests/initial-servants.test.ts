@@ -72,6 +72,7 @@ describe("initial servant definitions", () => {
       "domination-foreigner",
       "duzyarya-rider",
       "julia-farnese-rider",
+      "hervor",
       "octavianus",
       "augustus",
       "agrippa",

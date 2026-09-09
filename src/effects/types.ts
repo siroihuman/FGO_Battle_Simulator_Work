@@ -71,6 +71,8 @@ export type SlipDamageAmplifierKind =
  */
 export interface TriggerAction {
   target: TargetSelector;
+  /** Restricts this child action to the actor that caused the attack event. */
+  targetAttackEventActor?: boolean;
   /**
    * Restricts this child action to the targets of the current attack event.
    * The selector still controls side, life, reserve, exclusion, and traits;

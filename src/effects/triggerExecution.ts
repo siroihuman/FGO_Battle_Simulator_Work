@@ -101,6 +101,11 @@ function targetsForTriggerAction(
     ownerInstanceId,
     action.target,
   );
+  if (action.targetAttackEventActor === true) {
+    return resolved.filter(
+      ({ unit }) => unit.instanceId === event.actorInstanceId,
+    );
+  }
   if (action.targetAttackEventTargets !== true) return resolved;
   const eventTargetIds = new Set(
     event.targetInstanceIds

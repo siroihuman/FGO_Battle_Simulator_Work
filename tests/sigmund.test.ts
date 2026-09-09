@@ -59,7 +59,7 @@ describe("No.010 シグムンド", () => {
       { kind: "attack", order: 1, hitWeights: [1, 1, 1], damageMultiplierPermilleByLevel: [3_000, 4_000, 4_500, 4_750, 5_000] },
       { kind: "effect", order: 2 }, { kind: "effect", order: 3 },
     ]);
-    expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo)).toEqual([7, 10, 24, 25, 29, 54, 55, 56, 57, 58, 62, 70, 94, 105, 107]);
+    expect(ORIGINAL_SERVANT_DEFINITIONS.map(({ collectionNo }) => collectionNo)).toEqual([7, 10, 24, 25, 29, 30, 54, 55, 56, 57, 58, 62, 70, 94, 105, 107]);
     expect(sigmund().unresolvedEffectStableIds).toEqual([]);
   });
 

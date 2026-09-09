@@ -48,6 +48,9 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "神々の加護": "skill-crit-damage-up",
   "人の理を脱ぎ、王は狼へと還る": "skill-card-buster-up",
   "戦王のカリスマ": "skill-attack-up",
+  "戦闘続行": "skill-guts",
+  "運命の克服者": "skill-np-charge",
+  "怨念模りし炎の鎧": "skill-defense-up",
   "華麗の皇帝": "skill-unique-looks-of-loveliness",
   "羅馬特権": "skill-hp-heal",
   "不朽不滅の都": "skill-defense-up",
@@ -116,6 +119,7 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "被ダメージカット": "Defenseup",
   "クリティカル攻撃耐性ダウン": "Critattackresdown",
   "毒無効": "Debuffimmune",
+  "弱体無効": "Debuffimmune",
 };
 
 function publicAssetPath(path: string): string {

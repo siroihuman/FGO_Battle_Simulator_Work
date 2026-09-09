@@ -25,6 +25,7 @@ import { OCTAVIANUS } from "./octavianus";
 import { AUGUSTUS } from "./augustus";
 import { JULIA_FARNESE_RIDER } from "./juliaFarneseRider";
 import { SIGMUND } from "./sigmund";
+import { HERVOR } from "./hervor";
 
 const PASSIVE = {
   category: "buff" as const,
@@ -224,6 +225,7 @@ export const OFFICIAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
 
 export const ORIGINAL_SERVANT_DEFINITIONS: readonly ServantDefinition[] = [
   SIGMUND,
+  HERVOR,
   DUZYARYA_RIDER,
   JULIA_FARNESE_RIDER,
   OCTAVIANUS,

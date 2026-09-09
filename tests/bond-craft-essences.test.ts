@@ -158,7 +158,7 @@ function battleUnit(
 
 describe("bond Craft Essences", () => {
   it("registers all requested bond essences with exact wearer restrictions and fixed Lv80 stats", () => {
-    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(19);
+    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(20);
     for (const definition of INITIAL_CRAFT_ESSENCE_DEFINITIONS.filter(
       ({ eligibleServantDataIds }) => eligibleServantDataIds !== undefined,
     )) {

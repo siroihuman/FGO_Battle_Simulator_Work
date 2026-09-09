@@ -182,6 +182,20 @@ export function assertValidEffectTrigger(
         );
       }
     }
+    if (action.targetAttackEventActor === true) {
+      if (!ATTACK_TRIGGER_TIMINGS.includes(
+        trigger.timing as typeof ATTACK_TRIGGER_TIMINGS[number],
+      )) {
+        throw new RangeError(
+          `${actionName}.targetAttackEventActor requires attack timing`,
+        );
+      }
+      if (action.target.relation === "self" || action.target.selection !== "all") {
+        throw new RangeError(
+          `${actionName}.targetAttackEventActor requires non-self all selection`,
+        );
+      }
+    }
     if (action.turnEndSettlement && trigger.timing !== "turn_end") {
       throw new RangeError(
         `${actionName}.turnEndSettlement requires turn_end timing`,

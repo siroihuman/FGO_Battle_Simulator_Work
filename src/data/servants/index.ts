@@ -17,3 +17,4 @@ export * from "./octavianus";
 export * from "./augustus";
 export * from "./juliaFarneseRider";
 export * from "./sigmund";
+export * from "./hervor";

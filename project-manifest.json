@@ -3,7 +3,7 @@
   "project": "FGO_Battle_Simulator_Work",
   "specVersion": "1.0.0",
   "dataSchemaVersion": "1.38.0",
-  "status": "sigmund-implemented-and-accepted",
+  "status": "hervor-implemented-awaiting-user-acceptance",
   "canonicalDocuments": [
     "AGENTS.md",
     "docs/INDEX.md",
@@ -894,6 +894,24 @@
         "dataSchemaVersion": "1.38.0"
       },
       {
+        "name": "ヘルヴォール",
+        "collectionNo": 30,
+        "dataId": "hervor",
+        "classificationCategory": 1,
+        "schemaVersion": 1,
+        "contentRevision": "current_upgraded_only",
+        "implementationStatus": "implemented_awaiting_user_acceptance",
+        "source": "https://w.atwiki.jp/siroi_human/pages/32.html",
+        "sourceCheckedAt": "2026-09-09",
+        "activeSkillCount": 3,
+        "classSkillCount": 1,
+        "noblePhantasmCount": 1,
+        "noblePhantasmRevision": "upgraded_only",
+        "noblePhantasmHitCount": 3,
+        "battleSuspendSchemaVersion": 4,
+        "dataSchemaVersion": "1.38.0"
+      },
+      {
         "name": "支配のフォーリナー",
         "collectionLabel": "024’",
         "dataId": "domination-foreigner",
@@ -1256,6 +1274,16 @@
         "level": 80,
         "eligibleServantDataIds": ["sigmund"],
         "source": "https://w.atwiki.jp/siroi_human/pages/258.html",
+        "implementationStatus": "implemented"
+      },
+      {
+        "name": "炎を越えた先に",
+        "dataId": "hervor-bond",
+        "rarity": 4,
+        "limitBreak": "max",
+        "level": 80,
+        "eligibleServantDataIds": ["hervor"],
+        "source": "https://w.atwiki.jp/siroi_human/pages/32.html",
         "implementationStatus": "implemented"
       },
       {

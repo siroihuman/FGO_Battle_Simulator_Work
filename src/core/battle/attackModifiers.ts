@@ -126,6 +126,18 @@ function matchesAttack(
   ) {
     return false;
   }
+  const requiredTargetEffectClassification = stringFlag(
+    effect,
+    "requiredTargetEffectClassification",
+  );
+  if (
+    requiredTargetEffectClassification
+    && !context.target.effects.some((targetEffect) =>
+      targetEffect.classifications.includes(requiredTargetEffectClassification)
+    )
+  ) {
+    return false;
+  }
   const excludedTargetTrait = stringFlag(
     effect,
     "excludedTargetTrait",
