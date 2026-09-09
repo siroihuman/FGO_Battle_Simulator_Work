@@ -5,13 +5,13 @@
 ## 現在地点
 
 - フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加
-- 状態: No.010「シグムンド」と絆礼装「二つに折れた選定」を実装した。強化後スキル3種、クラススキル4種、Buster全体宝具、装備者限定絆礼装を既存の共通処理へ接続し、BattleSession、中断保存形式4・データ1.38.0、固定シードリプレイ、カード再配布、6乱数列を維持する。自動検査後、ユーザー環境での実画面受入を待つ。
+- 状態: No.010「シグムンド」と絆礼装「二つに折れた選定」を実装した。強化後スキル3種、クラススキル4種、Buster全体宝具、装備者限定絆礼装を既存の共通処理へ接続し、指定5状態のアイコンを`Stunstatus`へ統一した。BattleSession、中断保存形式4・データ1.38.0、固定シードリプレイ、カード再配布、6乱数列を維持し、2026-09-09にユーザー実画面受入を完了した。
 - 完成目標: `v1.0`
 - 正本: このリポジトリの `main`、文書、実装、テスト。チャット履歴は正本にしない。
 
 ## 次の作業
 
-1. シグムンドの3スキル、Buster攻撃時NP増加、全体攻撃・クリティカル強化、確率スタン、クリティカル攻撃耐性ダウン、復讐者、毒無効、全体Buster宝具、絆礼装を実画面で確認する。合格ならPRを`main`へ統合する。
+1. カテゴリ1の次の未実装対象について、参照データと実装可能性を確認する。
 2. 統合後、`SERVANT_CLASSIFICATION.md`のカテゴリ1・No.順から次の対象を確認する。
 
 阿遅鉏高日子根神は[`qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md`](qa/AJISUKITAKAHIKONE_NO_KAMI_ACCEPTANCE_2026-08-21.md)、本多忠勝は[`qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md`](qa/HONDA_TADAKATSU_ACCEPTANCE_2026-08-21.md)、期限境界の修正は[`qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md`](qa/EFFECT_DURATION_BOUNDARY_ACCEPTANCE_2026-08-21.md)、聖母マリアは[`qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md`](qa/MOTHER_MARY_ACCEPTANCE_2026-08-20.md)、千利休は[`qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md`](qa/SEN_NO_RIKYU_ACCEPTANCE_2026-08-15.md)、支配のフォーリナーは[`qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md`](qa/DOMINATION_FOREIGNER_ACCEPTANCE_2026-08-14.md)を参照します。具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`](SERVANT_CLASSIFICATION.md)の確定済みカテゴリを確認します。

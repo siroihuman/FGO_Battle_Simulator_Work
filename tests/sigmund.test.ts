@@ -10,7 +10,8 @@ import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
 import { createEffectRuntimeCounters } from "../src/effects/runtime";
 import { resolveAllySkillUse } from "../src/effects/skillExecution";
 import { resolveAttackModifierTotals } from "../src/core/battle/attackModifiers";
-import { registeredSkillIconPath } from "../src/ui/iconRegistry";
+import { registeredSkillIconPath, registeredStatusIconPath } from "../src/ui/iconRegistry";
+import type { AppliedEffect } from "../src/effects/types";
 import { unit } from "./helpers/battle";
 
 function sigmund(instanceId = "sigmund") {
@@ -126,5 +127,32 @@ describe("No.010 シグムンド", () => {
     expect(registeredSkillIconPath("戦王のカリスマ")).toContain("skill-attack-up.png");
     expect(registeredSkillIconPath("復讐者")).toContain("class-avenger.png");
     expect(registeredSkillIconPath("抗毒")).toContain("skill-debuff-immunity.png");
+  });
+
+  it("uses Stunstatus only for the specified incapacitating states", () => {
+    const effect = (name: string): AppliedEffect => ({
+      instanceId: `status-${name}`,
+      stableId: `status-${name}`,
+      name,
+      effectType: "status-icon-test",
+      category: "debuff",
+      value: 0,
+      sourceInstanceId: "sigmund",
+      targetInstanceId: "enemy-a",
+      classifications: [],
+      remainingTurns: 1,
+      remainingUses: null,
+      removalPolicy: "removable",
+      durationTick: "owner_turn_end",
+      flags: {},
+      registrationOrder: 1,
+    });
+
+    for (const name of ["スタン", "拘束", "待機", "石化", "行動不能"]) {
+      expect(registeredStatusIconPath(effect(name))).toContain("Stunstatus.webp");
+    }
+    for (const name of ["魅了", "睡眠", "豚化"]) {
+      expect(registeredStatusIconPath(effect(name)) ?? "").not.toContain("Stunstatus.webp");
+    }
   });
 });

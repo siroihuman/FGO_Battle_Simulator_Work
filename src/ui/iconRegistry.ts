@@ -73,6 +73,11 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
 };
 
 const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
+  "スタン": "Stunstatus",
+  "拘束": "Stunstatus",
+  "待機": "Stunstatus",
+  "石化": "Stunstatus",
+  "行動不能": "Stunstatus",
   "Busterカード性能アップ": "Busterupstatus",
   "Artsカード性能アップ": "Artsupstatus",
   "Quickカード性能アップ": "Quickupstatus",
