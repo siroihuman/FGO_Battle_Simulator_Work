@@ -569,6 +569,33 @@ export const JULIA_FARNESE_RIDER_BOND: CraftEssenceDefinition = {
   }],
 };
 
+export const SIGMUND_BOND: CraftEssenceDefinition = {
+  schemaVersion: CRAFT_ESSENCE_DATA_SCHEMA_VERSION,
+  dataId: "sigmund-bond",
+  name: "二つに折れた選定",
+  ...BOND_CRAFT_ESSENCE,
+  eligibleServantDataIds: ["sigmund"],
+  startEffects: [
+    {
+      kind: "effect",
+      stableId: "sigmund-bond-buster",
+      order: 1,
+      description: "自身のBusterカード性能をアップ",
+      target: { relation: "self", selection: "single" },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "sigmund-bond-buster-state", name: "Busterカード性能アップ", effectType: COMMON_EFFECT_TYPES.cardPerformance, category: "buff", value: 200, removalPolicy: "unremovable", flags: { cardType: "buster" } } }] },
+    },
+    {
+      kind: "effect",
+      stableId: "sigmund-bond-critical",
+      order: 2,
+      description: "＆クリティカル威力をアップ",
+      target: { relation: "self", selection: "single" },
+      action: { kind: "apply_effects", effects: [{ template: { stableId: "sigmund-bond-critical-state", name: "クリティカル威力アップ", effectType: COMMON_EFFECT_TYPES.criticalDamage, category: "buff", value: 100, removalPolicy: "unremovable" } }] },
+    },
+  ],
+  sources: [{ url: "https://w.atwiki.jp/siroi_human/pages/258.html", checkedAt: "2026-09-08", note: "絆礼装「二つに折れた選定」の名称、星4Lv80・ATK100・HP100、装備者自身へのBuster性能20%・クリティカル威力10%を照合。" }],
+};
+
 export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   KALEIDOSCOPE,
   BLACK_GRAIL,
@@ -588,6 +615,7 @@ export const INITIAL_CRAFT_ESSENCE_DEFINITIONS = [
   OCTAVIANUS_BOND,
   AUGUSTUS_BOND,
   JULIA_FARNESE_RIDER_BOND,
+  SIGMUND_BOND,
 ] as const;
 
 export const INITIAL_CRAFT_ESSENCE_REGISTRY = createCraftEssenceDataRegistry(

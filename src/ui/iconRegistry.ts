@@ -45,6 +45,9 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "麗しのジュリア": "skill-stun-charm",
   "無垢なる一角馬": "skill-star-per-turn",
   "白百合の獣": "skill-hp-heal",
+  "神々の加護": "skill-crit-damage-up",
+  "人の理を脱ぎ、王は狼へと還る": "skill-card-buster-up",
+  "戦王のカリスマ": "skill-attack-up",
   "華麗の皇帝": "skill-unique-looks-of-loveliness",
   "羅馬特権": "skill-hp-heal",
   "不朽不滅の都": "skill-defense-up",
@@ -56,6 +59,8 @@ const SKILL_ICON_IDS: Readonly<Record<string, string>> = {
   "対魔力": "class-magic-resistance",
   "騎乗": "class-riding",
   "神性": "class-divinity",
+  "復讐者": "class-avenger",
+  "抗毒": "skill-debuff-immunity",
   "オシリスの塵": "skill-immune-invincibility",
   "イシスの雨": "skill-clear-debuff",
   "メジェドの眼": "skill-cooldown",
@@ -104,6 +109,8 @@ const STATUS_ICON_IDS: Readonly<Record<string, string>> = {
   "魅了耐性アップ": "Resistanceup",
   "即死付与成功率アップ": "Instapowerup",
   "被ダメージカット": "Defenseup",
+  "クリティカル攻撃耐性ダウン": "Critattackresdown",
+  "毒無効": "Debuffimmune",
 };
 
 function publicAssetPath(path: string): string {
