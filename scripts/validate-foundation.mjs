@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 30628)
-Total output lines: 2377
-
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import process from "node:process";
@@ -1250,7 +1247,59 @@ if (manifest) {
     "同じ概念礼装を複数の味方戦闘個体へ装備できなければなりません"
   );
   assert(
-    manifest.coreRules.craftEssenceInitialLimitBreak…628 tokens truncated…ければなりません"
+    manifest.coreRules.craftEssenceInitialLimitBreak === "max",
+    "初期概念礼装は最大解放固定でなければなりません"
+  );
+  assert(
+    manifest.coreRules.craftEssenceInitialLevelPolicy === "rarity_max_fixed",
+    "初期概念礼装はレアリティ別最大Lv固定でなければなりません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.craftEssenceMaxLevelByRarity) === JSON.stringify({
+      "1": 50,
+      "2": 55,
+      "3": 60,
+      "4": 80,
+      "5": 100
+    }),
+    "概念礼装のレアリティ別最大Lvが一致しません"
+  );
+  assert(
+    manifest.coreRules.craftEssenceInitialEffectTarget === "equipped_ally_instance",
+    "初期概念礼装の効果対象は装備した味方戦闘個体でなければなりません"
+  );
+  assert(
+    manifest.coreRules.craftEssenceReserveSelectable === true
+      && manifest.coreRules.craftEssenceStartEffectsIncludeReserve === true,
+    "控えも概念礼装の選択・開始時初期化対象でなければなりません"
+  );
+  const craftEssenceFieldEffects = manifest.coreRules.craftEssenceFieldEffects;
+  assert(
+    manifest.coreRules.craftEssenceEligibleServantDataIds
+      === "exact_data_id_only_ui_filtered_and_engine_rejected_before_mutation"
+      && craftEssenceFieldEffects.target === "all_allies_including_reserve"
+      && craftEssenceFieldEffects.application
+        === "declarative_passive_initialization"
+      && craftEssenceFieldEffects.activeWhen
+        === "source_and_recipient_are_both_ally_frontline"
+      && craftEssenceFieldEffects.inactiveValue === 0
+      && craftEssenceFieldEffects.uiInactiveValueDisplay === "hidden"
+      && craftEssenceFieldEffects.formationRefresh === "set_battle_formation"
+      && craftEssenceFieldEffects.saveSchemaChange === false
+      && craftEssenceFieldEffects.dataSchemaChange === false,
+    "絆礼装の厳密装備対象と前衛限定フィールド効果の規則が一致しません"
+  );
+  assert(
+    manifest.coreRules.initialCraftEssenceDataRegistry
+      === "src/data/craftEssences/initialCraftEssences.ts"
+      && manifest.coreRules.kaleidoscopeStartNpUnits === 10000
+      && manifest.coreRules.blackGrailNoblePhantasmDamagePermille === 800,
+    "初期概念礼装の登録先・開始NP・宝具威力が一致しません"
+  );
+  assert(
+    JSON.stringify(manifest.coreRules.blackGrailRecurringHpReduction)
+      === JSON.stringify({ amount: 500, canDefeat: true, turnEndSettlement: null }),
+    "黒の聖杯の毎ターンHP減少はHP0可能な共通HP減少でなければなりません"
   );
   assert(
     JSON.stringify(manifest.coreRules.slipDamageAmplification)
