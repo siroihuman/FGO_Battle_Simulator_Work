@@ -403,6 +403,7 @@ if (manifest) {
   );
   const specifiedServants = manifest.specifiedContent?.servants ?? [];
   const hondaTadakatsu = specifiedServants.find(({ dataId }) => dataId === "honda-tadakatsu");
+  const sigmund = specifiedServants.find(({ dataId }) => dataId === "sigmund");
   const ajisukitakahikoneNoKami = specifiedServants.find(
     ({ dataId }) => dataId === "ajisukitakahikone-no-kami"
   );
@@ -418,7 +419,7 @@ if (manifest) {
   const senNoRikyu = specifiedServants.find(({ dataId }) => dataId === "sen-no-rikyu");
   const motherMary = specifiedServants.find(({ dataId }) => dataId === "mother-mary");
   assert(
-    specifiedServants.length === 14
+    specifiedServants.length === 15
       && senNoRikyu?.collectionNo === 362
       && senNoRikyu?.implementationStatus === "implemented_and_accepted"
       && senNoRikyu?.activeSkillCount === 3
@@ -429,9 +430,21 @@ if (manifest) {
     "指定コンテンツに千利休の登録状態がありません"
   );
   assert(
+    sigmund?.collectionNo === 10
+      && sigmund?.classificationCategory === 1
+      && sigmund?.implementationStatus === "implemented_and_accepted"
+      && sigmund?.activeSkillCount === 3
+      && sigmund?.classSkillCount === 4
+      && sigmund?.noblePhantasmCount === 1
+      && sigmund?.noblePhantasmHitCount === 3
+      && sigmund?.battleSuspendSchemaVersion === 4
+      && sigmund?.dataSchemaVersion === "1.38.0",
+    "指定コンテンツにシグムンドの登録状態がありません"
+  );
+  assert(
     juliaFarneseRider?.collectionNo === 29
       && juliaFarneseRider?.classificationCategory === 1
-      && juliaFarneseRider?.implementationStatus === "implemented_awaiting_user_acceptance"
+      && juliaFarneseRider?.implementationStatus === "implemented_and_accepted"
       && juliaFarneseRider?.activeSkillCount === 3
       && juliaFarneseRider?.classSkillCount === 2
       && juliaFarneseRider?.noblePhantasmCount === 1
@@ -938,7 +951,7 @@ if (manifest) {
   const effectDurationBoundaries =
     manifest.coreRules.effectDurationBoundaries;
   assert(
-    manifest.status === "julia-farnese-rider-implemented-awaiting-user-acceptance"
+    manifest.status === "sigmund-implemented-and-accepted"
       && JSON.stringify(effectDurationBoundaries.values)
         === JSON.stringify([
           "owner_turn_end",
@@ -1319,6 +1332,7 @@ if (manifest) {
   const initialCraftEssences = manifest.initialContent?.craftEssences ?? [];
   const expectedBondCraftEssences = [
     ["傷ひとつなき具足", "honda-tadakatsu-bond", "honda-tadakatsu", "https://w.atwiki.jp/siroi_human/pages/274.html"],
+    ["二つに折れた選定", "sigmund-bond", "sigmund", "https://w.atwiki.jp/siroi_human/pages/258.html"],
     ["一九二八年二月号", "domination-foreigner-bond", "domination-foreigner", "https://w.atwiki.jp/siroi_human/pages/766.html"],
     ["二谷を渡る玉", "ajisukitakahikone-no-kami-bond", "ajisukitakahikone-no-kami", "https://w.atwiki.jp/siroi_human/pages/50.html"],
     ["六つのありえざるもの", "fenrir-bond", "fenrir", "https://w.atwiki.jp/siroi_human/pages/329.html"],
@@ -1336,7 +1350,7 @@ if (manifest) {
     ["六輪の青百合", "julia-farnese-rider-bond", "julia-farnese-rider", "https://w.atwiki.jp/siroi_human/pages/31.html"],
   ];
   assert(
-    initialCraftEssences.length === 18
+    initialCraftEssences.length === 19
       && initialCraftEssences[0]?.name === "カレイドスコープ"
       && initialCraftEssences[0]?.dataId === "kaleidoscope"
       && initialCraftEssences[0]?.rarity === 5
@@ -1358,7 +1372,7 @@ if (manifest) {
           && craftEssence.source === source
           && craftEssence.implementationStatus === "implemented";
       }),
-    "概念礼装2枚と絆礼装16枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
+    "概念礼装2枚と絆礼装17枚の正式名称・ID・最大解放・Lv・装備対象・参照が一致しません"
   );
 
   const initialEnemies = manifest.initialContent?.enemies ?? [];
@@ -1552,12 +1566,12 @@ assert(startHere.includes("## 次の作業"), "作業開始ページに次の作
 assert(startHere.includes("## 必須規則"), "作業開始ページに必須規則がありません");
 assert(
   startHere.includes("フェーズ: 19／v1.0初期完成範囲外サーヴァントの順次追加")
-    && startHere.includes("No.029「ジュリア・ファルネーゼ〔騎〕」")
+    && startHere.includes("No.010「シグムンド」")
     && startHere.includes("具体サーヴァントの選定前には、[`SERVANT_CLASSIFICATION.md`]")
-    && startHere.includes("実画面受入を待つ")
+    && startHere.includes("ユーザー実画面受入を完了")
     && startHere.includes("中断保存形式4・データ1.38.0")
-    && startHere.includes("No.059「那須与一」"),
-    "作業開始ページにジュリア・ファルネーゼ〔騎〕の実装状態と次作業がありません"
+    && startHere.includes("カテゴリ1・No.順"),
+    "作業開始ページにシグムンドの実装状態と次作業がありません"
 );
 const uiAcceptance = await readText(
   "docs/qa/UI_COMPLETION_ACCEPTANCE_2026-08-13.md"

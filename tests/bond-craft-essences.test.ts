@@ -24,6 +24,7 @@ import {
   JULIA_FARNESE_RIDER_BOND,
   SANADA_YUKIMURA_BOND,
   SEN_NO_RIKYU_BOND,
+  SIGMUND_BOND,
 } from "../src/data/craftEssences";
 import { createEffectRuntimeCounters } from "../src/effects/runtime";
 import { COMMON_EFFECT_TYPES } from "../src/effects/modifiers";
@@ -157,7 +158,7 @@ function battleUnit(
 
 describe("bond Craft Essences", () => {
   it("registers all requested bond essences with exact wearer restrictions and fixed Lv80 stats", () => {
-    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(18);
+    expect(INITIAL_CRAFT_ESSENCE_DEFINITIONS).toHaveLength(19);
     for (const definition of INITIAL_CRAFT_ESSENCE_DEFINITIONS.filter(
       ({ eligibleServantDataIds }) => eligibleServantDataIds !== undefined,
     )) {
@@ -171,6 +172,7 @@ describe("bond Craft Essences", () => {
       expect(definition.eligibleServantDataIds).toHaveLength(1);
     }
     expect(HONDA_TADAKATSU_BOND.name).toBe("傷ひとつなき具足");
+    expect(SIGMUND_BOND).toMatchObject({ name: "二つに折れた選定", eligibleServantDataIds: ["sigmund"] });
     expect(DOMINATION_FOREIGNER_BOND.name).toBe("一九二八年二月号");
     expect(FENRIR_BOND.name).toBe("六つのありえざるもの");
     expect(SANADA_YUKIMURA_BOND).toMatchObject({

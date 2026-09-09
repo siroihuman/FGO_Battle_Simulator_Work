@@ -18,6 +18,7 @@ import {
   SEN_NO_RIKYU,
   OCTAVIANUS,
   JULIA_FARNESE_RIDER,
+  SIGMUND,
   assertValidServantDefinition,
   createServantBattleInstance,
   createServantDataRegistry,
@@ -67,6 +68,7 @@ describe("initial servant definitions", () => {
       "koyanskaya-of-light",
       "sen-no-rikyu",
       "honda-tadakatsu",
+      "sigmund",
       "domination-foreigner",
       "duzyarya-rider",
       "julia-farnese-rider",
@@ -101,6 +103,7 @@ describe("initial servant definitions", () => {
       hp: 15_133,
       attack: 11_449,
     });
+    expect(SIGMUND.levelStats.at(-1)).toEqual({ level: 120, hp: 17_176, attack: 13_500 });
     expect(AJISUKITAKAHIKONE_NO_KAMI.levelStats.at(-1)).toEqual({
       level: 120,
       hp: 21_242,
